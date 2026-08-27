@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SBEE Weekly Report Generator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .logo {
+            font-size: 36px;
+            margin-bottom: 10px;
+        }
+        h1 {
+            color: #dc2626;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        p {
+            color: #666;
+            font-size: 14px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+        input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        input:focus {
+            outline: none;
+            border-color: #dc2626;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 30px;
+        }
+        button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .btn-primary {
+            background: #dc2626;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #b91c1c;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(220, 38, 38, 0.3);
+        }
+        .btn-secondary {
+            background: #f3f4f6;
+            color: #333;
+        }
+        .btn-secondary:hover {
+            background: #e5e7eb;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+        }
+        .spinner {
+            border: 4px solid #f3f4f6;
+            border-top-color: #dc2626;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .status {
+            margin-top: 20px;
+            padding: 12px;
+            border-radius: 6px;
+            text-align: center;
+            display: none;
+            font-size: 14px;
+        }
+        .status.success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        .status.error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">📊</div>
+            <h1>SBEE Cables</h1>
+            <p>Weekly Executive Report Generator</p>
+        </div>
+
+        <div class="form-group">
+            <label>Supabase URL</label>
+            <input type="text" id="supabaseUrl" placeholder="https://your-project.supabase.co" />
+        </div>
+
+        <div class="form-group">
+            <label>Supabase Anon Key</label>
+            <input type="password" id="supabaseKey" placeholder="your-anon-key" />
+        </div>
+
+        <div class="button-group">
+            <button class="btn-primary" onclick="generateReport()">Generate & Download</button>
+            <button class="btn-secondary" onclick="loadFromEnv()">Auto-Fill from Env</button>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Generating report...</p>
+        </div>
+
+        <div class="status" id="status"></div>
+    </div>
+
+    <script>
+        async function loadFromEnv() {
+            // Try to load from localStorage or default values
+            const url = localStorage.getItem('supabaseUrl') || '';
+            const key = localStorage.getItem('supabaseKey') || '';
+            document.getElementById('supabaseUrl').value = url;
+            document.getElementById('supabaseKey').value = key;
+        }
+
+        async function generateReport() {
+            const url = document.getElementById('supabaseUrl').value.trim();
+            const key = document.getElementById('supabaseKey').value.trim();
+
+            if (!url || !key) {
+                showStatus('Please enter Supabase credentials', 'error');
+                return;
+            }
+
+            // Save to localStorage
+            localStorage.setItem('supabaseUrl', url);
+            localStorage.setItem('supabaseKey', key);
+
+            showLoading(true);
+            showStatus('');
+
+            try {
+                // Fetch data from Supabase
+                const headers = {
+                    'apikey': key,
+                    'Authorization': `Bearer ${key}`,
+                    'Content-Type': 'application/json'
+                };
+
+                const leadsRes = await fetch(`${url}/rest/v1/leads?select=*,lead_statuses(name),users!owner_id(full_name,email)`, { headers });
+                const activitiesRes = await fetch(`${url}/rest/v1/activity_events?select=*,users(full_name,email)`, { headers });
+                const usersRes = await fetch(`${url}/rest/v1/users?select=*&is_active=eq.true`, { headers });
+
+                if (!leadsRes.ok || !activitiesRes.ok || !usersRes.ok) {
+                    throw new Error('Failed to fetch data from Supabase');
+                }
+
+                const leads = await leadsRes.json();
+                const activities = await activitiesRes.json();
+                const users = await usersRes.json();
+
+                // Filter excluded users
+                const excluded = ['Suyog', 'Prajwal', 'Shravan', 'Ajay'];
+                const filteredLeads = leads.filter(l => l.users && !excluded.includes(l.users.full_name));
+                const filteredActivities = activities.filter(a => a.users && !excluded.includes(a.users.full_name));
+                const filteredUsers = users.filter(u => !excluded.includes(u.full_name));
+
+                // Calculate metrics
+                const totalValue = filteredLeads.reduce((sum, l) => sum + (Number(l.opportunity_value) || 0), 0);
+                const completedActivities = filteredActivities.filter(a => a.status === 'completed').length;
+
+                // Create PDF
+                const doc = new window.jspdf.jsPDF({ orientation: 'landscape' });
+                const pageWidth = doc.internal.pageSize.getWidth();
+                const pageHeight = doc.internal.pageSize.getHeight();
+                const margin = 15;
+                let y = margin + 10;
+
+                // Header
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(20);
+                doc.setTextColor(220, 38, 38);
+                doc.text('SBEE CABLES INDIA LTD', margin, y);
+
+                y += 10;
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(11);
+                doc.setTextColor(100, 100, 100);
+                doc.text('Weekly Executive Report', margin, y);
+
+                y += 8;
+                const today = new Date();
+                const weekStart = new Date(today);
+                weekStart.setDate(today.getDate() - today.getDay());
+                const weekEnd = new Date(weekStart);
+                weekEnd.setDate(weekStart.getDate() + 6);
+
+                doc.setFontSize(9);
+                doc.text(`Report Period: ${weekStart.toLocaleDateString()} - ${weekEnd.toLocaleDateString()}`, margin, y);
+
+                y += 12;
+                doc.setDrawColor(220, 38, 38);
+                doc.line(margin, y, pageWidth - margin, y);
+                y += 8;
+
+                // Key Metrics
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(12);
+                doc.setTextColor(20, 30, 60);
+                doc.text('KEY METRICS', margin, y);
+                y += 8;
+
+                const metrics = [
+                    { label: 'Total Leads Created', value: filteredLeads.length.toString() },
+                    { label: 'Pipeline Value', value: `₹${(totalValue / 100000).toFixed(2)}Cr` },
+                    { label: 'Activities Completed', value: completedActivities.toString() },
+                    { label: 'Completion Rate', value: filteredActivities.length > 0 ? `${((completedActivities / filteredActivities.length) * 100).toFixed(1)}%` : '0%' }
+                ];
+
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(9);
+                doc.setTextColor(50, 50, 50);
+                metrics.forEach(m => {
+                    doc.text(`${m.label}:`, margin, y);
+                    doc.setFont('helvetica', 'bold');
+                    doc.setTextColor(20, 30, 60);
+                    doc.text(m.value, pageWidth - margin - 40, y, { align: 'right' });
+                    doc.setFont('helvetica', 'normal');
+                    doc.setTextColor(50, 50, 50);
+                    y += 6;
+                });
+
+                y += 5;
+
+                // Top Performers
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(12);
+                doc.setTextColor(20, 30, 60);
+                doc.text('TOP PERFORMERS', margin, y);
+                y += 8;
+
+                const ownerStats = {};
+                filteredLeads.forEach(lead => {
+                    if (lead.owner_id) {
+                        if (!ownerStats[lead.owner_id]) ownerStats[lead.owner_id] = { count: 0, value: 0 };
+                        ownerStats[lead.owner_id].count++;
+                        ownerStats[lead.owner_id].value += Number(lead.opportunity_value) || 0;
+                    }
+                });
+
+                const topOwners = Object.entries(ownerStats)
+                    .map(([id, stats]) => {
+                        const owner = filteredLeads.find(l => l.owner_id === id)?.users;
+                        return { name: owner?.full_name || 'Unknown', ...stats };
+                    })
+                    .sort((a, b) => b.value - a.value)
+                    .slice(0, 5);
+
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(9);
+                doc.setTextColor(50, 50, 50);
+                topOwners.forEach((owner, idx) => {
+                    doc.text(`${idx + 1}. ${owner.name} - ${owner.count} leads (₹${(owner.value / 100000).toFixed(2)}Cr)`, margin + 2, y);
+                    y += 6;
+                });
+
+                y += 8;
+
+                // Leads Table
+                if (y < pageHeight - 40) {
+                    const leadsData = filteredLeads.slice(0, 30).map(lead => [
+                        lead.users?.full_name || 'Unknown',
+                        lead.company_name?.substring(0, 20) || 'N/A',
+                        lead.lead_statuses?.name || 'Unknown',
+                        `₹${(Number(lead.opportunity_value) || 0) / 10000000}Cr`,
+                        lead.created_at ? new Date(lead.created_at).toLocaleDateString() : 'N/A'
+                    ]);
+
+                    doc.autoTable({
+                        startY: y,
+                        head: [['Owner', 'Company', 'Status', 'Value', 'Created']],
+                        body: leadsData,
+                        margin: { left: margin, right: margin },
+                        headStyles: { fillColor: [220, 38, 38], textColor: 255 },
+                        alternateRowStyles: { fillColor: [244, 246, 250] },
+                        columnStyles: { 3: { halign: 'right' } },
+                        theme: 'grid',
+                        fontSize: 8
+                    });
+                }
+
+                // Save PDF
+                const fileName = `SBEE_Weekly_Report_${new Date().toISOString().split('T')[0]}.pdf`;
+                doc.save(fileName);
+                showStatus(`✅ Report generated: ${fileName}`, 'success');
+
+            } catch (error) {
+                console.error(error);
+                showStatus(`❌ Error: ${error.message}`, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+        }
+
+        function showStatus(message, type) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = `status ${type}`;
+            status.style.display = message ? 'block' : 'none';
+        }
+
+        // Load on page load
+        window.addEventListener('load', () => {
+            const url = localStorage.getItem('supabaseUrl');
+            const key = localStorage.getItem('supabaseKey');
+            if (url) document.getElementById('supabaseUrl').value = url;
+            if (key) document.getElementById('supabaseKey').value = key;
+        });
+    </script>
+</body>
+</html>
