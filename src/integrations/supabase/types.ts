@@ -5700,6 +5700,30 @@ export type Database = {
         }
         Returns: string
       }
+      upsert_company_profile: {
+        Args: { _payload: Json }
+        Returns: {
+          address: string | null
+          bank_account: string | null
+          bank_ifsc: string | null
+          bank_name: string | null
+          company_name: string
+          created_at: string
+          email: string | null
+          gst_number: string | null
+          id: string
+          logo_url: string | null
+          pan_number: string | null
+          phone: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "company_profile"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
     }
     Enums: {
       app_role: "admin" | "user" | "data_viewer" | "sales_manager"
