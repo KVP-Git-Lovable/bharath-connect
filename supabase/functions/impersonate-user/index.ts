@@ -163,7 +163,7 @@ serve(async (req) => {
         headers: { "Content-Type": "application/json", ...corsHeaders },
       }
     )
-  } catch (error) {
+  } catch (error: any) {
     console.error("Edge function error:", error)
     return new Response(
       JSON.stringify({ error: error.message || "Internal server error" }),

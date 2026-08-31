@@ -90,7 +90,7 @@ serve(async (req) => {
           });
           console.error(`Web Push error:`, error);
         }
-      } catch (error) {
+      } catch (error: any) {
         results.push({
           subscription: subscription.substring(0, 50),
           success: false,
@@ -109,7 +109,7 @@ serve(async (req) => {
       }),
       { headers: corsHeaders }
     );
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error in send-web-push-notification:", error);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,

@@ -320,7 +320,7 @@ Deno.serve(async (req) => {
         "Content-Disposition": `attachment; filename="SBEE_Weekly_Report_${new Date().toISOString().split("T")[0]}.pdf"`,
       },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error(error);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,

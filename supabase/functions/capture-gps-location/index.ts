@@ -93,7 +93,7 @@ serve(async (req) => {
       }),
       { status: 200, headers: corsHeaders }
     );
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error in capture-gps-location:", error);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
