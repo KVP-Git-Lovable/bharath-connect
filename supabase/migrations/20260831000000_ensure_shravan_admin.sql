@@ -27,8 +27,11 @@ CROSS JOIN LATERAL (
   ORDER BY CASE lower(name) WHEN 'system administrator' THEN 0 ELSE 1 END
   LIMIT 1
 ) sp
-WHERE u.full_name ILIKE '%shravan%' OR u.email ILIKE '%shravan%'
-ON CONFLICT (user_id, profile_id) DO NOTHING;
+WHERE (u.full_name ILIKE '%shravan%' OR u.email ILIKE '%shravan%')
+  AND NOT EXISTS (
+    SELECT 1 FROM public.user_security_profiles usp
+    WHERE usp.user_id = u.id AND usp.profile_id = sp.id
+  );
 
 -- 3) Ensure the admin profile has every module permission (including GPS Track,
 --    Expenses, and the Admin panel)
