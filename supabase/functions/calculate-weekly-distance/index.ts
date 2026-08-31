@@ -188,7 +188,7 @@ serve(async (req) => {
     return new Response(JSON.stringify(report), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (error) {
+  } catch (error: any) {
     return new Response(
       JSON.stringify({ error: error.message }),
       {

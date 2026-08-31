@@ -117,7 +117,7 @@ Deno.serve(async (req) => {
         } else {
           assigned++
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error(`Error processing user ${user.id}:`, err)
         failed++
       }
@@ -135,7 +135,7 @@ Deno.serve(async (req) => {
         status: 200,
       }
     )
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in assign-user-roles:', error)
     return new Response(
       JSON.stringify({ error: error.message }),

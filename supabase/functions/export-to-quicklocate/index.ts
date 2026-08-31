@@ -40,7 +40,7 @@ const TABLES = [
 const BATCH_SIZE = 500;
 
 async function migrateTable(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   table: string,
   targetUrl: string,
   secret: string,

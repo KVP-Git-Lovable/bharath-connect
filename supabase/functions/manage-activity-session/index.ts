@@ -67,7 +67,7 @@ serve(async (req) => {
     }
 
     throw new Error("Invalid action");
-  } catch (error) {
+  } catch (error: any) {
     return new Response(
       JSON.stringify({ error: error.message }),
       {

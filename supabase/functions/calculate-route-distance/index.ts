@@ -106,7 +106,7 @@ async function getRouteDistance(points: GPSPoint[]): Promise<DistanceResult> {
       distanceKm: Math.round((totalDistance / 1000) * 100) / 100, // Round to 2 decimals
       segments,
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error calculating route distance:", error);
     return {
       totalDistance: 0,
@@ -184,7 +184,7 @@ serve(async (req) => {
         "Access-Control-Allow-Origin": "*",
       },
     });
-  } catch (error) {
+  } catch (error: any) {
     return new Response(
       JSON.stringify({
         error: `Server error: ${error.message}`,

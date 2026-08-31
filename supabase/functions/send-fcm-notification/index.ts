@@ -88,7 +88,7 @@ serve(async (req) => {
           results.push({ token, success: false, error });
           console.error(`FCM error for token ${token}:`, error);
         }
-      } catch (error) {
+      } catch (error: any) {
         results.push({ token, success: false, error: error.message });
       }
     }
@@ -103,7 +103,7 @@ serve(async (req) => {
       }),
       { headers: corsHeaders }
     );
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error in send-fcm-notification:", error);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
