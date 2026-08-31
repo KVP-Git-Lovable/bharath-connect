@@ -3,6 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCallback, useMemo, useEffect } from "react";
 import { ADMIN_MODULE_PATH_MAP } from "@/components/security/permissionModules";
 import { useUserProfile } from "./useUserProfile";
+import { useCurrentUser } from "./useCurrentUser";
+
 
 interface ProfilePermission {
   object_name: string;
@@ -18,12 +20,15 @@ interface ProfilePermission {
 export function useProfilePermissions() {
   const queryClient = useQueryClient();
   const { isAdmin } = useUserProfile();
+  const { user } = useCurrentUser();
 
-  // Get current user's security profile
+  // Get current user's security profile.
+  // The key MUST include the user id, otherwise a previously signed-in user's
+  // security profile stays cached and drives this user's navigation.
   const { data: userProfile } = useQuery({
-    queryKey: ["current-user-security-profile"],
+    queryKey: ["current-user-security-profile", user?.id],
+    enabled: !!user?.id,
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
       if (!user) return null;
       const { data } = await supabase
         .from("user_security_profiles")
@@ -33,6 +38,7 @@ export function useProfilePermissions() {
       return data;
     },
   });
+
 
   const { data: permissions } = useQuery({
     queryKey: ["user-profile-permissions", userProfile?.profile_id],
