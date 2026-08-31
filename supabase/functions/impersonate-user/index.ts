@@ -113,16 +113,20 @@ serve(async (req) => {
 
     // Log impersonation to audit table
     try {
-    await supabaseAdmin.from("audit_logs").insert({
-      action: "admin_impersonate_user",
-      actor_user_id: currentUser.id,
-      target_user_id: target_user_id,
-      details: {
-        admin_email: currentUser.email,
-        target_email: targetUser.email,
-        timestamp: new Date().toISOString(),
-      },
-    }).catch((err) => console.warn("Audit log error:", err))
+      await supabaseAdmin.from("audit_logs").insert({
+        action: "admin_impersonate_user",
+        actor_user_id: currentUser.id,
+        target_user_id: target_user_id,
+        details: {
+          admin_email: currentUser.email,
+          target_email: targetUser.email,
+          timestamp: new Date().toISOString(),
+        },
+      })
+    } catch (err) {
+      console.warn("Audit log error:", err)
+    }
+
 
     // Generate passwordless link for target user (email signin)
     const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
