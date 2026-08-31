@@ -3,6 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCallback, useMemo, useEffect } from "react";
 import { ADMIN_MODULE_PATH_MAP } from "@/components/security/permissionModules";
 import { useUserProfile } from "./useUserProfile";
+import { useCurrentUser } from "./useCurrentUser";
+
 
 interface ProfilePermission {
   object_name: string;
