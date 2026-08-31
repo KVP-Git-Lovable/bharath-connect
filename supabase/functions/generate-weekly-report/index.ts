@@ -312,7 +312,7 @@ Deno.serve(async (req) => {
 
     // Save PDF
     const pdfBytes = await pdfDoc.save();
-    const pdfBase64 = encode(pdfBytes);
+    const pdfBase64 = encode(pdfBytes as unknown as ArrayBuffer);
 
     return new Response(pdfBase64, {
       headers: {

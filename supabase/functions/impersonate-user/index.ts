@@ -112,6 +112,7 @@ serve(async (req) => {
     }
 
     // Log impersonation to audit table
+    try {
     await supabaseAdmin.from("audit_logs").insert({
       action: "admin_impersonate_user",
       actor_user_id: currentUser.id,
@@ -125,14 +126,14 @@ serve(async (req) => {
 
     // Generate passwordless link for target user (email signin)
     const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-      type: "email_signin",
+      type: "magiclink",
       email: targetUser.email,
       options: {
         redirectTo: new URL(req.url).origin + "/auth/impersonate-callback",
       }
     })
 
-    if (linkError || !linkData?.properties?.email_link) {
+    if (linkError || !linkData?.properties?.action_link) {
       console.error("Link generation error:", linkError)
       return new Response(
         JSON.stringify({ error: "Failed to generate impersonation link" }),
@@ -142,7 +143,7 @@ serve(async (req) => {
 
     // Extract access token from the magic link
     // The link contains a token parameter that can be used to authenticate
-    const emailLink = linkData.properties.email_link
+    const emailLink = linkData.properties.action_link
     const linkUrl = new URL(emailLink)
     const accessToken = linkUrl.searchParams.get("token_hash")
 
