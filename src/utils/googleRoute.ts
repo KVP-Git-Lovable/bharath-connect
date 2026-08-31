@@ -12,34 +12,48 @@ export interface LatLng {
   lng: number;
 }
 
+/** How the final distance number was produced. Labels shown to the user must
+ *  match this — never claim "road-snapped" for a fallback calculation. */
+export type DistanceSource = "road-snapped" | "validated-gps" | "estimated-gap" | "mixed";
+
 export interface SnappedRoute {
-  /** Path to draw (road-snapped when `snapped` is true, raw track otherwise). */
+  /** Path to draw (road-snapped where snapping succeeded, validated track otherwise). */
   path: LatLng[];
-  /** Actual road distance in metres, or null when snapping was unavailable. */
+  /** Total metres (tracked + estimated), or null when routing was unavailable. */
   distanceMeters: number | null;
+  /** GPS-confirmed metres: measured along observed (snapped or validated) trail. */
+  trackedMeters: number;
+  /** Estimated metres: reconstructed across tracking blackouts. NEVER
+   *  reclassified as GPS-confirmed — the road taken during a gap is a guess. */
+  estimatedMeters: number;
+  /** Back-compat alias of estimatedMeters (amber "bridged km" label). */
+  bridgedMeters: number;
+  /** True only when every snap batch genuinely road-snapped. */
+  snappingComplete: boolean;
+  /** True when any stretch fell back to validated-GPS measurement
+   *  (circuit breaker, API failure, or the MAX_CALLS cap). */
+  snappingFallbackUsed: boolean;
+  source: DistanceSource;
+  /** Back-compat: true ⇔ snappingComplete. */
   snapped: boolean;
-  /** Metres contributed by bridging tracking blackouts (estimated, not recorded). */
-  bridgedMeters?: number;
 }
 
 /**
  * Distance engine for Day Tracking.
  *
- * Raw breadcrumbs are snapped onto real road geometry with the Google Roads API
- * (`snapToRoads`, interpolate=true) and the distance is measured ALONG that
- * geometry — the same question Google Maps Timeline answers ("which roads did
- * this phone actually cover"). The Routes API is used only to bridge tracking
- * gaps, where we genuinely have to guess the path between two known positions.
+ * Validated trajectory SEGMENTS (from gpsDistance.processTrajectory — the
+ * single segmentation authority) are snapped onto real road geometry with the
+ * Google Roads API (`snapToRoads`, interpolate=true) and the distance is
+ * measured ALONG that geometry. Segment boundaries are tracking blackouts;
+ * the Routes API bridges them and those metres are classified ESTIMATED,
+ * kept separate from GPS-confirmed (tracked) metres end-to-end.
  *
- * Falls back to the raw straight-line track whenever Google is unavailable.
+ * Falls back to the validated straight-line track whenever Google is
+ * unavailable — never to raw unfiltered GPS.
  */
 
 // Roads API accepts up to 100 points per request.
 const SNAP_BATCH = 100;
-// Beyond these thresholds the trail has a hole in it: bridge with a driving
-// route instead of pretending the breadcrumbs are continuous.
-const GAP_MINUTES = 3;
-const GAP_METERS = 500;
 // Safety cap on outbound calls for a very dense day.
 const MAX_CALLS = 60;
 
@@ -47,7 +61,7 @@ const MAX_CALLS = 60;
  * Circuit breaker: when the edge runtime is degraded (503
  * SUPABASE_EDGE_RUNTIME_SERVICE_DEGRADED) every call fails the same way. After
  * a couple of failures we stop calling for a cool-off window and silently use
- * the raw GPS track instead of hammering the gateway.
+ * the validated GPS track instead of hammering the gateway.
  */
 const BREAKER_THRESHOLD = 2;
 const BREAKER_COOLDOWN_MS = 60_000;
@@ -72,7 +86,6 @@ function noteRoutingSuccess() {
   breakerFailures = 0;
 }
 
-
 function legMeters(points: RoutePoint[]): number {
   let m = 0;
   for (let i = 1; i < points.length; i++) {
@@ -88,33 +101,6 @@ function legMeters(points: RoutePoint[]): number {
 
 const toLatLng = (p: RoutePoint): LatLng => ({ lat: p.latitude, lng: p.longitude });
 
-/** Split the track wherever tracking clearly dropped out. */
-function splitSegments(points: RoutePoint[]): RoutePoint[][] {
-  const segments: RoutePoint[][] = [];
-  let current: RoutePoint[] = [];
-  for (let i = 0; i < points.length; i++) {
-    const p = points[i];
-    if (current.length === 0) {
-      current.push(p);
-      continue;
-    }
-    const prev = current[current.length - 1];
-    const distM = haversineMeters(prev.latitude, prev.longitude, p.latitude, p.longitude);
-    const gapMin =
-      prev.timestamp && p.timestamp
-        ? (new Date(p.timestamp).getTime() - new Date(prev.timestamp).getTime()) / 60000
-        : 0;
-    if (gapMin > GAP_MINUTES || distM > GAP_METERS) {
-      segments.push(current);
-      current = [p];
-    } else {
-      current.push(p);
-    }
-  }
-  if (current.length) segments.push(current);
-  return segments;
-}
-
 async function snapBatch(batch: RoutePoint[]): Promise<{ path: LatLng[]; meters: number; snapped: boolean }> {
   const raw = batch.map(toLatLng);
   if (routingUnavailable()) return { path: raw, meters: legMeters(batch), snapped: false };
@@ -128,11 +114,10 @@ async function snapBatch(batch: RoutePoint[]): Promise<{ path: LatLng[]; meters:
     return { path, meters, snapped: data?.snapped === true };
   } catch (e) {
     noteRoutingFailure();
-    console.warn("snap-roads batch failed, using raw track", e);
+    console.warn("snap-roads batch failed, using validated track", e);
     return { path: raw, meters: legMeters(batch), snapped: false };
   }
 }
-
 
 // Sanity guards for bridging a blackout: beyond these the two fixes are not a
 // plausible single road journey (flight, stale fix, day rollover) — skip them.
@@ -169,27 +154,48 @@ async function bridgeGap(a: RoutePoint, b: RoutePoint): Promise<{ path: LatLng[]
     noteRoutingFailure();
     console.warn("gap bridge failed, using straight line", e);
     return { path: [toLatLng(b)], meters: straight, snapped: false };
-
   }
 }
 
-export async function getSnappedRoute(points: RoutePoint[]): Promise<SnappedRoute> {
-  if (points.length < 2) return { path: [], distanceMeters: null, snapped: false };
+/**
+ * Snap validated trajectory segments to roads and measure the distance.
+ *
+ * @param segments Chronological validated segments from
+ *   gpsDistance.processTrajectory; the holes BETWEEN segments are tracking
+ *   gaps, bridged here and classified as estimated distance.
+ */
+export async function getSnappedRoute(segments: RoutePoint[][]): Promise<SnappedRoute> {
+  const nonEmpty = segments.filter((s) => s.length > 0);
+  const totalPoints = nonEmpty.reduce((n, s) => n + s.length, 0);
+  const failure = (): SnappedRoute => ({
+    path: nonEmpty.flat().map(toLatLng),
+    distanceMeters: null,
+    trackedMeters: 0,
+    estimatedMeters: 0,
+    bridgedMeters: 0,
+    snappingComplete: false,
+    snappingFallbackUsed: true,
+    source: "validated-gps",
+    snapped: false,
+  });
+  if (totalPoints < 2) {
+    return { ...failure(), path: [], snappingFallbackUsed: false };
+  }
 
-  const segments = splitSegments(points);
   let calls = 0;
   const path: LatLng[] = [];
-  let meters = 0;
-  let bridgedMeters = 0;
+  let trackedMeters = 0;
+  let estimatedMeters = 0;
+  let snappingFallbackUsed = false;
   let allSnapped = true;
 
   try {
-    for (let s = 0; s < segments.length; s++) {
-      const segment = segments[s];
+    for (let s = 0; s < nonEmpty.length; s++) {
+      const segment = nonEmpty[s];
 
       if (s > 0) {
         // Bridge the hole between the previous segment and this one.
-        const prevSeg = segments[s - 1];
+        const prevSeg = nonEmpty[s - 1];
         const from = prevSeg[prevSeg.length - 1];
         const to = segment[0];
         if (!isBridgeable(from, to)) {
@@ -200,50 +206,71 @@ export async function getSnappedRoute(points: RoutePoint[]): Promise<SnappedRout
           calls++;
           const bridge = await bridgeGap(from, to);
           path.push(...bridge.path);
-          meters += bridge.meters;
-          bridgedMeters += bridge.meters;
+          estimatedMeters += bridge.meters;
           if (!bridge.snapped) allSnapped = false;
         } else {
           const straight = haversineMeters(from.latitude, from.longitude, to.latitude, to.longitude);
-          meters += straight;
-          bridgedMeters += straight;
+          estimatedMeters += straight;
           path.push(toLatLng(to));
           allSnapped = false;
         }
       }
-
 
       if (segment.length < 2) {
         path.push(toLatLng(segment[0]));
         continue;
       }
 
-      // Snap the segment in overlapping batches so no distance is lost at seams.
+      // Snap the segment in overlapping batches (stride SNAP_BATCH-1) so the
+      // seam leg is measured exactly once; drop the duplicated seam vertex
+      // from the drawn path.
+      let firstBatch = true;
       for (let i = 0; i < segment.length - 1; i += SNAP_BATCH - 1) {
         const batch = segment.slice(i, i + SNAP_BATCH);
         if (batch.length < 2) break;
         if (calls >= MAX_CALLS) {
-          path.push(...batch.map(toLatLng));
-          meters += legMeters(batch);
+          path.push(...batch.slice(firstBatch ? 0 : 1).map(toLatLng));
+          trackedMeters += legMeters(batch);
+          snappingFallbackUsed = true;
           allSnapped = false;
+          firstBatch = false;
           continue;
         }
         calls++;
         const res = await snapBatch(batch);
-        path.push(...res.path);
-        meters += res.meters;
-        if (!res.snapped) allSnapped = false;
+        path.push(...(firstBatch ? res.path : res.path.slice(1)));
+        trackedMeters += res.meters;
+        if (!res.snapped) {
+          snappingFallbackUsed = true;
+          allSnapped = false;
+        }
+        firstBatch = false;
       }
     }
 
     if (path.length < 2) throw new Error("empty route");
-    return { path, distanceMeters: meters > 0 ? meters : null, snapped: allSnapped, bridgedMeters };
-  } catch {
+
+    const meters = trackedMeters + estimatedMeters;
+    const snappingComplete = allSnapped && !snappingFallbackUsed;
+    let source: DistanceSource;
+    if (trackedMeters === 0 && estimatedMeters > 0) source = "estimated-gap";
+    else if (snappingComplete && estimatedMeters === 0) source = "road-snapped";
+    else if (!snappingComplete || estimatedMeters > 0) source = "mixed";
+    else source = "road-snapped";
+
     return {
-      path: points.map(toLatLng),
-      distanceMeters: null,
-      snapped: false,
+      path,
+      distanceMeters: meters > 0 ? meters : null,
+      trackedMeters,
+      estimatedMeters,
+      bridgedMeters: estimatedMeters,
+      snappingComplete,
+      snappingFallbackUsed,
+      source,
+      snapped: snappingComplete,
     };
+  } catch {
+    return failure();
   }
 }
 

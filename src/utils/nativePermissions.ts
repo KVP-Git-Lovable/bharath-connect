@@ -41,6 +41,8 @@ async function nativeGetPosition(opts: { enableHighAccuracy: boolean; timeout: n
     latitude: pos.coords.latitude,
     longitude: pos.coords.longitude,
     accuracy: pos.coords.accuracy,
+    speed: pos.coords.speed ?? null,
+    heading: pos.coords.heading ?? null,
   };
 }
 
@@ -121,13 +123,21 @@ export async function prepareNativeLocationSettings(): Promise<NativeLocationPow
  * since a single getCurrentPosition call often returns a cached/low-accuracy fix
  * (especially on desktop where Wi-Fi/IP geolocation can be off by kilometers).
  */
-function webGetPosition(opts: { enableHighAccuracy: boolean; timeout: number }): Promise<{ latitude: number; longitude: number; accuracy: number }> {
+type PositionFix = {
+  latitude: number;
+  longitude: number;
+  accuracy: number;
+  speed: number | null;
+  heading: number | null;
+};
+
+function webGetPosition(opts: { enableHighAccuracy: boolean; timeout: number }): Promise<PositionFix> {
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) {
       return reject(new Error('Geolocation not supported'));
     }
 
-    let best: { latitude: number; longitude: number; accuracy: number } | null = null;
+    let best: PositionFix | null = null;
     let settled = false;
     const ACCEPT_ACCURACY_M = 50; // return early if we get a reading this good
     const SAMPLE_MS = Math.min(8000, Math.max(3000, opts.timeout / 2));
@@ -148,6 +158,8 @@ function webGetPosition(opts: { enableHighAccuracy: boolean; timeout: number }):
           latitude: pos.coords.latitude,
           longitude: pos.coords.longitude,
           accuracy: pos.coords.accuracy,
+          speed: pos.coords.speed ?? null,
+          heading: pos.coords.heading ?? null,
         };
         if (!best || reading.accuracy < best.accuracy) best = reading;
         if (reading.accuracy <= ACCEPT_ACCURACY_M) finish();

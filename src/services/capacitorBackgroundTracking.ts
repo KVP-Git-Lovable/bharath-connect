@@ -62,6 +62,7 @@ export async function startCapacitorBackgroundTracking(userId: string): Promise<
           longitude: location.longitude,
           accuracy: location.accuracy,
           speed: location.speed,
+          heading: location.bearing ?? null,
           timestamp: new Date().toISOString(),
         });
 
@@ -118,6 +119,7 @@ async function saveLocationToDatabase(
     longitude: number;
     accuracy: number | null;
     speed: number | null;
+    heading: number | null;
     timestamp: string;
   }
 ): Promise<void> {
@@ -148,6 +150,7 @@ async function saveLocationToDatabase(
       longitude: location.longitude,
       accuracy: location.accuracy,
       speed: location.speed,
+      heading: location.heading,
       timestamp: location.timestamp,
     });
   } catch (error) {

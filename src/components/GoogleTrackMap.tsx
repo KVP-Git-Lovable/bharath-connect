@@ -1,6 +1,5 @@
 import { forwardRef, useEffect, useRef, useState } from "react";
 import { format } from "date-fns";
-import { getSnappedRoute } from "@/utils/googleRoute";
 
 interface GPSPoint {
   latitude: number;
@@ -87,7 +86,6 @@ const GoogleTrackMap = forwardRef<HTMLDivElement, GoogleTrackMapProps>(function 
   const infoRef = useRef<any>(null);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [routedPath, setRoutedPath] = useState<{ lat: number; lng: number }[]>([]);
 
   const points = gpsPoints || [];
 
@@ -153,29 +151,6 @@ const GoogleTrackMap = forwardRef<HTMLDivElement, GoogleTrackMapProps>(function 
   }, [ready]);
 
 
-  // Snap trail to roads (skipped when the parent already computed the route)
-  useEffect(() => {
-    let cancelled = false;
-    if (routePath) {
-      setRoutedPath(routePath);
-      return;
-    }
-    if (points.length < 2) {
-      setRoutedPath([]);
-      return;
-    }
-    getSnappedRoute(points)
-      .then((res) => !cancelled && setRoutedPath(res.path))
-      .catch(() => {
-        if (!cancelled) setRoutedPath(points.map((p) => ({ lat: p.latitude, lng: p.longitude })));
-      });
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [routePath, JSON.stringify(points.map((p) => [p.latitude, p.longitude]))]);
-
-
   // Draw everything
   useEffect(() => {
     if (!ready || !mapRef.current) return;
@@ -215,9 +190,14 @@ const GoogleTrackMap = forwardRef<HTMLDivElement, GoogleTrackMapProps>(function 
       hasBounds = true;
     };
 
-    // Trail polyline
+    // Trail polyline. The parent owns routing (one snap sequence per data
+    // load; the drawn line and the displayed distance always come from the
+    // same SnappedRoute). While the parent's route is still resolving, draw
+    // the validated raw trail.
     const linePath =
-      routedPath.length > 0 ? routedPath : points.map((p) => ({ lat: p.latitude, lng: p.longitude }));
+      routePath && routePath.length > 0
+        ? routePath
+        : points.map((p) => ({ lat: p.latitude, lng: p.longitude }));
     if (linePath.length > 1) {
       const line = new g.maps.Polyline({
         path: linePath,
@@ -275,7 +255,7 @@ const GoogleTrackMap = forwardRef<HTMLDivElement, GoogleTrackMapProps>(function 
       });
       overlaysRef.current.push({ setMap: () => g.maps.event.removeListener(listener) });
     }
-  }, [ready, location, activityMarkers, points, routedPath]);
+  }, [ready, location, activityMarkers, points, routePath]);
 
   if (error) {
     return (

@@ -1,4 +1,4 @@
-import { haversineMeters as haversineMetersLatLng } from "@/utils/gpsDistance";
+import { haversineMeters as haversineMetersLatLng, GPS_PROCESSING_CONFIG } from "@/utils/gpsDistance";
 
 export interface GateFix {
   lat: number;
@@ -7,10 +7,12 @@ export interface GateFix {
   accuracy: number | null;
 }
 
-const MIN_MOVE_METERS_FLOOR = 10; // floor — only throttles capture-side writes;
-                                   // gpsDistance.ts is the authoritative arbiter
-                                   // of counted distance for display
-const MAX_ACCURACY_M = 150;        // same worst-case fallback used for accuracy gating
+// Thresholds come from the shared engine config so capture-side gating can
+// never drift from the display-side algorithm. This gate only throttles
+// capture-side writes; gpsDistance.ts is the authoritative arbiter of
+// counted distance for display.
+const MIN_MOVE_METERS_FLOOR = GPS_PROCESSING_CONFIG.DUPLICATE_EPSILON_METERS;
+const MAX_ACCURACY_M = GPS_PROCESSING_CONFIG.MAX_ACCURACY_METERS; // worst-case fallback for null accuracy
 
 function haversineMeters(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
   return haversineMetersLatLng(a.lat, a.lng, b.lat, b.lng);

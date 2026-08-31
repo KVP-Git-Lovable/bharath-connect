@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, Suspense, lazy } from "react";
+import { useState, useEffect, useCallback, useMemo, Suspense, lazy } from "react";
 import { motion } from "framer-motion";
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
@@ -24,7 +24,12 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { useGPSTeamMembers } from "@/hooks/useGPSTeamMembers";
 import { getSnappedRoute, type SnappedRoute } from "@/utils/googleRoute";
-import { filterTrackPoints } from "@/utils/gpsDistance";
+import {
+  processTrajectory,
+  GPS_PROCESSING_CONFIG,
+  type ProcessedTrajectory,
+} from "@/utils/gpsDistance";
+import { filterPointsByAttendance } from "@/utils/attendanceGate";
 
 
 const GoogleTrackMap = lazy(() =>
@@ -43,6 +48,7 @@ interface GPSPoint {
   timestamp: string;
   speed: number | null;
   accuracy: number | null;
+  heading?: number | null;
 }
 
 interface GPSStop {
@@ -68,6 +74,61 @@ const MapFallback = () => (
   </div>
 );
 
+const UserSelector = ({
+  value,
+  onChange,
+  teamMembers,
+  currentUserId,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  teamMembers: { id: string; full_name: string }[];
+  currentUserId: string | null;
+}) => (
+  <Select value={value} onValueChange={onChange}>
+    <SelectTrigger>
+      <SelectValue />
+    </SelectTrigger>
+    <SelectContent>
+      <SelectItem value="me">My Data</SelectItem>
+      {teamMembers
+        .filter((m) => m.id !== currentUserId)
+        .map((m) => (
+          <SelectItem key={m.id} value={m.id}>{m.full_name}</SelectItem>
+        ))}
+    </SelectContent>
+  </Select>
+);
+
+// Supabase caps a single select at 1000 rows; a dense tracking day (or a
+// week/month range) exceeds that. Page until exhausted; if the hard safety
+// cap is ever hit, say so instead of presenting partial data as complete.
+const GPS_FETCH_PAGE_SIZE = 1000;
+const GPS_FETCH_MAX_PAGES = 30;
+
+async function fetchAllGpsRows(
+  userId: string,
+  from: string,
+  to: string
+): Promise<{ rows: (GPSPoint & { date?: string })[]; truncated: boolean }> {
+  const rows: (GPSPoint & { date?: string })[] = [];
+  for (let page = 0; page < GPS_FETCH_MAX_PAGES; page++) {
+    const { data, error } = await supabase
+      .from("gps_tracking")
+      .select("latitude, longitude, timestamp, speed, accuracy, heading, date")
+      .eq("user_id", userId)
+      .gte("date", from)
+      .lte("date", to)
+      .order("timestamp", { ascending: true })
+      .order("id", { ascending: true })
+      .range(page * GPS_FETCH_PAGE_SIZE, (page + 1) * GPS_FETCH_PAGE_SIZE - 1);
+    if (error) throw error;
+    rows.push(...((data ?? []) as (GPSPoint & { date?: string })[]));
+    if (!data || data.length < GPS_FETCH_PAGE_SIZE) return { rows, truncated: false };
+  }
+  return { rows, truncated: true };
+}
+
 export default function GPSTracking() {
   const [activeTab, setActiveTab] = useState("current");
   const { currentUserId, isAdmin, teamMembers } = useGPSTeamMembers();
@@ -85,11 +146,16 @@ export default function GPSTracking() {
   const [customFromDate, setCustomFromDate] = useState<Date | undefined>(new Date());
   const [customToDate, setCustomToDate] = useState<Date | undefined>(new Date());
   const [selectedUser, setSelectedUser] = useState<string>("me");
-  const [gpsPoints, setGpsPoints] = useState<GPSPoint[]>([]);
+  const [trajectory, setTrajectory] = useState<ProcessedTrajectory | null>(null);
+  const [latestFix, setLatestFix] = useState<GPSPoint | null>(null);
   const [gpsStops, setGpsStops] = useState<GPSStop[]>([]);
   const [activityMarkers, setActivityMarkers] = useState<ActivityAtLocation[]>([]);
   const [trackingLoading, setTrackingLoading] = useState(false);
   const [route, setRoute] = useState<SnappedRoute | null>(null);
+  // Internal flag: the paged GPS fetch hit its hard safety cap, so the
+  // dataset (and therefore the distance) is incomplete. Not shown in the UI
+  // yet, but the system must know the day was truncated.
+  const [trackingDataTruncated, setTrackingDataTruncated] = useState(false);
 
 
   // Get own location
@@ -190,13 +256,7 @@ export default function GPSTracking() {
     setTrackingLoading(true);
     try {
       const [pointsRes, attendanceRes, stopsRes, activitiesRes] = await Promise.all([
-        supabase
-          .from("gps_tracking")
-          .select("latitude, longitude, timestamp, speed, accuracy, date")
-          .eq("user_id", userId)
-          .gte("date", from)
-          .lte("date", to)
-          .order("timestamp", { ascending: true }),
+        fetchAllGpsRows(userId, from, to),
         // Check-in windows live in `attendance` (activity_sessions is unused)
         supabase
           .from("attendance")
@@ -218,52 +278,48 @@ export default function GPSTracking() {
           .lte("activity_date", to),
       ]);
 
-      // Filter GPS points - remove noise/jitter while keeping real movement
-      let points = (pointsRes.data || []) as (GPSPoint & { date?: string })[];
-      const attendanceRows = (attendanceRes.data || []).filter((a: any) => a.check_in_time);
-      const attendanceDates = new Set(attendanceRows.map((a: any) => a.date));
+      const { rows: points, truncated } = pointsRes;
+      setTrackingDataTruncated(truncated);
 
-      // Keep points inside a check-in window; if a day has no attendance record
-      // at all, keep that day's points rather than blanking the trail.
-      // A grace window absorbs the seconds/minutes between the first location
-      // fix and the check-in write (and the same at check-out) — without it the
-      // opening leg of the day is silently dropped and distance reads 0 km.
-      const SESSION_GRACE_MS = 15 * 60 * 1000;
-      const isInActiveSession = (p: { timestamp: string; date?: string }): boolean => {
-        if (p.date && !attendanceDates.has(p.date)) return true;
-        const pointTime = new Date(p.timestamp).getTime();
-        return attendanceRows.some((a: any) => {
-          const checkinTime = new Date(a.check_in_time).getTime() - SESSION_GRACE_MS;
-          const checkoutTime = a.check_out_time
-            ? new Date(a.check_out_time).getTime() + SESSION_GRACE_MS
-            : Infinity;
-          return pointTime >= checkinTime && pointTime <= checkoutTime;
-        });
-      };
+      // Attendance gating: points inside a check-in window; a day with no
+      // attendance record keeps its points rather than blanking the trail
+      // (grace + open-session + overnight rules live in attendanceGate.ts).
+      const sessionFilteredPoints = filterPointsByAttendance(
+        points,
+        (attendanceRes.data || []) as {
+          date: string;
+          check_in_time: string | null;
+          check_out_time: string | null;
+        }[]
+      );
 
-      const sessionFilteredPoints = points.filter((p) => isInActiveSession(p));
+      // Validated-trajectory engine — shared algorithm on web, dashboard, APK
+      // (sort, dedup, accuracy bands, jump + stationary + gap handling).
+      const processed = processTrajectory(sessionFilteredPoints);
+      setTrajectory(processed);
 
-
-      // Shared filtering — identical algorithm on web, dashboard, and APK
-      // (accuracy gate, stationary jitter, 160 km/h jump, 5-min gap split)
-      const cleanedPoints = filterTrackPoints(sessionFilteredPoints) as GPSPoint[];
-
-      // The jitter filter collapses a stationary cluster onto its first fix, so
-      // the "Latest" reading can lag hours behind. Re-anchor the tail with the
-      // last usable raw fix (adds only a few metres of distance).
+      // The stationary filter collapses a cluster, so the "Latest" reading can
+      // lag. Track the last usable raw fix for DISPLAY ONLY (pins/timeline) —
+      // it never enters the trajectory, the snapping input, or the distance.
       const lastRaw = [...sessionFilteredPoints]
         .reverse()
-        .find((p) => p.accuracy != null && p.accuracy <= 150);
-      if (
-        lastRaw &&
-        (cleanedPoints.length === 0 ||
-          cleanedPoints[cleanedPoints.length - 1].timestamp !== lastRaw.timestamp)
-      ) {
-        cleanedPoints.push(lastRaw as GPSPoint);
-      }
+        .find(
+          (p) => p.accuracy != null && p.accuracy <= GPS_PROCESSING_CONFIG.MAX_ACCURACY_METERS
+        );
+      setLatestFix((lastRaw as GPSPoint) ?? null);
 
-      console.log("Filtered from", points.length, "to", cleanedPoints.length, "points");
-      setGpsPoints(cleanedPoints);
+      if (import.meta.env.DEV) {
+        console.debug("[GPSTracking] processed", {
+          ...processed.metrics,
+          trackingDataTruncated: truncated,
+          rawRowsFetched: points.length,
+        });
+        if (truncated) {
+          console.warn(
+            `[GPSTracking] GPS fetch hit the ${GPS_FETCH_MAX_PAGES}-page safety cap — dataset is incomplete`
+          );
+        }
+      }
 
       setGpsStops(stopsRes.data || []);
 
@@ -296,71 +352,73 @@ export default function GPSTracking() {
     }
   }, [activeTab, fetchTrackingData]);
 
-  // Resolve the real road route + distance once per set of GPS points
-  const routeKey = gpsPoints.map((p) => `${p.latitude.toFixed(5)},${p.longitude.toFixed(5)}`).join("|");
+  // Display trajectory: validated points, plus the latest raw fix appended
+  // for the pins/timeline (display only — never part of the distance).
+  const gpsPoints = useMemo<GPSPoint[]>(() => {
+    const pts = (trajectory?.points ?? []) as GPSPoint[];
+    if (
+      latestFix &&
+      (pts.length === 0 || pts[pts.length - 1].timestamp !== latestFix.timestamp)
+    ) {
+      return [...pts, latestFix];
+    }
+    return pts;
+  }, [trajectory, latestFix]);
+
+  // Resolve the real road route + distance once per processed trajectory.
+  // Validated segments go to snapping — the engine is the only segmentation
+  // authority, and gap bridging distance comes back classified as estimated.
   useEffect(() => {
     let cancelled = false;
-    if (gpsPoints.length < 2) {
+    if (!trajectory || trajectory.points.length < 2) {
       setRoute(null);
       return;
     }
-    getSnappedRoute(gpsPoints)
+    getSnappedRoute(trajectory.segments)
       .then((res) => !cancelled && setRoute(res))
       .catch(() => !cancelled && setRoute(null));
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [routeKey]);
+  }, [trajectory]);
 
+  // Build markers (stable identity — the map tears down overlays on change)
+  const allMapMarkers = useMemo(
+    () => [
+      ...gpsStops.map((s) => ({
+        lat: s.latitude,
+        lng: s.longitude,
+        name: s.reason || `Stop (${s.duration_minutes || 0} min)`,
+      })),
+      ...activityMarkers.map((a) => ({
+        lat: a.lat,
+        lng: a.lng,
+        name: `${a.name}${a.status ? ` · ${a.status}` : ""}${a.timestamp ? ` · ${format(new Date(a.timestamp), "hh:mm a")}` : ""}`,
+      })),
+    ],
+    [gpsStops, activityMarkers]
+  );
 
-
-  // Build markers
-  const allMapMarkers = [
-    ...gpsStops.map((s) => ({
-      lat: s.latitude,
-      lng: s.longitude,
-      name: s.reason || `Stop (${s.duration_minutes || 0} min)`,
-    })),
-    ...activityMarkers.map((a) => ({
-      lat: a.lat,
-      lng: a.lng,
-      name: `${a.name}${a.status ? ` · ${a.status}` : ""}${a.timestamp ? ` · ${format(new Date(a.timestamp), "hh:mm a")}` : ""}`,
-    })),
-  ];
-
-  // Straight-line fallback estimate
-  const haversineDistance = gpsPoints.length > 1
-    ? gpsPoints.reduce((acc, p, i) => {
-        if (i === 0) return 0;
-        const prev = gpsPoints[i - 1];
-        const R = 6371;
-        const dLat = ((p.latitude - prev.latitude) * Math.PI) / 180;
-        const dLon = ((p.longitude - prev.longitude) * Math.PI) / 180;
-        const a =
-          Math.sin(dLat / 2) ** 2 +
-          Math.cos((prev.latitude * Math.PI) / 180) *
-            Math.cos((p.latitude * Math.PI) / 180) *
-            Math.sin(dLon / 2) ** 2;
-        return acc + R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-      }, 0)
-    : 0;
-
-  // Real road distance snapped onto actual roads (falls back to straight-line)
+  // Distance ladder: road-snapped total when routing succeeded, otherwise the
+  // validated trajectory distance. Raw unfiltered GPS distance is never used.
   const isRoadDistance = route?.distanceMeters != null;
-  const totalDistance = isRoadDistance ? (route!.distanceMeters as number) / 1000 : haversineDistance;
-  // Kilometres reconstructed across tracking blackouts (Routes API estimate)
-  const bridgedKm = (route?.bridgedMeters ?? 0) / 1000;
+  const totalDistance = isRoadDistance
+    ? (route!.distanceMeters as number) / 1000
+    : trajectory?.trackedDistanceKm ?? 0;
+  // Kilometres reconstructed across tracking blackouts (estimated, not recorded)
+  const bridgedKm = (route?.estimatedMeters ?? 0) / 1000;
+  // Truthful label: "road-snapped" only when snapping genuinely completed with
+  // no estimated stretch; anything mixed/bridged reads "part estimated".
+  const distanceLabel = isRoadDistance
+    ? route!.source === "road-snapped"
+      ? "road-snapped"
+      : "part estimated"
+    : "estimated";
 
   // Capture diagnostics — a long hole in the trail means the phone stopped
   // reporting (Doze / battery optimisation), and no route API can recover
   // kilometres that were never recorded.
-  const longestGapMinutes = gpsPoints.reduce((max, p, i) => {
-    if (i === 0) return 0;
-    const gap =
-      (new Date(p.timestamp).getTime() - new Date(gpsPoints[i - 1].timestamp).getTime()) / 60000;
-    return Math.max(max, gap);
-  }, 0);
+  const longestGapMinutes = trajectory?.metrics.longestGapMinutes ?? 0;
 
   // Android won't let an app silently disable its own battery optimisation
   // or upgrade location to "Allow all the time" — both need the user's tap
@@ -398,22 +456,6 @@ export default function GPSTracking() {
     ? "My Location"
     : teamMembers.find(m => m.id === currentSelectedUser)?.full_name || "Selected User";
 
-  const UserSelector = ({ value, onChange }: { value: string; onChange: (v: string) => void }) => (
-    <Select value={value} onValueChange={onChange}>
-      <SelectTrigger>
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="me">My Data</SelectItem>
-        {teamMembers
-          .filter((m) => m.id !== currentUserId)
-          .map((m) => (
-            <SelectItem key={m.id} value={m.id}>{m.full_name}</SelectItem>
-          ))}
-      </SelectContent>
-    </Select>
-  );
-
   return (
     <motion.div
       className="p-4 space-y-4 max-w-4xl mx-auto"
@@ -438,7 +480,12 @@ export default function GPSTracking() {
             <Card className="shadow-card">
               <CardContent className="p-4 space-y-2">
                 <p className="text-sm font-medium">Select User</p>
-                <UserSelector value={currentSelectedUser} onChange={setCurrentSelectedUser} />
+                <UserSelector
+                  value={currentSelectedUser}
+                  onChange={setCurrentSelectedUser}
+                  teamMembers={teamMembers}
+                  currentUserId={currentUserId}
+                />
               </CardContent>
             </Card>
           )}
@@ -504,7 +551,12 @@ export default function GPSTracking() {
               {hasTeamMembers && (
                 <>
                   <p className="text-sm font-medium">Select Team Member</p>
-                  <UserSelector value={selectedUser} onChange={setSelectedUser} />
+                  <UserSelector
+                    value={selectedUser}
+                    onChange={setSelectedUser}
+                    teamMembers={teamMembers}
+                    currentUserId={currentUserId}
+                  />
                 </>
               )}
 
@@ -564,14 +616,14 @@ export default function GPSTracking() {
 
           {/* Summary cards */}
           {gpsPoints.length > 0 && (
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-3 gap-2" data-truncated={trackingDataTruncated || undefined}>
               <Card className="shadow-card">
                 <CardContent className="p-3 text-center">
                   <Navigation className="h-4 w-4 mx-auto mb-1 text-primary" />
                   <p className="text-xs text-muted-foreground">Distance</p>
                   <p className="text-sm font-semibold">{totalDistance.toFixed(1)} km</p>
                   <p className="text-[10px] text-muted-foreground mt-0.5">
-                    {isRoadDistance ? (route?.snapped ? "road-snapped" : "part estimated") : "estimated"}
+                    {distanceLabel}
                   </p>
                   {bridgedKm >= 0.1 && (
                     <p className="text-[10px] text-amber-600 mt-0.5">

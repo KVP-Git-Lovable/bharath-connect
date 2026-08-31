@@ -2,25 +2,20 @@ import { useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { getCurrentPosition, isNative, prepareNativeLocationSettings } from "@/utils/nativePermissions";
 import { shouldAcceptMove } from "@/utils/gpsCaptureGate";
+import { GPS_PROCESSING_CONFIG, haversineMeters as haversine } from "@/utils/gpsDistance";
 import { format } from "date-fns";
 
 const INTERVAL_MS = 15_000;          // safety heartbeat: sample at least every 15s
 const FOREGROUND_POLL_MS = 15_000;   // web / non-native fallback
 const WATCHDOG_MS = 5 * 60_000;      // no point written for 5 min while the day is
                                      // open ⇒ the OS killed the watcher: re-register
-const MAX_ACCURACY_M = 150;          // reject fixes worse than 150m (cell-tower guesses create phantom distance)
+// Reject fixes worse than this (cell-tower guesses create phantom distance) —
+// same threshold the display-side trajectory engine uses.
+const MAX_ACCURACY_M = GPS_PROCESSING_CONFIG.MAX_ACCURACY_METERS;
 const MAX_JUMP_METERS = 10000;       // reject teleport jumps >10km between consecutive samples
 
 function haversineMeters(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
-  const R = 6371000;
-  const dLat = ((b.lat - a.lat) * Math.PI) / 180;
-  const dLon = ((b.lng - a.lng) * Math.PI) / 180;
-  const s =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((a.lat * Math.PI) / 180) *
-      Math.cos((b.lat * Math.PI) / 180) *
-      Math.sin(dLon / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(s), Math.sqrt(1 - s));
+  return haversine(a.lat, a.lng, b.lat, b.lng);
 }
 
 /**
@@ -41,7 +36,14 @@ function haversineMeters(a: { lat: number; lng: number }, b: { lat: number; lng:
 export function useGPSTracker(userId: string | null | undefined) {
   const activeRef = useRef(false);
   const lastPointRef = useRef<{ lat: number; lng: number; ts: number; accuracy: number | null } | null>(null);
-  const pendingJumpRef = useRef<{ lat: number; lng: number; accuracy: number | null; ts: number } | null>(null);
+  const pendingJumpRef = useRef<{
+    lat: number;
+    lng: number;
+    accuracy: number | null;
+    ts: number;
+    speed: number | null;
+    heading: number | null;
+  } | null>(null);
   const timerRef = useRef<number | null>(null);
   const watcherIdRef = useRef<string | null>(null);
   const foregroundBusyRef = useRef(false);
@@ -90,7 +92,9 @@ export function useGPSTracker(userId: string | null | undefined) {
       lng: number,
       accuracy: number | null,
       ts: number,
-      advanceAnchor: boolean
+      advanceAnchor: boolean,
+      speed: number | null = null,
+      heading: number | null = null
     ) {
       if (advanceAnchor) lastPointRef.current = { lat, lng, ts, accuracy };
       lastWriteRef.current = Date.now();
@@ -100,12 +104,22 @@ export function useGPSTracker(userId: string | null | undefined) {
         latitude: lat,
         longitude: lng,
         accuracy,
+        // Device speed (m/s) and heading feed the trajectory engine's
+        // plausibility checks — store them whenever the fix provides them.
+        speed,
+        heading,
         timestamp: new Date(ts).toISOString(),
         date: today,
       });
     }
 
-    async function insertPoint(lat: number, lng: number, accuracy: number | null) {
+    async function insertPoint(
+      lat: number,
+      lng: number,
+      accuracy: number | null,
+      speed: number | null = null,
+      heading: number | null = null
+    ) {
       // Reject low-accuracy fixes (IP/Wi-Fi guesses can be 10s of km off)
       if (accuracy != null && accuracy > MAX_ACCURACY_M) {
         console.debug("[GPSTracker] rejected low-accuracy fix", accuracy);
@@ -132,10 +146,18 @@ export function useGPSTracker(userId: string | null | undefined) {
           const pending = pendingJumpRef.current;
           if (pending && haversineMeters(pending, { lat, lng }) <= 100) {
             // Confirmed: genuine relocation — flush the held point first.
-            await persistPoint(pending.lat, pending.lng, pending.accuracy, pending.ts, true);
+            await persistPoint(
+              pending.lat,
+              pending.lng,
+              pending.accuracy,
+              pending.ts,
+              true,
+              pending.speed,
+              pending.heading
+            );
             pendingJumpRef.current = null;
           } else {
-            pendingJumpRef.current = { lat, lng, accuracy, ts: now };
+            pendingJumpRef.current = { lat, lng, accuracy, ts: now, speed, heading };
             return;
           }
         } else if (pendingJumpRef.current) {
@@ -153,20 +175,26 @@ export function useGPSTracker(userId: string | null | undefined) {
           if (elapsed < INTERVAL_MS) return; // too soon, no real movement — skip write entirely
           // Heartbeat-forced sample: keep the trail dense, but don't move the
           // gating anchor — it wasn't a confirmed real move.
-          await persistPoint(lat, lng, accuracy, now, false);
+          await persistPoint(lat, lng, accuracy, now, false, speed, heading);
           return;
         }
       }
-      await persistPoint(lat, lng, accuracy, now, true);
+      await persistPoint(lat, lng, accuracy, now, true, speed, heading);
     }
 
-    function queueInsert(lat: number, lng: number, accuracy: number | null) {
+    function queueInsert(
+      lat: number,
+      lng: number,
+      accuracy: number | null,
+      speed: number | null = null,
+      heading: number | null = null
+    ) {
       // Native has two independent producers (background watcher + heartbeat
       // poll) calling insertPoint; serialize them so they can't interleave
       // across insertPoint's await boundaries and race pendingJumpRef/lastPointRef.
       insertChainRef.current = insertChainRef.current
         .catch(() => {})
-        .then(() => insertPoint(lat, lng, accuracy));
+        .then(() => insertPoint(lat, lng, accuracy, speed, heading));
       return insertChainRef.current;
     }
 
@@ -208,7 +236,13 @@ export function useGPSTracker(userId: string | null | undefined) {
               if (!activeRef.current) return;
               if (cancelled) return;
               try {
-                await queueInsert(location.latitude, location.longitude, location.accuracy ?? null);
+                await queueInsert(
+                  location.latitude,
+                  location.longitude,
+                  location.accuracy ?? null,
+                  location.speed ?? null,
+                  location.bearing ?? null
+                );
               } catch { /* ignore */ }
             }
           );
@@ -227,7 +261,13 @@ export function useGPSTracker(userId: string | null | undefined) {
           if (!activeRef.current || cancelled) return;
           try {
             const pos = await getCurrentPosition({ enableHighAccuracy: true, timeout: 15000 });
-            await queueInsert(pos.latitude, pos.longitude, pos.accuracy ?? null);
+            await queueInsert(
+              pos.latitude,
+              pos.longitude,
+              pos.accuracy ?? null,
+              pos.speed ?? null,
+              pos.heading ?? null
+            );
           } catch { /* ignore */ }
           if (Date.now() - lastWriteRef.current > WATCHDOG_MS) {
             console.warn("[GPSTracker] watcher appears dead — re-registering");
@@ -267,7 +307,13 @@ export function useGPSTracker(userId: string | null | undefined) {
         foregroundBusyRef.current = true;
         try {
           const pos = await getCurrentPosition({ enableHighAccuracy: true, timeout: 15000 });
-          await queueInsert(pos.latitude, pos.longitude, pos.accuracy ?? null);
+          await queueInsert(
+            pos.latitude,
+            pos.longitude,
+            pos.accuracy ?? null,
+            pos.speed ?? null,
+            pos.heading ?? null
+          );
         } catch { /* ignore */ } finally {
           foregroundBusyRef.current = false;
         }
