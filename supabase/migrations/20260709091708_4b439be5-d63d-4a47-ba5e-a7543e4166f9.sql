@@ -1,0 +1,2 @@
+ALTER TABLE public.activity_events ADD COLUMN IF NOT EXISTS client_uuid uuid;
+CREATE UNIQUE INDEX IF NOT EXISTS activity_events_client_uuid_key ON public.activity_events(client_uuid) WHERE client_uuid IS NOT NULL;

@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.17"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
@@ -36,6 +36,9 @@ export type Database = {
           location_address: string | null
           location_lat: number | null
           location_lng: number | null
+          manual_distance_attachments: Json
+          manual_distance_km: number | null
+          manual_distance_note: string | null
           milestone_id: string | null
           next_follow_up_date: string | null
           opportunity_id: string | null
@@ -55,6 +58,11 @@ export type Database = {
           to_date: string | null
           total_days: number | null
           total_hours: number | null
+          travel_distance_km: number | null
+          travel_from_activity_id: string | null
+          travel_from_at: string | null
+          travel_from_type: string | null
+          travel_time_mins: number | null
           user_id: string
           visit_id: string | null
         }
@@ -79,6 +87,9 @@ export type Database = {
           location_address?: string | null
           location_lat?: number | null
           location_lng?: number | null
+          manual_distance_attachments?: Json
+          manual_distance_km?: number | null
+          manual_distance_note?: string | null
           milestone_id?: string | null
           next_follow_up_date?: string | null
           opportunity_id?: string | null
@@ -98,6 +109,11 @@ export type Database = {
           to_date?: string | null
           total_days?: number | null
           total_hours?: number | null
+          travel_distance_km?: number | null
+          travel_from_activity_id?: string | null
+          travel_from_at?: string | null
+          travel_from_type?: string | null
+          travel_time_mins?: number | null
           user_id: string
           visit_id?: string | null
         }
@@ -122,6 +138,9 @@ export type Database = {
           location_address?: string | null
           location_lat?: number | null
           location_lng?: number | null
+          manual_distance_attachments?: Json
+          manual_distance_km?: number | null
+          manual_distance_note?: string | null
           milestone_id?: string | null
           next_follow_up_date?: string | null
           opportunity_id?: string | null
@@ -141,6 +160,11 @@ export type Database = {
           to_date?: string | null
           total_days?: number | null
           total_hours?: number | null
+          travel_distance_km?: number | null
+          travel_from_activity_id?: string | null
+          travel_from_at?: string | null
+          travel_from_type?: string | null
+          travel_time_mins?: number | null
           user_id?: string
           visit_id?: string | null
         }
@@ -199,6 +223,13 @@ export type Database = {
             columns: ["site_id"]
             isOneToOne: false
             referencedRelation: "project_sites"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activity_events_travel_from_activity_id_fkey"
+            columns: ["travel_from_activity_id"]
+            isOneToOne: false
+            referencedRelation: "activity_events"
             referencedColumns: ["id"]
           },
           {
@@ -1288,6 +1319,7 @@ export type Database = {
       expense_master_config: {
         Row: {
           created_at: string
+          da_applicable: boolean
           da_calculation_basis: string
           da_type: string
           fixed_da_amount: number | null
@@ -1299,6 +1331,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          da_applicable?: boolean
           da_calculation_basis?: string
           da_type?: string
           fixed_da_amount?: number | null
@@ -1310,6 +1343,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          da_applicable?: boolean
           da_calculation_basis?: string
           da_type?: string
           fixed_da_amount?: number | null
@@ -1548,6 +1582,7 @@ export type Database = {
           action: string
           actor_id: string | null
           created_at: string
+          field_name: string | null
           from_value: string | null
           id: string
           lead_id: string
@@ -1557,6 +1592,7 @@ export type Database = {
           action: string
           actor_id?: string | null
           created_at?: string
+          field_name?: string | null
           from_value?: string | null
           id?: string
           lead_id: string
@@ -1566,6 +1602,7 @@ export type Database = {
           action?: string
           actor_id?: string | null
           created_at?: string
+          field_name?: string | null
           from_value?: string | null
           id?: string
           lead_id?: string
@@ -1939,6 +1976,63 @@ export type Database = {
           is_active?: boolean
           max_days?: number
           name?: string
+        }
+        Relationships: []
+      }
+      list_views: {
+        Row: {
+          charts: Json
+          created_at: string
+          display_fields: string[]
+          filter_match: string
+          filters: Json
+          id: string
+          is_default: boolean
+          is_shared: boolean
+          name: string
+          section: string
+          shared_with: string[]
+          sort_by: string | null
+          sort_direction: string
+          updated_at: string
+          user_id: string
+          visibility: string
+        }
+        Insert: {
+          charts?: Json
+          created_at?: string
+          display_fields?: string[]
+          filter_match?: string
+          filters?: Json
+          id?: string
+          is_default?: boolean
+          is_shared?: boolean
+          name: string
+          section: string
+          shared_with?: string[]
+          sort_by?: string | null
+          sort_direction?: string
+          updated_at?: string
+          user_id: string
+          visibility?: string
+        }
+        Update: {
+          charts?: Json
+          created_at?: string
+          display_fields?: string[]
+          filter_match?: string
+          filters?: Json
+          id?: string
+          is_default?: boolean
+          is_shared?: boolean
+          name?: string
+          section?: string
+          shared_with?: string[]
+          sort_by?: string | null
+          sort_direction?: string
+          updated_at?: string
+          user_id?: string
+          visibility?: string
         }
         Relationships: []
       }
@@ -5242,6 +5336,39 @@ export type Database = {
           },
         ]
       }
+      ta_rate_history: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          effective_from: string
+          effective_to: string | null
+          id: string
+          note: string | null
+          per_km_rate: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          effective_from: string
+          effective_to?: string | null
+          id?: string
+          note?: string | null
+          per_km_rate?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          note?: string | null
+          per_km_rate?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           assigned_at: string
@@ -5604,6 +5731,10 @@ export type Database = {
         Args: { _object_name: string; _permission: string; _user_id: string }
         Returns: boolean
       }
+      compute_filtered_distance_km: {
+        Args: { _date: string; _user_id: string }
+        Returns: number
+      }
       convert_lead: {
         Args: { _lead_id: string; _payload: Json }
         Returns: string
@@ -5654,6 +5785,7 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_ta_rate_for_date: { Args: { _date: string }; Returns: number }
       get_user_hierarchy: {
         Args: { _manager_id: string }
         Returns: {
@@ -5699,30 +5831,6 @@ export type Database = {
           user_id_param: string
         }
         Returns: string
-      }
-      upsert_company_profile: {
-        Args: { _payload: Json }
-        Returns: {
-          address: string | null
-          bank_account: string | null
-          bank_ifsc: string | null
-          bank_name: string | null
-          company_name: string
-          created_at: string
-          email: string | null
-          gst_number: string | null
-          id: string
-          logo_url: string | null
-          pan_number: string | null
-          phone: string | null
-          updated_at: string
-        }
-        SetofOptions: {
-          from: "*"
-          to: "company_profile"
-          isOneToOne: true
-          isSetofReturn: false
-        }
       }
     }
     Enums: {

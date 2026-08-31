@@ -1,11 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Sparkles, Loader2, MapPin, Target } from "lucide-react";
+import { Sparkles, Loader2, MapPin, Target, Mic, Square, AudioLines } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { useAudioRecorder } from "@/hooks/useAudioRecorder";
+import { useQueryClient } from "@tanstack/react-query";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { BusinessCardScanner } from "./BusinessCardScanner";
@@ -33,8 +37,122 @@ export function LeadForm({
     opportunity_value: "", opportunity_close_date: "", opportunity_probability: "",
   };
   const [f, setF] = useState(emptyForm);
+  const [errors, setErrors] = useState<string[]>([]);
   const [isElaborating, setIsElaborating] = useState(false);
   const [locating, setLocating] = useState(false);
+
+
+  // ==== Voice-to-text / audio note for Requirement Overview ====
+  const qc = useQueryClient();
+  const {
+    isRecording, isFinalizing, recording, elapsed,
+    startRecording, stopRecording, clearRecording,
+  } = useAudioRecorder();
+  const [micMenuOpen, setMicMenuOpen] = useState(false);
+  const [voiceToTextMode, setVoiceToTextMode] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [isStartingRecording, setIsStartingRecording] = useState(false);
+  const [uploadingAudio, setUploadingAudio] = useState(false);
+  const micBusy = isTranscribing || isFinalizing || isStartingRecording || uploadingAudio;
+
+  const transcribeAudio = useCallback(async (audioBlob: Blob) => {
+    setIsTranscribing(true);
+    try {
+      const formData = new FormData();
+      const extension = audioBlob.type.includes("mp4") || audioBlob.type.includes("aac")
+        ? "m4a" : audioBlob.type.includes("ogg") ? "ogg" : "webm";
+      formData.append("audio", audioBlob, `recording.${extension}`);
+      formData.append("lang", "en");
+      const response = await supabase.functions.invoke("transcribe-audio", { body: formData });
+      if (response.error) throw response.error;
+      const transcript = response.data?.transcript?.trim();
+      if (transcript) {
+        setF((prev) => ({
+          ...prev,
+          researched_information: prev.researched_information
+            ? `${prev.researched_information} ${transcript}`
+            : transcript,
+        }));
+        toast.success("Voice transcribed");
+      } else {
+        toast.error("Could not understand the audio.");
+      }
+    } catch (err: any) {
+      toast.error("Transcription failed: " + (err.message || "Unknown error"));
+    } finally {
+      setIsTranscribing(false);
+    }
+  }, []);
+
+  const uploadAudioNote = useCallback(async (rec: { blob: Blob; fileExtension: string; mimeType: string }) => {
+    if (!lead?.id) {
+      toast.error("Save the lead first, then record an audio note");
+      return;
+    }
+    setUploadingAudio(true);
+    try {
+      const { data: auth } = await supabase.auth.getUser();
+      const uid = auth.user?.id ?? null;
+      const fileName = `voice-note-${new Date().toISOString().replace(/[:.]/g, "-")}.${rec.fileExtension}`;
+      const path = `leads/${lead.id}/${Date.now()}_${fileName}`;
+      const { error: upErr } = await supabase.storage
+        .from("customer-documents")
+        .upload(path, rec.blob, { contentType: rec.mimeType });
+      if (upErr) throw upErr;
+      const { error } = await supabase.from("customer_documents").insert({
+        lead_id: lead.id,
+        file_name: fileName,
+        file_url: path,
+        file_size: rec.blob.size,
+        file_type: rec.mimeType,
+        doc_type: "other",
+        uploaded_by: uid,
+        updated_by: uid,
+      } as any);
+      if (error) throw error;
+      qc.invalidateQueries({ queryKey: ["lead-documents", lead.id] });
+      toast.success("Audio note attached to this lead");
+    } catch (e: any) {
+      toast.error(e.message ?? "Could not save the audio note");
+    } finally {
+      setUploadingAudio(false);
+    }
+  }, [lead?.id, qc]);
+
+  useEffect(() => {
+    if (recording && !isRecording && !isTranscribing && !uploadingAudio) {
+      const rec = recording;
+      clearRecording();
+      if (voiceToTextMode) {
+        setVoiceToTextMode(false);
+        transcribeAudio(rec.blob);
+      } else {
+        uploadAudioNote(rec);
+      }
+    }
+  }, [recording, isRecording, isTranscribing, uploadingAudio, voiceToTextMode, clearRecording, transcribeAudio, uploadAudioNote]);
+
+  const handleMicOptionClick = useCallback(async (mode: "text" | "audio") => {
+    if (micBusy) return;
+    if (isRecording) { setMicMenuOpen(false); await stopRecording(); return; }
+    if (mode === "audio" && !lead?.id) {
+      toast.error("Save the lead first, then record an audio note");
+      setMicMenuOpen(false);
+      return;
+    }
+    clearRecording();
+    setVoiceToTextMode(mode === "text");
+    setIsStartingRecording(true);
+    try {
+      await startRecording();
+      setMicMenuOpen(false);
+    } catch (err: any) {
+      setVoiceToTextMode(false);
+      toast.error(err.message || "Could not start recording");
+    } finally {
+      setIsStartingRecording(false);
+    }
+  }, [micBusy, isRecording, lead?.id, clearRecording, startRecording, stopRecording]);
 
   useEffect(() => {
     if (lead) {
@@ -56,6 +174,8 @@ export function LeadForm({
     } else {
       setF({ ...emptyForm, related_event_id: defaultEventId ?? "" });
     }
+    setErrors([]);
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lead, open, defaultEventId]);
 
@@ -128,8 +248,46 @@ export function LeadForm({
     }
   };
 
+  const statusName = (statuses.find((s) => s.id === f.lead_status_id)?.name ?? "").trim().toLowerCase();
+
+  const validate = (): string[] => {
+    const errs: string[] = [];
+    if (!f.name.trim()) errs.push("Name is required");
+    if (!f.lead_status_id) { errs.push("Status is required"); return errs; }
+
+    const qualified = ["quote submitted", "negotiation", "close won", "closed won"];
+    const contactHeavy = ["contacted", "shown interest", ...qualified];
+    const early = ["enquiry", "lost", "on hold", "dropped"];
+
+    if (qualified.includes(statusName)) {
+      if (!f.indicative_budget.trim()) errs.push("Indicative Budget is required for this status");
+      if (!f.opportunity_value.trim()) errs.push("Opportunity Value is required for this status");
+      if (!f.opportunity_close_date) errs.push("Close Date is required for this status");
+      if (!f.opportunity_probability.trim()) errs.push("Probability of Win is required for this status");
+      if (!f.researched_information.trim()) errs.push("Requirement Overview is required for this status");
+    }
+
+    if (contactHeavy.includes(statusName) || early.includes(statusName)) {
+      if (!f.title.trim()) errs.push("Designation is required for this status");
+      if (!f.contact_role || f.contact_role === "unknown") errs.push("Contact Role is required for this status");
+      if (!f.company.trim()) errs.push("Company is required for this status");
+      if (!f.email.trim()) errs.push("Email is required for this status");
+      if (!f.phone.trim()) errs.push("Phone is required for this status");
+    }
+    if (contactHeavy.includes(statusName)) {
+      if (!f.industry) errs.push("Industry is required for this status");
+      if (!f.address.trim()) errs.push("Address is required for this status");
+    }
+    return errs;
+  };
+
   const submit = async () => {
-    if (!f.name.trim()) return;
+    const errs = validate();
+    setErrors(errs);
+    if (errs.length) {
+      toast.error("Please fix the highlighted fields before saving");
+      return;
+    }
     await save.mutateAsync({
       id: lead?.id,
       name: f.name.trim(),
@@ -168,8 +326,25 @@ export function LeadForm({
         </DialogHeader>
 
         <div className="space-y-3">
+          {errors.length > 0 && (
+            <div className="rounded-md border border-destructive bg-destructive/10 p-3">
+              <p className="text-sm font-bold text-destructive">Please complete the required fields</p>
+              <ul className="mt-1 list-disc pl-5 text-sm font-semibold text-destructive">
+                {errors.map((e) => <li key={e}>{e}</li>)}
+              </ul>
+            </div>
+          )}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div><Label>Name *</Label><Input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></div>
+            {/* Left: Name, Designation, Company, Phone, Industry — Right: Status, Contact role, Website, Email, Source */}
+            <div><Label>Name <span className="text-destructive">*</span></Label><Input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></div>
+            <div>
+              <Label>Status <span className="text-destructive">*</span></Label>
+              <Select value={f.lead_status_id} onValueChange={(v) => setF({ ...f, lead_status_id: v })}>
+                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                <SelectContent>{statuses.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+
             <div><Label>Designation</Label><Input value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} /></div>
             <div>
               <Label>Contact Role</Label>
@@ -182,22 +357,18 @@ export function LeadForm({
                 </SelectContent>
               </Select>
             </div>
+
             <div><Label>Company</Label><Input value={f.company} onChange={(e) => setF({ ...f, company: e.target.value })} /></div>
+            <div><Label>Website</Label><Input value={f.website} onChange={(e) => setF({ ...f, website: e.target.value })} /></div>
+
+            <div><Label>Phone</Label><Input value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} /></div>
+            <div><Label>Email</Label><Input type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></div>
+
             <div>
               <Label>Industry</Label>
               <Select value={f.industry} onValueChange={(v) => setF({ ...f, industry: v })}>
                 <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
                 <SelectContent>{industries.map((i) => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
-            <div><Label>Email</Label><Input type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></div>
-            <div><Label>Phone</Label><Input value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} /></div>
-            <div><Label>Website</Label><Input value={f.website} onChange={(e) => setF({ ...f, website: e.target.value })} /></div>
-            <div>
-              <Label>Status</Label>
-              <Select value={f.lead_status_id} onValueChange={(v) => setF({ ...f, lead_status_id: v })}>
-                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                <SelectContent>{statuses.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div>
@@ -208,6 +379,7 @@ export function LeadForm({
               </Select>
             </div>
           </div>
+
 
 
           <div>
@@ -275,13 +447,60 @@ export function LeadForm({
               </div>
             </div>
             <div>
-              <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center justify-between gap-2 mb-1">
                 <Label className="text-xs">Requirement Overview</Label>
-                <Button type="button" variant="outline" size="sm" onClick={handleElaborate} disabled={isElaborating}>
-                  {isElaborating ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1" />}
-                  AI Elaborate
-                </Button>
+                <div className="flex items-center gap-1.5">
+                  <DropdownMenu open={micMenuOpen} onOpenChange={setMicMenuOpen}>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        type="button"
+                        disabled={micBusy}
+                        aria-label="Voice"
+                        className={cn(
+                          "h-9 w-9 rounded-full flex items-center justify-center transition",
+                          isRecording
+                            ? "text-red-600 bg-red-50 dark:bg-red-950/30 animate-pulse"
+                            : "text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-950/30",
+                          micBusy && "opacity-60",
+                        )}
+                        onClick={(e) => {
+                          if (isRecording) {
+                            e.preventDefault();
+                            stopRecording();
+                          }
+                        }}
+                      >
+                        {isTranscribing || isFinalizing || uploadingAudio ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : isRecording ? (
+                          <Square className="h-4 w-4" />
+                        ) : (
+                          <Mic className="h-4 w-4" />
+                        )}
+                      </button>
+                    </DropdownMenuTrigger>
+                    {!isRecording && (
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleMicOptionClick("text")} className="gap-2">
+                          <Mic className="h-3.5 w-3.5" /> Voice to text
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleMicOptionClick("audio")} className="gap-2">
+                          <AudioLines className="h-3.5 w-3.5" /> Record audio
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    )}
+                  </DropdownMenu>
+                  <Button type="button" variant="outline" size="sm" onClick={handleElaborate} disabled={isElaborating}>
+                    {isElaborating ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1" />}
+                    AI Elaborate
+                  </Button>
+                </div>
               </div>
+              {isRecording && (
+                <p className="text-[11px] font-medium text-red-600 mb-1">
+                  {voiceToTextMode ? "Listening" : "Recording"} · tap the mic to stop
+                </p>
+              )}
               <Textarea
                 rows={5}
                 placeholder="What the customer needs — scope, products/services, quantities, timelines and budget. You can also add background research: company size, recent news, pain points and competition… or leave blank and click AI Elaborate."

@@ -25,13 +25,27 @@ export interface WorkforceActivityRow {
   status: string;
   site_id: string | null;
   full_name: string;
+  short_name: string;
   site_name: string | null;
+  customer_name: string | null;
+  activity_type: string | null;
+  outcome: string | null;
 }
 
 export interface WorkforceFilters {
   userIds: string[];
   start: string;
   end: string;
+}
+
+/** "Nagananda Beegamudre" -> "NB" */
+export function toShortName(name: string) {
+  return (name || "")
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase() || "")
+    .join("");
 }
 
 export function useWorkforceUsers() {
@@ -70,6 +84,14 @@ export function useWorkforceOverview(filters: WorkforceFilters) {
         .select("id, site_name");
       const siteMap = new Map((sites || []).map((s) => [s.id, s.site_name]));
 
+      // Customers & leads (for the customer label on activities)
+      const { data: customers } = await supabase.from("customers").select("id, name");
+      const customerMap = new Map((customers || []).map((c) => [c.id, c.name]));
+      const { data: leadRows } = await supabase.from("leads").select("id, name, company");
+      const leadMap = new Map(
+        (leadRows || []).map((l) => [l.id, l.company || l.name])
+      );
+
       // Attendance
       let attQuery = supabase
         .from("attendance")
@@ -100,24 +122,94 @@ export function useWorkforceOverview(filters: WorkforceFilters) {
       // Activities
       let actQuery = supabase
         .from("activity_events")
-        .select("id, user_id, activity_date, status, site_id")
+        .select(
+          "id, user_id, activity_date, status, site_id, customer_id, lead_id, activity_type, outcome"
+        )
         .gte("activity_date", start)
         .lte("activity_date", end);
       if (userIds.length > 0) actQuery = actQuery.in("user_id", userIds);
       const { data: activities, error: actErr } = await actQuery;
       if (actErr) throw actErr;
 
-      const activityRows: WorkforceActivityRow[] = (activities || []).map((r) => ({
-        id: r.id,
-        user_id: r.user_id,
-        activity_date: r.activity_date,
-        status: r.status,
-        site_id: r.site_id,
-        full_name: userMap.get(r.user_id)?.full_name || "Unknown",
-        site_name: r.site_id ? siteMap.get(r.site_id) || null : null,
-      }));
+      const activityRows: WorkforceActivityRow[] = (activities || []).map((r) => {
+        const fullName = userMap.get(r.user_id)?.full_name || "Unknown";
+        return {
+          id: r.id,
+          user_id: r.user_id,
+          activity_date: r.activity_date,
+          status: r.status,
+          site_id: r.site_id,
+          full_name: fullName,
+          short_name: toShortName(fullName),
+          site_name: r.site_id ? siteMap.get(r.site_id) || null : null,
+          customer_name:
+            (r.customer_id ? customerMap.get(r.customer_id) : null) ||
+            (r.lead_id ? leadMap.get(r.lead_id) : null) ||
+            null,
+          activity_type: r.activity_type || null,
+          outcome: r.outcome || null,
+        };
+      });
 
-      return { attendanceRows, activityRows };
+      // Won deals — leads sitting in a "won" status, touched within the range
+      const { data: statuses } = await supabase
+        .from("master_lead_statuses")
+        .select("id, name");
+      const wonStatusIds = (statuses || [])
+        .filter((s) => /won/i.test(s.name || ""))
+        .map((s) => s.id);
+
+      let wonDeals = 0;
+      if (wonStatusIds.length > 0) {
+        let wonQuery = supabase
+          .from("leads")
+          .select("id", { count: "exact", head: true })
+          .in("lead_status_id", wonStatusIds)
+          .gte("updated_at", `${start}T00:00:00`)
+          .lte("updated_at", `${end}T23:59:59`);
+        if (userIds.length > 0) wonQuery = wonQuery.in("owner_id", userIds);
+        const { count } = await wonQuery;
+        wonDeals = count || 0;
+      }
+
+      // New leads created in the range
+      let newLeadsQuery = supabase
+        .from("leads")
+        .select("id", { count: "exact", head: true })
+        .gte("created_at", `${start}T00:00:00`)
+        .lte("created_at", `${end}T23:59:59`);
+      if (userIds.length > 0) newLeadsQuery = newLeadsQuery.in("owner_id", userIds);
+      const { count: newLeadsCount } = await newLeadsQuery;
+
+      // New opportunities — leads moved into a "Quote submitted" status in range
+      const quoteStatusIds = (statuses || [])
+        .filter((s) => /quote\s*submitted/i.test(s.name || ""))
+        .map((s) => s.id);
+      let newOppsCount = 0;
+      if (quoteStatusIds.length > 0) {
+        let newOppsQuery = supabase
+          .from("leads")
+          .select("id", { count: "exact", head: true })
+          .in("lead_status_id", quoteStatusIds)
+          .gte("updated_at", `${start}T00:00:00`)
+          .lte("updated_at", `${end}T23:59:59`);
+        if (userIds.length > 0) newOppsQuery = newOppsQuery.in("owner_id", userIds);
+        const { count } = await newOppsQuery;
+        newOppsCount = count || 0;
+      }
+
+
+      return {
+        attendanceRows,
+        activityRows,
+        wonDeals,
+        wonStatusIds,
+        quoteStatusIds,
+
+        newLeads: newLeadsCount || 0,
+        newOpportunities: newOppsCount || 0,
+      };
+
     },
     staleTime: 0,
     refetchOnMount: "always",

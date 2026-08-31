@@ -1,77 +1,41 @@
-import { useMemo, useState, useEffect, useRef } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Search, TrendingUp, CalendarClock, CheckCircle2, Activity, X } from "lucide-react";
-import { useLeads, useLeadStatuses, statusColorClasses } from "@/hooks/useLeadsEvents";
-import { LeadForm } from "@/components/leads/LeadForm";
-import { useLeadScoringRules } from "@/hooks/useLeadScoring";
-import { useLeadsInsights, bantScore, BANT_LEVEL_CLASSES, SLA_BADGE_CLASSES } from "@/hooks/useLeadInsights";
+import { Plus } from "lucide-react";
 import {
-  format, startOfDay, endOfDay, subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth,
-  subWeeks, subMonths, startOfQuarter, endOfQuarter, subQuarters, isWithinInterval,
-} from "date-fns";
+  useLeads, useLeadStatuses, useLeadSources, useIndustries, statusColorClasses,
+} from "@/hooks/useLeadsEvents";
+import { LeadForm } from "@/components/leads/LeadForm";
+import { format } from "date-fns";
+
 import { supabase } from "@/integrations/supabase/client";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { buildLeadRollups, EMPTY_ROLLUP } from "@/lib/leadActivityRollups";
-import { ColumnPicker } from "@/components/reports/ColumnPicker";
-import { SavedReportBar } from "@/components/reports/SavedReportBar";
-import type { ReportColumn, SavedReport } from "@/components/reports/reportTypes";
+import { toast } from "sonner";
+import {
+  applyFilters, sortRows, formatCell, fieldDef, DEFAULT_VIEW_COLUMNS,
+  type ListDisplayMode, type ListView, type FilterCondition, type KanbanConfig,
+} from "@/lib/leadFields";
+import { getKanbanConfig, setKanbanConfig, isStandardViewId } from "@/lib/leadStandardViews";
+import { useLeadListViews } from "@/hooks/useLeadListViews";
+import ViewBar from "@/components/leads/listviews/ViewBar";
+import ViewEditorDialog from "@/components/leads/listviews/ViewEditorDialog";
+import ViewFiltersPanel from "@/components/leads/listviews/ViewFiltersPanel";
+import ViewChartsPanel from "@/components/leads/listviews/ViewChartsPanel";
+import FieldsDisplayDialog from "@/components/leads/listviews/FieldsDisplayDialog";
+import KanbanSettingsDialog from "@/components/leads/listviews/KanbanSettingsDialog";
+import LeadListViewTable from "@/components/leads/listviews/LeadListViewTable";
+import LeadKanban from "@/components/leads/listviews/LeadKanban";
+import LeadSplitView from "@/components/leads/listviews/LeadSplitView";
+import { LeadAvatar } from "@/components/leads/listviews/LeadAvatar";
 
-const DATE_PRESETS = [
-  { value: "all", label: "All time" },
-  { value: "today", label: "Today" },
-  { value: "yesterday", label: "Yesterday" },
-  { value: "this_week", label: "This week" },
-  { value: "last_week", label: "Last week" },
-  { value: "current_month", label: "Current month" },
-  { value: "last_month", label: "Last month" },
-  { value: "this_quarter", label: "This quarter" },
-  { value: "last_quarter", label: "Last quarter" },
-  { value: "current_fy", label: "Current FY" },
-];
+const SECTION = "leads";
 
-function presetRange(preset: string): { start: Date; end: Date } | null {
-  const now = new Date();
-  switch (preset) {
-    case "today": return { start: startOfDay(now), end: endOfDay(now) };
-    case "yesterday": return { start: startOfDay(subDays(now, 1)), end: endOfDay(subDays(now, 1)) };
-    case "this_week": return { start: startOfWeek(now, { weekStartsOn: 1 }), end: endOfWeek(now, { weekStartsOn: 1 }) };
-    case "last_week": {
-      const d = subWeeks(now, 1);
-      return { start: startOfWeek(d, { weekStartsOn: 1 }), end: endOfWeek(d, { weekStartsOn: 1 }) };
-    }
-    case "current_month": return { start: startOfMonth(now), end: endOfMonth(now) };
-    case "last_month": {
-      const d = subMonths(now, 1);
-      return { start: startOfMonth(d), end: endOfMonth(d) };
-    }
-    case "this_quarter": return { start: startOfQuarter(now), end: endOfQuarter(now) };
-    case "last_quarter": {
-      const d = subQuarters(now, 1);
-      return { start: startOfQuarter(d), end: endOfQuarter(d) };
-    }
-    case "current_fy": {
-      // Indian FY: 1 Apr – 31 Mar
-      const y = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
-      return { start: new Date(y, 3, 1, 0, 0, 0), end: new Date(y + 1, 2, 31, 23, 59, 59) };
-    }
-    default: return null;
-  }
-}
 
-function inRange(value?: string | null, range?: { start: Date; end: Date } | null) {
-  if (!range) return true;
-  if (!value) return false;
-  const d = new Date(value);
-  if (isNaN(d.getTime())) return false;
-  return isWithinInterval(d, range);
-}
+
 
 /** Activities recorded against leads — used for the completed KPIs and roll-ups */
 function useLeadActivityStats() {
@@ -90,45 +54,64 @@ function useLeadActivityStats() {
 }
 
 
-function KpiCard({ icon: Icon, label, value, sub, color }: any) {
-  return (
-    <Card><CardContent className="p-4 min-h-[120px] flex flex-col justify-between">
-      <div className="flex items-start gap-2 mb-2">
-        <div className={`p-2 rounded-lg shrink-0 ${color}`}><Icon className="h-4 w-4 md:h-5 md:w-5" /></div>
-        <div className="text-xs md:text-sm text-muted-foreground font-medium line-clamp-2">{label}</div>
-      </div>
-      <div className="space-y-1">
-        <div className="text-lg md:text-2xl font-bold break-words">{value}</div>
-        {sub && <div className="text-xs text-muted-foreground">{sub}</div>}
-      </div>
-    </CardContent></Card>
-  );
-}
+/** Columns that can be written straight back to the leads table. */
+const DIRECT_COLUMNS: Record<string, string> = {
+  name: "name",
+  title: "title",
+  company: "company",
+  phone: "phone",
+  email: "email",
+  website: "website",
+  address: "address",
+  industry: "industry",
+  contact_role: "contact_role",
+  researched_information: "researched_information",
+  opportunity_value: "opportunity_value",
+  opportunity_probability: "opportunity_probability",
+  opportunity_close_date: "opportunity_close_date",
+  indicative_budget: "indicative_budget",
+  target_first_contact_date: "target_first_contact_date",
+  actual_first_contact_date: "actual_first_contact_date",
+  target_conversion_date: "target_conversion_date",
+};
 
 export default function Leads() {
   const nav = useNavigate();
+  const qc = useQueryClient();
   const { data: leads = [] } = useLeads();
   const { data: statuses = [] } = useLeadStatuses(false);
+  const { data: sources = [] } = useLeadSources(false);
+  const { data: industries = [] } = useIndustries(false);
   const { data: leadActivities = [] } = useLeadActivityStats();
-  const statusMap = useMemo(() => Object.fromEntries(statuses.map((s) => [s.id, s])), [statuses]);
 
-  const [q, setQ] = useState("");
+  const statusMap = useMemo(() => Object.fromEntries(statuses.map((s) => [s.id, s])), [statuses]);
+  const sourceMap = useMemo(() => Object.fromEntries(sources.map((s) => [s.id, s])), [sources]);
+
   const [leadOpen, setLeadOpen] = useState(false);
   const [userMap, setUserMap] = useState<Record<string, string>>({});
-  const [createdPreset, setCreatedPreset] = useState("all");
-  const [ownerFilter, setOwnerFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [minProductive, setMinProductive] = useState("");
-  const [minDaysSince, setMinDaysSince] = useState("");
+  const [search, setSearch] = useState("");
+  const [display, setDisplay] = useState<ListDisplayMode>("table");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editingView, setEditingView] = useState<ListView | null>(null);
+  const [fieldsOpen, setFieldsOpen] = useState(false);
+  const [kanbanOpen, setKanbanOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [chartsOpen, setChartsOpen] = useState(false);
+  const [sortKey, setSortKey] = useState<string | null>(null);
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 
-  // Activity & effort roll-ups per lead
+  const {
+    allViews, loading, userId, activeView, selectView, saveView, saveCharts,
+    deleteView, pinDefault, updateStandardColumns, updateStandardFilters, updateStandardCharts, reload,
+  } = useLeadListViews(SECTION, "Leads");
+
+
   const rollups = useMemo(() => buildLeadRollups(leadActivities), [leadActivities]);
-  const rollupOf = (id: string) => rollups[id] ?? EMPTY_ROLLUP;
-
 
   useEffect(() => {
     const ids = Array.from(
-      new Set(leads.flatMap((l) => [l.created_by, (l as any).owner_id]).filter(Boolean)),
+      new Set(leads.flatMap((l: any) => [l.created_by, l.owner_id]).filter(Boolean)),
     ) as string[];
     const missing = ids.filter((id) => !userMap[id]);
     if (!missing.length) return;
@@ -145,404 +128,283 @@ export default function Leads() {
     })();
   }, [leads, userMap]);
 
-  const ownerOf = (l: any) => (l.owner_id || l.created_by || null) as string | null;
-
-  const ownerOptions = useMemo(() => {
-    const ids = Array.from(new Set(leads.map(ownerOf).filter(Boolean))) as string[];
-    return ids.map((id) => ({ id, name: userMap[id] || "Unknown" })).sort((a, b) => a.name.localeCompare(b.name));
-  }, [leads, userMap]);
-
-  const createdRange = useMemo(() => presetRange(createdPreset), [createdPreset]);
-
-  const filteredLeads = useMemo(() => leads.filter((l: any) => {
-    if (q && ![l.name, l.company, l.email, l.phone].some((v) => (v ?? "").toLowerCase().includes(q.toLowerCase()))) return false;
-    if (!inRange(l.created_at, createdRange)) return false;
-    if (ownerFilter !== "all" && ownerOf(l) !== ownerFilter) return false;
-    if (statusFilter !== "all" && l.lead_status_id !== statusFilter) return false;
+  /** Flatten leads into list-view rows keyed exactly like LEAD_FIELDS. */
+  const rows = useMemo(() => leads.map((l: any) => {
     const ru = rollups[l.id] ?? EMPTY_ROLLUP;
-    if (minProductive !== "" && ru.productiveCount < Number(minProductive)) return false;
-    if (minDaysSince !== "" && (ru.daysSinceLastActivity == null || ru.daysSinceLastActivity < Number(minDaysSince))) return false;
-    return true;
-  }), [leads, q, createdRange, ownerFilter, statusFilter, rollups, minProductive, minDaysSince]);
+    const ownerId = l.owner_id || l.created_by || null;
+    return {
+      ...l,
+      status_name: l.lead_status_id ? statusMap[l.lead_status_id]?.name ?? "" : "",
+      status_color: l.lead_status_id ? statusMap[l.lead_status_id]?.color ?? "" : "",
+      source_name: l.lead_source_id ? sourceMap[l.lead_source_id]?.name ?? "" : "",
+      owner_id: ownerId,
+      owner_name: ownerId ? userMap[ownerId] || "" : "",
+      created_by_name: l.created_by ? userMap[l.created_by] || "" : "",
+      activity_count: ru.activityCount,
+      productive_count: ru.productiveCount,
+      days_since_last_activity: ru.daysSinceLastActivity,
+      total_effort_hours: (ru as any).totalEffortHours ?? 0,
+      last_activity_date: ru.lastActivityDate,
+      next_activity_date: ru.nextActivityDate,
+      converted_label: l.converted_customer_id ? "Yes" : "No",
+    };
+  }), [leads, rollups, statusMap, sourceMap, userMap]);
 
-  const activeFilters =
-    [createdPreset, ownerFilter, statusFilter].filter((v) => v !== "all").length +
-    [minProductive, minDaysSince].filter((v) => v !== "").length;
+  const picklistOptions = useMemo(() => {
+    const opt = (vals: string[]) =>
+      Array.from(new Set(vals.filter(Boolean))).sort().map((v) => ({ value: v, label: v }));
+    return {
+      status: statuses.map((s) => ({ value: s.name, label: s.name })),
+      source: sources.map((s) => ({ value: s.name, label: s.name })),
+      industry: industries.length
+        ? industries.map((i) => ({ value: i.name, label: i.name }))
+        : opt(rows.map((r: any) => r.industry)),
+      owner: opt(rows.map((r: any) => r.owner_name)),
+      contact_role: opt(rows.map((r: any) => r.contact_role)),
+      converted: [{ value: "Yes", label: "Yes" }, { value: "No", label: "No" }],
+    } as Record<string, { value: string; label: string }[]>;
+  }, [statuses, sources, industries, rows]);
 
-  const clearAllFilters = () => {
-    setCreatedPreset("all"); setOwnerFilter("all"); setStatusFilter("all");
-    setMinProductive(""); setMinDaysSince("");
-  };
-
-  const filterChips = useMemo(() => {
-    const chips: { key: string; label: string; clear: () => void }[] = [];
-    const presetLabel = (v: string) => DATE_PRESETS.find((p) => p.value === v)?.label ?? v;
-    if (createdPreset !== "all") chips.push({ key: "created", label: `Created: ${presetLabel(createdPreset)}`, clear: () => setCreatedPreset("all") });
-    if (ownerFilter !== "all") chips.push({ key: "owner", label: `Owner: ${ownerOptions.find((o) => o.id === ownerFilter)?.name ?? "Unknown"}`, clear: () => setOwnerFilter("all") });
-    if (statusFilter !== "all") chips.push({ key: "status", label: `Status: ${statusMap[statusFilter]?.name ?? "Unknown"}`, clear: () => setStatusFilter("all") });
-    if (minProductive !== "") chips.push({ key: "prod", label: `Productive ≥ ${minProductive}`, clear: () => setMinProductive("") });
-    if (minDaysSince !== "") chips.push({ key: "days", label: `Days since activity ≥ ${minDaysSince}`, clear: () => setMinDaysSince("") });
-    return chips;
-  }, [createdPreset, ownerFilter, statusFilter, minProductive, minDaysSince, ownerOptions, statusMap]);
-
-  // Progressive rendering for large lists
-  const PAGE_SIZE = 20;
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
-  useEffect(() => { setVisibleCount(PAGE_SIZE); }, [q, createdPreset, ownerFilter, statusFilter, minProductive, minDaysSince]);
-
-  const visibleLeads = useMemo(() => filteredLeads.slice(0, visibleCount), [filteredLeads, visibleCount]);
-  const { rules: scoringRules } = useLeadScoringRules();
-  const visibleIds = useMemo(() => visibleLeads.map((l: any) => l.id), [visibleLeads]);
-  const { data: insights = {} } = useLeadsInsights(visibleIds);
-  const hasMore = visibleCount < filteredLeads.length;
-  const sentinelRef = useRef<HTMLDivElement | null>(null);
-  useEffect(() => {
-    if (!hasMore) return;
-    const el = sentinelRef.current;
-    if (!el) return;
-    const io = new IntersectionObserver((entries) => {
-      if (entries[0].isIntersecting) setVisibleCount((c) => c + PAGE_SIZE);
-    }, { rootMargin: "200px" });
-    io.observe(el);
-    return () => io.disconnect();
-  }, [hasMore, filteredLeads.length]);
-
-  const kpis = useMemo(() => {
-    const now = new Date();
-    const monthRange = { start: startOfMonth(now), end: endOfMonth(now) };
-    const weekRange = { start: startOfWeek(now, { weekStartsOn: 1 }), end: endOfWeek(now, { weekStartsOn: 1 }) };
-
-    const pipeline = filteredLeads.reduce((s: number, l: any) => s + (Number(l.opportunity_value) || 0), 0);
-    const closingLeads = filteredLeads.filter((l: any) => inRange(l.opportunity_close_date, monthRange));
-    const closingValue = closingLeads.reduce((s: number, l: any) => s + (Number(l.opportunity_value) || 0), 0);
-
-    const leadIds = new Set(filteredLeads.map((l: any) => l.id));
-    const completed = leadActivities.filter((a) => a.status === "completed" && leadIds.has(a.lead_id));
-    const completedMonth = completed.filter((a) => inRange(a.activity_date, monthRange)).length;
-    const completedWeek = completed.filter((a) => inRange(a.activity_date, weekRange)).length;
-
-    return { pipeline, closingCount: closingLeads.length, closingValue, completedMonth, completedWeek };
-  }, [filteredLeads, leadActivities]);
-
-  const money = (n: number) =>
-    new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0, notation: n >= 100000 ? "compact" : "standard" }).format(n || 0);
-
-  // ---- Configurable list columns (fields to display) ----
-  const listColumns: ReportColumn<any>[] = useMemo(() => [
-    {
-      key: "name", header: "Name", value: (l) => l.name,
-      render: (l) => (
-        <span className="font-medium">
-          {l.name}
-          {l.converted_customer_id && <Badge variant="secondary" className="ml-2">Converted</Badge>}
-        </span>
-      ),
-    },
-    { key: "designation", header: "Designation", value: (l) => l.designation ?? l.title ?? "—" },
-    { key: "company", header: "Company", value: (l) => l.company ?? "—" },
-    {
-      key: "status", header: "Status", value: (l) => (l.lead_status_id ? statusMap[l.lead_status_id]?.name ?? "—" : "—"),
-      render: (l) => {
-        const st = l.lead_status_id ? statusMap[l.lead_status_id] : null;
-        return st ? <Badge className={statusColorClasses(st.color)}>{st.name}</Badge> : <>—</>;
-      },
-    },
-    { key: "owner", header: "Owner", value: (l) => (ownerOf(l) ? userMap[ownerOf(l) as string] || "—" : "—") },
-    {
-      key: "value", header: "Opp. Value", align: "right", numeric: true,
-      value: (l) => Number(l.opportunity_value) || 0,
-      render: (l) => <>{Number(l.opportunity_value) > 0 ? money(Number(l.opportunity_value)) : "—"}</>,
-    },
-    {
-      key: "close_date", header: "Close Date",
-      value: (l) => (l.opportunity_close_date ? format(new Date(l.opportunity_close_date), "dd MMM yyyy") : "—"),
-    },
-    {
-      key: "probability", header: "Win %", align: "right", numeric: true,
-      value: (l) => (l.opportunity_probability != null ? Number(l.opportunity_probability) : null),
-      render: (l) => <>{l.opportunity_probability != null ? `${l.opportunity_probability}%` : "—"}</>,
-    },
-    {
-      key: "productive_count", header: "# Productive Activities", align: "right", numeric: true,
-      value: (l) => rollupOf(l.id).productiveCount,
-    },
-    {
-      key: "days_since_last_activity", header: "Days Since Last Activity", align: "right", numeric: true,
-      value: (l) => rollupOf(l.id).daysSinceLastActivity,
-      render: (l) => <>{rollupOf(l.id).daysSinceLastActivity ?? "—"}</>,
-    },
-    {
-      key: "next_activity_date", header: "Next Activity Date",
-      value: (l) => {
-        const d = rollupOf(l.id).nextActivityDate;
-        return d ? format(new Date(d), "dd MMM yyyy") : "—";
-      },
-    },
-    {
-      key: "activity_count", header: "# Activities", align: "right", numeric: true, defaultHidden: true,
-      value: (l) => rollupOf(l.id).activityCount,
-    },
-    {
-      key: "last_activity_date", header: "Last Activity Date", defaultHidden: true,
-      value: (l) => {
-        const d = rollupOf(l.id).lastActivityDate;
-        return d ? format(new Date(d), "dd MMM yyyy") : "—";
-      },
-    },
-    { key: "phone", header: "Phone", value: (l) => l.phone ?? "—", defaultHidden: true },
-    { key: "email", header: "Email", value: (l) => l.email ?? "—", defaultHidden: true },
-    { key: "created_at", header: "Created", value: (l) => format(new Date(l.created_at), "dd MMM yyyy"), defaultHidden: true },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  ], [statusMap, userMap, rollups]);
-
-  const [visibleCols, setVisibleCols] = useState<string[]>([]);
-  useEffect(() => {
-    if (visibleCols.length) return;
-    setVisibleCols(listColumns.filter((c) => !c.defaultHidden).map((c) => c.key));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [listColumns]);
-  const shownCols = useMemo(
-    () => listColumns.filter((c) => visibleCols.includes(c.key)),
-    [listColumns, visibleCols],
+  const people = useMemo(
+    () => Object.entries(userMap).map(([value, label]) => ({ value, label: label || "Unknown" })),
+    [userMap],
   );
 
-  // Saved views (same storage as saved reports, scoped to the leads list)
-  const [activeViewId, setActiveViewId] = useState<string | null>(null);
-  const [activeViewName, setActiveViewName] = useState<string | null>(null);
-  const applyView = (r: SavedReport) => {
-    const f = (r.config.filters || {}) as Record<string, unknown>;
-    setCreatedPreset((f.createdPreset as string) || "all");
-    setOwnerFilter((f.ownerFilter as string) || "all");
-    setStatusFilter((f.statusFilter as string) || "all");
-    setMinProductive((f.minProductive as string) ?? "");
-    setMinDaysSince((f.minDaysSince as string) ?? "");
-    if (r.config.visibleColumns?.length) {
-      setVisibleCols(r.config.visibleColumns.filter((k) => listColumns.some((c) => c.key === k)));
+  const columns = activeView?.columns?.length ? activeView.columns : DEFAULT_VIEW_COLUMNS;
+
+  const viewRows = useMemo(() => {
+    let out = applyFilters(rows, activeView?.filters);
+    const q = search.trim().toLowerCase();
+    if (q) {
+      out = out.filter((r: any) =>
+        [r.name, r.company, r.email, r.phone, r.status_name, r.owner_name]
+          .some((v) => String(v ?? "").toLowerCase().includes(q)));
     }
-    setActiveViewId(r.id);
-    setActiveViewName(r.name);
+    const field = sortKey ?? activeView?.sort_field ?? "created_at";
+    const dir = sortKey ? sortDir : activeView?.sort_dir ?? "desc";
+    return sortRows(out, field, dir);
+  }, [rows, activeView, search, sortKey, sortDir]);
+
+  const [kanbanConfig, setKanbanConfigState] = useState<KanbanConfig>(() =>
+    getKanbanConfig(SECTION, activeView?.id ?? "__all__"));
+  useEffect(() => {
+    setKanbanConfigState(getKanbanConfig(SECTION, activeView?.id ?? "__all__"));
+  }, [activeView?.id]);
+
+  const canManageActive = !!activeView && (activeView.is_standard || activeView.owner_id === userId);
+
+
+  const toggleSort = (key: string) => {
+    if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else { setSortKey(key); setSortDir("asc"); }
   };
 
+  const openLead = (row: any) => nav(`/leads/${row.id}`);
+
+  const saveColumns = (cols: string[]) => {
+    if (!activeView) return;
+    if (activeView.is_standard) updateStandardColumns(activeView.id, cols);
+    else saveView({ ...activeView, name: activeView.name, columns: cols });
+  };
+
+  const persistField = async (row: any, key: string, value: any) => {
+    const patch: Record<string, any> = {};
+    if (DIRECT_COLUMNS[key]) {
+      const def = fieldDef(key);
+      patch[DIRECT_COLUMNS[key]] =
+        value === "" ? null : def?.type === "number" ? Number(value) : value;
+    } else if (key === "status_name") {
+      const st = statuses.find((s) => s.name === value);
+      if (!st) return;
+      patch.lead_status_id = st.id;
+    } else if (key === "source_name") {
+      const so = sources.find((s) => s.name === value);
+      if (!so) return;
+      patch.lead_source_id = so.id;
+    } else {
+      toast.error("This field can't be edited inline");
+      return;
+    }
+
+    const { error } = await supabase.from("leads" as any).update(patch).eq("id", row.id);
+    if (error) { toast.error(error.message); return; }
+    qc.invalidateQueries({ queryKey: ["leads"] });
+    toast.success("Lead updated");
+  };
 
   return (
     <motion.div className="p-3 md:p-6 space-y-4 max-w-7xl mx-auto" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-      <div>
-        <h1 className="text-xl md:text-2xl font-bold">Leads</h1>
-        <p className="text-xs md:text-sm text-muted-foreground">Capture and convert leads into customers</p>
-      </div>
-
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
-        <KpiCard icon={TrendingUp} label="Total Opportunity Pipeline" value={money(kpis.pipeline)} sub={`${filteredLeads.length} leads`} color="bg-blue-100 text-blue-600" />
-        <KpiCard icon={CalendarClock} label="Closing This Month" value={money(kpis.closingValue)} sub={`${kpis.closingCount} leads`} color="bg-amber-100 text-amber-600" />
-        <KpiCard icon={CheckCircle2} label="Activities Completed (Month)" value={kpis.completedMonth} color="bg-emerald-100 text-emerald-600" />
-        <KpiCard icon={Activity} label="Activities Completed (Week)" value={kpis.completedWeek} color="bg-purple-100 text-purple-600" />
-      </div>
-
-      <div className="flex items-center gap-2">
-        <div className="relative flex-1 md:flex-none">
-          <Search className="h-4 w-4 absolute left-2 top-2.5 text-muted-foreground" />
-          <Input placeholder="Search" value={q} onChange={(e) => setQ(e.target.value)} className="pl-8 w-full md:w-56" />
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <h1 className="text-xl md:text-2xl font-bold">Leads</h1>
+          <p className="text-xs md:text-sm text-muted-foreground">Capture and convert leads into customers</p>
         </div>
-        <Button size="sm" className="shrink-0" onClick={() => setLeadOpen(true)}><Plus className="h-4 w-4 mr-1" />New Lead</Button>
+        <Button size="sm" className="shrink-0" onClick={() => setLeadOpen(true)}>
+          <Plus className="h-4 w-4 mr-1" />New Lead
+        </Button>
       </div>
 
-      {/* Filters */}
-      <Card>
-        <CardContent className="p-3 space-y-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <SavedReportBar
-              module="leads-list"
-              currentConfig={{
-                filters: { createdPreset, ownerFilter, statusFilter, minProductive, minDaysSince },
-                visibleColumns: visibleCols,
-              }}
-              activeId={activeViewId}
-              activeName={activeViewName}
-              onApply={applyView}
-              onSaved={(id, name) => { setActiveViewId(id); setActiveViewName(name); }}
-              onCleared={() => { setActiveViewId(null); setActiveViewName(null); }}
-            />
-            <ColumnPicker columns={listColumns} visible={visibleCols} onChange={setVisibleCols} />
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
 
-            <Select value={createdPreset} onValueChange={setCreatedPreset}>
-              <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Created date" /></SelectTrigger>
-              <SelectContent className="bg-popover z-50">
-                {DATE_PRESETS.map((p) => <SelectItem key={p.value} value={p.value}>{p.value === "all" ? "Created: All time" : `Created: ${p.label}`}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Input
-              type="number"
-              min={0}
-              inputMode="numeric"
-              className="h-9 text-xs"
-              placeholder="Min # productive activities"
-              value={minProductive}
-              onChange={(e) => setMinProductive(e.target.value)}
-            />
-            <Input
-              type="number"
-              min={0}
-              inputMode="numeric"
-              className="h-9 text-xs"
-              placeholder="Min days since last activity"
-              value={minDaysSince}
-              onChange={(e) => setMinDaysSince(e.target.value)}
-            />
+      <ViewBar
+        views={allViews}
+        activeView={activeView}
+        currentUserId={userId}
+        onSelect={selectView}
+        onNew={() => { setEditingView(null); setEditorOpen(true); }}
+        onEdit={(v) => { setEditingView(v); setEditorOpen(true); }}
+        onDelete={deleteView}
+        onPin={pinDefault}
+        onClone={(v) => { setEditingView({ ...v, id: "", name: `${v.name} (copy)`, is_standard: false }); setEditorOpen(true); }}
+        onFields={() => setFieldsOpen(true)}
+        onRefresh={() => { reload(); qc.invalidateQueries({ queryKey: ["leads"] }); }}
+        display={display}
+        onDisplayChange={setDisplay}
+        onKanbanSettings={() => setKanbanOpen(true)}
+        count={viewRows.length}
+        search={search}
+        onSearchChange={setSearch}
+        chartsOpen={chartsOpen}
+        onToggleCharts={() => setChartsOpen((o) => !o)}
+        filtersOpen={filtersOpen}
+        onToggleFilters={() => setFiltersOpen((o) => !o)}
+      />
 
-            <Select value={ownerFilter} onValueChange={setOwnerFilter}>
-              <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Owner" /></SelectTrigger>
-              <SelectContent className="bg-popover z-50">
-                <SelectItem value="all">All owners</SelectItem>
-                {ownerOptions.map((o) => <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Status" /></SelectTrigger>
-              <SelectContent className="bg-popover z-50">
-                <SelectItem value="all">All statuses</SelectItem>
-                {statuses.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          {activeFilters > 0 && (
-            <div className="space-y-2">
-              <div className="flex flex-wrap gap-1.5">
-                {filterChips.map((c) => (
+      <div className={filtersOpen || chartsOpen ? "grid gap-4 md:grid-cols-[1fr_340px]" : ""}>
+        <Card className="overflow-hidden md:order-1">
+
+          <CardContent className="p-0">
+            {loading ? (
+              <p className="p-8 text-center text-sm text-muted-foreground">Loading views…</p>
+            ) : viewRows.length === 0 ? (
+              <p className="p-8 text-center text-sm text-muted-foreground">No leads match this view</p>
+            ) : display === "table" ? (
+              <LeadListViewTable
+                rows={viewRows}
+                columns={columns}
+                selectedIds={selectedIds}
+                onToggle={(id) => setSelectedIds((prev) => {
+                  const next = new Set(prev);
+                  next.has(id) ? next.delete(id) : next.add(id);
+                  return next;
+                })}
+                onToggleAll={() => setSelectedIds((prev) =>
+                  prev.size === viewRows.length ? new Set() : new Set(viewRows.map((r: any) => r.id)))}
+                onOpen={openLead}
+                sortKey={sortKey ?? activeView?.sort_field ?? null}
+                sortDir={sortKey ? sortDir : activeView?.sort_dir ?? "desc"}
+                onSort={toggleSort}
+                onInlineSave={persistField}
+                picklistOptions={picklistOptions}
+              />
+            ) : display === "kanban" ? (
+              <LeadKanban
+                rows={viewRows}
+                config={kanbanConfig}
+                options={picklistOptions[fieldDef(kanbanConfig.group_field)?.optionsSource ?? "status"] ?? []}
+                columns={columns}
+                onOpen={openLead}
+                onMove={(row, field, value) => persistField(row, field, value)}
+              />
+            ) : display === "split" ? (
+              <LeadSplitView rows={viewRows} columns={columns} onOpen={openLead} />
+            ) : (
+              <div className="grid gap-2 p-3 sm:grid-cols-2 lg:grid-cols-3">
+                {viewRows.map((l: any) => (
                   <button
-                    key={c.key}
-                    onClick={c.clear}
-                    className="inline-flex items-center gap-1 rounded-full border bg-secondary/60 px-2.5 py-1 text-[11px] font-medium text-secondary-foreground active:opacity-70"
+                    key={l.id}
+                    onClick={() => openLead(l)}
+                    className="rounded-lg border border-border bg-background p-3 text-left transition-colors hover:bg-muted/40"
                   >
-                    <span className="max-w-[160px] truncate">{c.label}</span>
-                    <X className="h-3 w-3 opacity-70" />
+                    <div className="flex items-start gap-3">
+                      <LeadAvatar name={l.name} className="h-9 w-9" />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold">{l.name}</p>
+                        <p className="truncate text-xs text-muted-foreground">{l.company || "No company"}</p>
+                      </div>
+                      {l.status_name && (
+                        <Badge className={`${statusColorClasses(l.status_color)} shrink-0 text-[10px]`}>{l.status_name}</Badge>
+                      )}
+                    </div>
+                    <div className="mt-2 grid grid-cols-2 gap-2 text-[11px] text-muted-foreground">
+                      {columns.filter((c) => c !== "name").slice(0, 4).map((c) => (
+                        <div key={c} className="truncate">
+                          <span className="opacity-70">{fieldDef(c)?.label}: </span>
+                          {formatCell(l, c)}
+                        </div>
+                      ))}
+                    </div>
+                    <p className="mt-2 text-[10px] text-muted-foreground">
+                      Created {format(new Date(l.created_at), "dd MMM yyyy")}
+                    </p>
                   </button>
                 ))}
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] text-muted-foreground">{filteredLeads.length} result{filteredLeads.length !== 1 ? "s" : ""}</span>
-                <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={clearAllFilters}>
-                  <X className="h-3 w-3 mr-1" />Clear all
-                </Button>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            )}
+          </CardContent>
+        </Card>
 
+        {(filtersOpen || chartsOpen) && (
+          <div className="order-first space-y-4 md:order-2 md:sticky md:top-4 md:self-start">
 
-      {/* Mobile: card list */}
-      <div className="space-y-2 md:hidden">
-        {visibleLeads.map((l: any) => {
-          const st = l.lead_status_id ? statusMap[l.lead_status_id] : null;
-          const owner = ownerOf(l);
-          const ownerName = owner ? (userMap[owner] || "—") : "—";
-          const ins = (insights as any)[l.id] ?? { activityCount: 0, documentCount: 0, sla: "Not Started" };
-          const score = bantScore(
-            {
-              statusName: st?.name, contactRole: l.contact_role,
-              activityCount: ins.activityCount, createdAt: l.created_at,
-              indicativeBudget: l.indicative_budget, opportunityValue: l.opportunity_value,
-              requirement: l.researched_information, closeDate: l.opportunity_close_date,
-            },
-            scoringRules,
-          );
-          return (
-            <Card key={l.id} className="cursor-pointer active:opacity-80" onClick={() => nav(`/leads/${l.id}`)}>
-              <CardContent className="p-3 space-y-1.5">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="font-semibold text-sm truncate">{l.name}</p>
-                    {l.company && <p className="text-xs text-muted-foreground truncate">{l.company}</p>}
-                  </div>
-                  {st && <Badge className={`${statusColorClasses(st.color)} shrink-0 text-[10px]`}>{st.name}</Badge>}
-                </div>
-                <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
-                  <span className="truncate">{l.phone ?? "No phone"}</span>
-                  <span className="shrink-0">{format(new Date(l.created_at), "dd MMM yyyy")}</span>
-                </div>
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-[11px] text-muted-foreground truncate">Owner: {ownerName}</span>
-                  <span className="text-[11px] text-muted-foreground shrink-0">{ins.documentCount} doc{ins.documentCount === 1 ? "" : "s"}</span>
-                </div>
-                <div className="grid grid-cols-3 gap-2 rounded-md bg-muted/40 p-2">
-                  <div>
-                    <div className="text-[10px] text-muted-foreground">Value</div>
-                    <div className="text-[11px] font-semibold truncate">
-                      {Number(l.opportunity_value) > 0 ? money(Number(l.opportunity_value)) : "—"}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-[10px] text-muted-foreground">Close date</div>
-                    <div className="text-[11px] font-semibold truncate">
-                      {l.opportunity_close_date ? format(new Date(l.opportunity_close_date), "dd MMM yy") : "—"}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-[10px] text-muted-foreground">Win %</div>
-                    <div className="text-[11px] font-semibold">
-                      {l.opportunity_probability != null ? `${l.opportunity_probability}%` : "—"}
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <Badge className={`${BANT_LEVEL_CLASSES[score.level]} text-[10px]`}>BANT {score.total} · {score.level}</Badge>
-                  <Badge className={`${SLA_BADGE_CLASSES[ins.sla]} text-[10px]`}>{ins.sla}</Badge>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-        {filteredLeads.length === 0 && (
-          <Card><CardContent className="p-6 text-center text-sm text-muted-foreground">No leads match the filters</CardContent></Card>
+            {filtersOpen && (
+              <ViewFiltersPanel
+                view={activeView}
+                canManage={canManageActive}
+                picklistOptions={picklistOptions}
+                onSave={(filters: { match: "all" | "any"; conditions: FilterCondition[] }) => {
+                  if (!activeView) return;
+                  if (activeView.is_standard) updateStandardFilters(activeView.id, filters);
+                  else saveView({ ...activeView, name: activeView.name, filters });
+                }}
+                onClose={() => setFiltersOpen(false)}
+              />
+            )}
+            {chartsOpen && (
+              <ViewChartsPanel
+                charts={activeView?.charts ?? []}
+                rows={viewRows}
+                canManage={canManageActive}
+                onChange={(charts) => {
+                  if (!activeView) return;
+                  if (activeView.is_standard) updateStandardCharts(activeView.id, charts);
+                  else saveCharts(activeView.id, charts);
+                }}
+                onClose={() => setChartsOpen(false)}
+              />
+            )}
+
+          </div>
         )}
       </div>
 
-      {/* Desktop: table */}
-      <Card className="hidden md:block"><CardContent className="p-0 overflow-x-auto">
-        <Table>
-          <TableHeader><TableRow>
-            {shownCols.map((c) => (
-              <TableHead key={c.key} className={c.align === "right" ? "text-right" : ""}>{c.header}</TableHead>
-            ))}
-          </TableRow></TableHeader>
-          <TableBody>
-            {visibleLeads.map((l: any) => (
-              <TableRow key={l.id} className="cursor-pointer" onClick={() => nav(`/leads/${l.id}`)}>
-                {shownCols.map((c) => (
-                  <TableCell key={c.key} className={`text-sm ${c.align === "right" ? "text-right" : ""}`}>
-                    {c.render ? c.render(l) : (c.value(l) ?? "—")}
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))}
-            {filteredLeads.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={Math.max(shownCols.length, 1)} className="text-center py-8 text-muted-foreground">
-                  No leads match the filters
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </CardContent></Card>
+      <ViewEditorDialog
+        open={editorOpen}
+        onOpenChange={setEditorOpen}
+        view={editingView}
+        onSave={(payload) => saveView(payload as any)}
+        picklistOptions={picklistOptions}
+        people={people}
+      />
 
+      <FieldsDisplayDialog
+        open={fieldsOpen}
+        onOpenChange={setFieldsOpen}
+        viewName={activeView?.name ?? "All Leads"}
+        columns={columns}
+        onSave={saveColumns}
+      />
 
-      {/* Infinite scroll sentinel */}
-      {hasMore && (
-        <div ref={sentinelRef} className="flex flex-col items-center gap-2 py-3">
-          <span className="text-[11px] text-muted-foreground">
-            Showing {visibleLeads.length} of {filteredLeads.length}
-          </span>
-          <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}>
-            Load more
-          </Button>
-        </div>
-      )}
+      <KanbanSettingsDialog
+        open={kanbanOpen}
+        onOpenChange={setKanbanOpen}
+        config={kanbanConfig}
+        onSave={(cfg) => {
+          setKanbanConfigState(cfg);
+          setKanbanConfig(SECTION, activeView?.id ?? "__all__", cfg);
+        }}
+      />
 
       <LeadForm open={leadOpen} onOpenChange={setLeadOpen} />
-
     </motion.div>
   );
 }

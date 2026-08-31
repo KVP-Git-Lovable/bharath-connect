@@ -1,0 +1,1 @@
+DELETE FROM public.gps_tracking WHERE accuracy IS NOT NULL AND accuracy > 100;

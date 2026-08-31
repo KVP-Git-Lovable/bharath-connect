@@ -1,0 +1,1 @@
+ALTER TABLE public.opportunity_quotes ADD COLUMN IF NOT EXISTS overall_discount_pct numeric NOT NULL DEFAULT 0;

@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { format } from "date-fns";
 import { Filter, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,49 +13,46 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import type { WorkforceUser } from "@/hooks/useWorkforceOverview";
+import { presetLabels, type DatePreset } from "./workforceRange";
+import { useWorkforceFilterContext } from "./WorkforceFilterContext";
 
-export type DatePreset = "this_week" | "last_week" | "this_month" | "custom";
+export type { DatePreset };
 
-interface WorkforceFiltersProps {
-  users: WorkforceUser[];
-  preset: DatePreset;
-  onPresetChange: (preset: DatePreset) => void;
-  customStart: string;
-  customEnd: string;
-  onCustomStartChange: (v: string) => void;
-  onCustomEndChange: (v: string) => void;
-  selectedUsers: string[];
-  onSelectedUsersChange: (ids: string[]) => void;
-  rangeLabel: string;
-}
+const presetOrder: DatePreset[] = [
+  "today",
+  "yesterday",
+  "tomorrow",
+  "this_week",
+  "last_week",
+  "next_week",
+  "this_month",
+  "custom",
+];
 
-const presetLabels: Record<DatePreset, string> = {
-  this_week: "This Week",
-  last_week: "Last Week",
-  this_month: "This Month",
-  custom: "Custom Date Range",
-};
-
-export default function WorkforceFilters({
-  users,
-  preset,
-  onPresetChange,
-  customStart,
-  customEnd,
-  onCustomStartChange,
-  onCustomEndChange,
-  selectedUsers,
-  onSelectedUsersChange,
-  rangeLabel,
-}: WorkforceFiltersProps) {
+export default function WorkforceFilters() {
+  const {
+    users,
+    preset,
+    setPreset,
+    customStart,
+    setCustomStart,
+    customEnd,
+    setCustomEnd,
+    selectedUsers,
+    setSelectedUsers,
+    rangeLabel,
+    saveFilters,
+    clearFilters,
+    hasSavedFilters,
+  } = useWorkforceFilterContext();
   const [search, setSearch] = useState("");
+
 
   const toggleUser = (id: string) => {
     if (selectedUsers.includes(id)) {
-      onSelectedUsersChange(selectedUsers.filter((u) => u !== id));
+      setSelectedUsers(selectedUsers.filter((u) => u !== id));
     } else {
-      onSelectedUsersChange([...selectedUsers, id]);
+      setSelectedUsers([...selectedUsers, id]);
     }
   };
 
@@ -84,15 +80,16 @@ export default function WorkforceFilters({
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Date Range</Label>
-              <Select value={preset} onValueChange={(v) => onPresetChange(v as DatePreset)}>
+              <Select value={preset} onValueChange={(v) => setPreset(v as DatePreset)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="this_week">This Week</SelectItem>
-                  <SelectItem value="last_week">Last Week</SelectItem>
-                  <SelectItem value="this_month">This Month</SelectItem>
-                  <SelectItem value="custom">Custom Date Range</SelectItem>
+                  {presetOrder.map((p) => (
+                    <SelectItem key={p} value={p}>
+                      {presetLabels[p]}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -104,7 +101,7 @@ export default function WorkforceFilters({
                   <Input
                     type="date"
                     value={customStart}
-                    onChange={(e) => onCustomStartChange(e.target.value)}
+                    onChange={(e) => setCustomStart(e.target.value)}
                   />
                 </div>
                 <div className="space-y-1">
@@ -112,7 +109,7 @@ export default function WorkforceFilters({
                   <Input
                     type="date"
                     value={customEnd}
-                    onChange={(e) => onCustomEndChange(e.target.value)}
+                    onChange={(e) => setCustomEnd(e.target.value)}
                   />
                 </div>
               </div>
@@ -126,7 +123,7 @@ export default function WorkforceFilters({
                     variant="ghost"
                     size="sm"
                     className="h-auto p-0 text-xs"
-                    onClick={() => onSelectedUsersChange([])}
+                    onClick={() => setSelectedUsers([])}
                   >
                     Clear
                   </Button>
@@ -162,9 +159,29 @@ export default function WorkforceFilters({
                 </div>
               </ScrollArea>
             </div>
+
+            <div className="flex items-center gap-2 pt-1">
+              <Button size="sm" className="flex-1" onClick={saveFilters}>
+                Save filter
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="flex-1"
+                onClick={clearFilters}
+              >
+                Clear filter
+              </Button>
+            </div>
+            {hasSavedFilters && (
+              <p className="text-[11px] text-muted-foreground">
+                Saved filter is applied on every refresh.
+              </p>
+            )}
           </div>
         </PopoverContent>
       </Popover>
+
 
       <Badge className="bg-primary/10 text-primary border border-primary/20 font-normal">
         {presetLabels[preset]}: {rangeLabel}

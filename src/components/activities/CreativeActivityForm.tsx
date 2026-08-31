@@ -1,4 +1,6 @@
 import { SignedAvatarImage, SignedImage } from "@/components/ui/signed-image";
+import ActivityGeoStamp from "@/components/activities/ActivityGeoStamp";
+import ActivityEffortSection from "@/components/activities/ActivityEffortSection";
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -8,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,6 +37,8 @@ import {
   ImagePlus,
   LogIn,
   CheckCircle2,
+  HelpCircle,
+  AlertTriangle,
 
 } from "lucide-react";
 import { toast } from "sonner";
@@ -189,6 +194,11 @@ export default function CreativeActivityForm({
   const [checkedIn, setCheckedIn] = useState(false);
 
   const [checkingIn, setCheckingIn] = useState(false);
+  const [ownerId, setOwnerId] = useState("");
+  const [ownerOpen, setOwnerOpen] = useState(false);
+  const [ownerSearch, setOwnerSearch] = useState("");
+  const [ownerAvatars, setOwnerAvatars] = useState<Record<string, string>>({});
+  const [formError, setFormError] = useState("");
   const [assignOpen, setAssignOpen] = useState(false);
   const [assignSearch, setAssignSearch] = useState("");
   const [isTranscribing, setIsTranscribing] = useState(false);
@@ -245,6 +255,10 @@ export default function CreativeActivityForm({
       setGrnRecv({});
       setGrnItemRemarks({});
       setGrnRemarks("");
+      setOwnerId("");
+      setOwnerOpen(false);
+      setOwnerSearch("");
+      setFormError("");
       return;
     }
     // Prefill on edit
@@ -261,6 +275,7 @@ export default function CreativeActivityForm({
       setCheckedIn(!!(editActivity as any).check_in_at);
       setGrnPoId((editActivity as any).grn_po_id || "");
       setRisk((editActivity as any).risk || "green");
+      setOwnerId((editActivity as any).user_id || currentUserId || "");
       if ((editActivity as any).next_follow_up_date) {
         setFollowUp("Custom date");
         setFollowUpDate(String((editActivity as any).next_follow_up_date).slice(0, 10));
@@ -280,9 +295,10 @@ export default function CreativeActivityForm({
       });
     } else {
       setCheckedIn(false);
+      setOwnerId(currentUserId || "");
       if (defaultLeadId) setLeadId(defaultLeadId);
     }
-  }, [open, editActivity, clearRecording, defaultLeadId]);
+  }, [open, editActivity, clearRecording, defaultLeadId, currentUserId]);
 
 
   // Load leads for the picker
@@ -376,6 +392,34 @@ export default function CreativeActivityForm({
   }, [leadOptions, leadSearch]);
 
   const selectedLead = leadOptions.find((l) => l.id === leadId);
+
+  // ---- Activity owner (defaults to the logged-in user, can be reassigned) ----
+  const effectiveOwnerId = ownerId || currentUserId || "";
+  const isSelfOwner = !effectiveOwnerId || effectiveOwnerId === currentUserId;
+  const ownerName = isSelfOwner
+    ? currentProfile?.full_name || currentProfile?.username || "Me"
+    : users.find((u) => u.id === effectiveOwnerId)?.full_name || "Owner";
+  const ownerAvatar = isSelfOwner ? currentProfile?.profile_picture_url || "" : ownerAvatars[effectiveOwnerId] || "";
+  const ownerResults = useMemo(() => {
+    const q = ownerSearch.trim().toLowerCase();
+    const list = q ? users.filter((u) => u.full_name?.toLowerCase().includes(q)) : users;
+    return list.slice(0, 25);
+  }, [users, ownerSearch]);
+
+  useEffect(() => {
+    if (!open || isSelfOwner || !effectiveOwnerId || ownerAvatars[effectiveOwnerId] !== undefined) return;
+    let active = true;
+    supabase
+      .from("profiles")
+      .select("id, profile_picture_url")
+      .eq("id", effectiveOwnerId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (active) setOwnerAvatars((prev) => ({ ...prev, [effectiveOwnerId]: (data as any)?.profile_picture_url || "" }));
+      });
+    return () => { active = false; };
+  }, [open, isSelfOwner, effectiveOwnerId, ownerAvatars]);
+
 
   const filteredUsers = useMemo(() => {
     const q = assignSearch.trim().toLowerCase();
@@ -618,21 +662,27 @@ export default function CreativeActivityForm({
 
   const canPost = !!leadId && (!!description.trim() || !!activityType);
 
+  const fail = (msg: string) => {
+    setFormError(msg);
+    toast.error(msg, { className: "font-bold" });
+  };
+
   const handlePost = async () => {
+    setFormError("");
     if (!leadId) {
-      toast.error("Select a lead — it is mandatory for an activity");
+      fail("Lead is mandatory — select a lead before saving this activity");
       return;
     }
     if (!canPost) {
-      toast.error("Add an activity type or description to save");
+      fail("Add an activity type or an activity comment to save");
       return;
     }
     if (outcome && FOLLOW_UP_REQUIRED_OUTCOMES.includes(outcome) && !followUp) {
-      toast.error(`Select a next follow-up — it is mandatory when the outcome is "${outcome}"`);
+      fail(`Next follow-up is mandatory when the outcome is "${outcome}"`);
       return;
     }
     if (followUp === "Custom date" && !followUpDate) {
-      toast.error("Pick a date for the custom follow-up");
+      fail("Pick a date for the custom follow-up");
       return;
     }
     if (isEdit && !editActivity) return;
@@ -706,12 +756,12 @@ export default function CreativeActivityForm({
       };
 
       if (isEdit && updateActivity) {
-        await updateActivity(editActivity!.id, payload);
+        await updateActivity(editActivity!.id, { ...payload, ...(effectiveOwnerId ? { user_id: effectiveOwnerId } : {}) });
         toast.success("Post updated");
       } else {
         payload.status = "planned";
         payload.status_history = [{ status: "planned", at: new Date().toISOString() } as ActivityStatusEntry];
-        await createActivity(payload, undefined, true);
+        await createActivity(payload, effectiveOwnerId || undefined, true);
       }
 
       // Auto-create the next follow-up task
@@ -948,19 +998,7 @@ export default function CreativeActivityForm({
                       <div className="flex items-center gap-1.5 text-muted-foreground min-w-0"><Clock className="h-3 w-3 shrink-0" /><span className="min-w-0 break-words">End {format(parseISO(editActivity.end_time), "h:mm a")}</span></div>
                     )}
                   </div>
-                  {(editActivity.location_address || (editActivity.location_lat && editActivity.location_lng)) && (
-                    <div className="rounded-xl border border-border/60 bg-muted/40 px-2.5 py-2 space-y-0.5 min-w-0">
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5"><MapPin className="h-3 w-3" /> Geo Stamp</p>
-                      {editActivity.location_address && (
-                        <p className="text-[11px] text-muted-foreground break-words [overflow-wrap:anywhere]">{editActivity.location_address}</p>
-                      )}
-                      {editActivity.location_lat && editActivity.location_lng && (
-                        <p className="text-[11px] font-mono text-muted-foreground">
-                          {Number(editActivity.location_lat).toFixed(5)}, {Number(editActivity.location_lng).toFixed(5)}
-                        </p>
-                      )}
-                    </div>
-                  )}
+                  <ActivityGeoStamp activity={editActivity as any} />
                   {editActivity.milestone_name && (
                     <div className="text-[11px] text-muted-foreground break-words [overflow-wrap:anywhere]"><span className="font-medium text-foreground">Milestone:</span> {editActivity.milestone_name}</div>
                   )}
@@ -988,28 +1026,6 @@ export default function CreativeActivityForm({
                           {STATUS_LABELS[s]}
                         </button>
                       ))}
-                    </div>
-                  )}
-                  {/* Timeline */}
-                  {(editActivity.status_history || []).length > 0 && (
-                    <div className="pt-2 border-t border-border/60 min-w-0 max-w-full overflow-hidden">
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">Timeline</p>
-                      <div className="space-y-2 min-w-0">
-                        {[...editActivity.status_history]
-                          .sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime())
-                          .map((h, i) => (
-                            <div key={i} className="grid grid-cols-[0.375rem_minmax(0,1fr)] items-start gap-2 text-[11px] min-w-0 max-w-full">
-                              <span className={cn("mt-1.5 h-1.5 w-1.5 rounded-full", STATUS_DOT[h.status] || "bg-muted-foreground")} />
-                              <div className="min-w-0 max-w-full">
-                                <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 min-w-0">
-                                  <span className="font-medium break-words [overflow-wrap:anywhere]">{STATUS_LABELS[h.status] || h.status}</span>
-                                  <span className="text-muted-foreground break-words">· {format(parseISO(h.at), "MMM d, h:mm a")}</span>
-                                </div>
-                                {h.address && <p className="text-muted-foreground break-words [overflow-wrap:anywhere]">{h.address}</p>}
-                              </div>
-                            </div>
-                          ))}
-                      </div>
                     </div>
                   )}
                   {/* Attachments */}
@@ -1068,7 +1084,7 @@ export default function CreativeActivityForm({
               {/* Lead picker */}
               <div className="rounded-2xl bg-gradient-to-br from-indigo-50 to-fuchsia-50 dark:from-indigo-950/30 dark:to-fuchsia-950/30 border border-indigo-100 dark:border-indigo-900/50 px-3 sm:px-4 pt-4 pb-3 shadow-sm min-w-0 max-w-full overflow-hidden">
                 <div className="flex items-center justify-between gap-2 mb-2 min-w-0">
-                  <p className="text-xs font-bold uppercase tracking-wider text-indigo-700 dark:text-indigo-300">Lead</p>
+                  <p className="text-xs font-bold uppercase tracking-wider text-indigo-700 dark:text-indigo-300">Lead <span className="text-destructive">*</span></p>
                   {selectedLead && (
                     <button
                       className="text-[11px] text-muted-foreground hover:text-foreground shrink-0"
@@ -1169,25 +1185,81 @@ export default function CreativeActivityForm({
                 </div>
               )}
 
+              {formError && (
+                <div className="rounded-2xl border-2 border-destructive bg-destructive/10 px-3 sm:px-4 py-2.5 flex items-start gap-2">
+                  <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+                  <p className="text-sm font-bold text-destructive break-words">{formError}</p>
+                </div>
+              )}
+
               {/* Description with inline icon rail */}
               <div className="rounded-2xl bg-card border border-border px-3 sm:px-4 py-3 shadow-sm min-w-0 max-w-full overflow-hidden">
                 <div className="flex items-start gap-3 min-w-0">
-                  {currentProfile?.profile_picture_url ? (
-                    <SignedImage
-                      src={currentProfile.profile_picture_url}
-                      alt={currentProfile.full_name || currentProfile.username || "Me"}
-                      className="h-10 w-10 rounded-full object-cover shrink-0 border border-border"
-                    />
-                  ) : (
-                    <div
-                      className={cn(
-                        "h-10 w-10 rounded-full bg-gradient-to-br flex items-center justify-center text-white text-sm font-semibold shrink-0",
-                        gradientFor(currentUserId || "me")
-                      )}
-                    >
-                      {currentInitials && currentInitials !== "??" ? currentInitials : initials(currentProfile?.full_name || currentProfile?.username || "Me")}
-                    </div>
-                  )}
+                  <Popover open={ownerOpen} onOpenChange={(v) => { setOwnerOpen(v); if (!v) setOwnerSearch(""); }}>
+                    <PopoverTrigger asChild>
+                      <button
+                        type="button"
+                        title={`Owner: ${ownerName} — tap to reassign`}
+                        aria-label={`Activity owner ${ownerName}. Tap to reassign`}
+                        className="relative shrink-0 rounded-full focus:outline-none focus:ring-2 focus:ring-primary/50"
+                      >
+                        {ownerAvatar ? (
+                          <SignedImage
+                            src={ownerAvatar}
+                            alt={ownerName}
+                            className="h-10 w-10 rounded-full object-cover border border-border"
+                          />
+                        ) : (
+                          <div
+                            className={cn(
+                              "h-10 w-10 rounded-full bg-gradient-to-br flex items-center justify-center text-white text-sm font-semibold",
+                              gradientFor(effectiveOwnerId || "me")
+                            )}
+                          >
+                            {isSelfOwner && currentInitials && currentInitials !== "??" ? currentInitials : initials(ownerName)}
+                          </div>
+                        )}
+                        <span className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full bg-background border border-border flex items-center justify-center">
+                          <Users className="h-2.5 w-2.5 text-muted-foreground" />
+                        </span>
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent align="start" className="w-64 p-2">
+                      <p className="text-xs font-semibold mb-2">Activity owner</p>
+                      <div className="flex items-center gap-2 border rounded-md px-2 mb-2">
+                        <Search className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                        <input
+                          autoFocus
+                          value={ownerSearch}
+                          onChange={(e) => setOwnerSearch(e.target.value)}
+                          placeholder="Search users..."
+                          className="flex-1 min-w-0 bg-transparent text-sm py-2 outline-none"
+                        />
+                      </div>
+                      <div className="max-h-56 overflow-y-auto">
+                        {ownerResults.map((u) => (
+                          <button
+                            key={u.id}
+                            type="button"
+                            onClick={() => { setOwnerId(u.id); setOwnerOpen(false); setOwnerSearch(""); }}
+                            className={cn(
+                              "w-full text-left flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted text-sm",
+                              u.id === effectiveOwnerId && "bg-muted font-semibold"
+                            )}
+                          >
+                            <span className={cn("h-6 w-6 rounded-full bg-gradient-to-br flex items-center justify-center text-white text-[10px] font-semibold shrink-0", gradientFor(u.id))}>
+                              {initials(u.full_name)}
+                            </span>
+                            <span className="truncate">{u.full_name}</span>
+                            {u.id === currentUserId && <span className="ml-auto text-[10px] text-muted-foreground">You</span>}
+                          </button>
+                        ))}
+                        {ownerResults.length === 0 && (
+                          <p className="text-xs text-muted-foreground px-2 py-2">No users found</p>
+                        )}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
                   <Textarea
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
@@ -1469,9 +1541,21 @@ export default function CreativeActivityForm({
 
               {/* Activity type chips */}
               <div className="rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 border border-amber-100 dark:border-amber-900/50 px-3 sm:px-4 py-3 shadow-sm min-w-0 max-w-full overflow-hidden">
-                <p className="text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300 mb-2">
-                  Activity Type
-                </p>
+                <div className="flex items-center gap-1.5 mb-2">
+                  <p className="text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300">
+                    Activity Type
+                  </p>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button type="button" aria-label="Help" className="text-muted-foreground hover:text-foreground shrink-0">
+                        <HelpCircle className="h-3.5 w-3.5" />
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent align="start" className="w-64 text-xs leading-relaxed">
+                      Pick the type of work done. An activity type (or a comment) is required to save, and it must be set before you can check out.
+                    </PopoverContent>
+                  </Popover>
+                </div>
                 <div className="flex flex-wrap gap-2 min-w-0">
                   {activityTypes.length === 0 && (
                     <p className="text-xs text-muted-foreground">No activity types configured</p>
@@ -1498,9 +1582,21 @@ export default function CreativeActivityForm({
 
               {/* Outcome */}
               <div className="rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 border border-emerald-100 dark:border-emerald-900/50 px-3 sm:px-4 py-3 shadow-sm min-w-0 max-w-full overflow-hidden">
-                <p className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300 mb-2">
-                  Outcome
-                </p>
+                <div className="flex items-center gap-1.5 mb-2">
+                  <p className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
+                    Outcome
+                  </p>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button type="button" aria-label="Help" className="text-muted-foreground hover:text-foreground shrink-0">
+                        <HelpCircle className="h-3.5 w-3.5" />
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent align="start" className="w-64 text-xs leading-relaxed">
+                      Outcome is mandatory before check-out. Choose what actually happened during the visit or call.
+                    </PopoverContent>
+                  </Popover>
+                </div>
                 <div className="flex flex-wrap gap-2 min-w-0">
                   {ACTIVITY_OUTCOMES.map((o) => {
                     const active = o === outcome;
@@ -1524,9 +1620,21 @@ export default function CreativeActivityForm({
 
               {/* Next follow up */}
               <div className="rounded-2xl bg-gradient-to-br from-sky-50 to-indigo-50 dark:from-sky-950/30 dark:to-indigo-950/30 border border-sky-100 dark:border-sky-900/50 px-3 sm:px-4 py-3 shadow-sm min-w-0 max-w-full overflow-hidden">
-                <p className="text-xs font-bold uppercase tracking-wider text-sky-700 dark:text-sky-300 mb-2">
-                  Next Follow Up
-                </p>
+                <div className="flex items-center gap-1.5 mb-2">
+                  <p className="text-xs font-bold uppercase tracking-wider text-sky-700 dark:text-sky-300">
+                    Next Follow Up
+                  </p>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button type="button" aria-label="Help" className="text-muted-foreground hover:text-foreground shrink-0">
+                        <HelpCircle className="h-3.5 w-3.5" />
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent align="start" className="w-64 text-xs leading-relaxed">
+                      A next follow-up is mandatory when the outcome is "Visited but not available", "Postponed" or "Cancelled". Use "Not fixed" only when no date can be committed.
+                    </PopoverContent>
+                  </Popover>
+                </div>
                 <div className="flex flex-wrap gap-2 min-w-0">
                   {FOLLOW_UP_OPTIONS.map((f) => {
                     const active = f === followUp;
@@ -1566,6 +1674,35 @@ export default function CreativeActivityForm({
                 )}
               </div>
 
+
+              {isEdit && editActivity && (
+                <div className="rounded-2xl bg-card border border-border px-3 sm:px-4 py-3 shadow-sm space-y-3 overflow-hidden min-w-0 max-w-full">
+                {/* Effort */}
+                <ActivityEffortSection activity={editActivity as any} onNavigateAway={() => onOpenChange(false)} />
+                {/* Timeline */}
+                {(editActivity.status_history || []).length > 0 && (
+                  <div className="pt-2 border-t border-border/60 min-w-0 max-w-full overflow-hidden">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">Timeline</p>
+                    <div className="space-y-2 min-w-0">
+                      {[...editActivity.status_history]
+                        .sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime())
+                        .map((h, i) => (
+                          <div key={i} className="grid grid-cols-[0.375rem_minmax(0,1fr)] items-start gap-2 text-[11px] min-w-0 max-w-full">
+                            <span className={cn("mt-1.5 h-1.5 w-1.5 rounded-full", STATUS_DOT[h.status] || "bg-muted-foreground")} />
+                            <div className="min-w-0 max-w-full">
+                              <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 min-w-0">
+                                <span className="font-medium break-words [overflow-wrap:anywhere]">{STATUS_LABELS[h.status] || h.status}</span>
+                                <span className="text-muted-foreground break-words">· {format(parseISO(h.at), "MMM d, h:mm a")}</span>
+                              </div>
+                              {h.address && <p className="text-muted-foreground break-words [overflow-wrap:anywhere]">{h.address}</p>}
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
+                </div>
+              )}
 
               {/* GRN — Goods Receipt (only when Activity Type contains "GRN") */}
               {isGrnType && (

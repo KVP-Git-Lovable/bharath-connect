@@ -1,0 +1,1 @@
+ALTER TABLE public.expense_master_config ADD COLUMN IF NOT EXISTS da_applicable boolean NOT NULL DEFAULT true;

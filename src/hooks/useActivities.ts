@@ -67,6 +67,7 @@ export interface Activity {
   created_at: string;
   // joined
   user_full_name?: string;
+  user_avatar_url?: string;
   project_name?: string;
   site_name?: string;
   site_flag?: string;
@@ -76,10 +77,22 @@ export interface Activity {
   lead_name?: string;
   lead_company?: string;
   lead_designation?: string;
+  lead_address?: string;
 
   outcome?: string | null;
   risk?: string | null;
   next_follow_up_date?: string | null;
+
+  // Travel effort
+  travel_distance_km?: number | null;
+  travel_time_mins?: number | null;
+  travel_from_type?: "attendance" | "activity" | null;
+  travel_from_activity_id?: string | null;
+  travel_from_at?: string | null;
+  manual_distance_km?: number | null;
+  manual_distance_note?: string | null;
+  manual_distance_attachments?: { url: string; name: string; at: string }[];
+
 
   // Offline queue metadata
   _pending?: boolean;
@@ -135,12 +148,18 @@ export function useActivities() {
       const siteIds = [...new Set((data || []).filter((a: any) => a.site_id).map((a: any) => a.site_id))];
 
       let userMap: Record<string, string> = {};
+      let avatarMap: Record<string, string> = {};
       let projectMap: Record<string, string> = {};
       let siteMap: Record<string, { name: string; active: boolean; flag: string }> = {};
 
       if (userIds.length > 0) {
         const { data: usersData } = await supabase.from("users").select("id, full_name").in("id", userIds);
         (usersData || []).forEach((u: any) => { userMap[u.id] = u.full_name || u.id; });
+        const { data: profData } = await supabase.from("profiles").select("id, full_name, profile_picture_url").in("id", userIds);
+        (profData || []).forEach((p: any) => {
+          if (p.profile_picture_url) avatarMap[p.id] = p.profile_picture_url;
+          if (!userMap[p.id] && p.full_name) userMap[p.id] = p.full_name;
+        });
       }
 
       if (projectIds.length > 0) {
@@ -163,11 +182,11 @@ export function useActivities() {
 
       // Fetch lead names
       const leadIds = [...new Set((data || []).filter((a: any) => a.lead_id).map((a: any) => a.lead_id))];
-      let leadMap: Record<string, { name: string; company: string; designation: string }> = {};
+      let leadMap: Record<string, { name: string; company: string; designation: string; address: string }> = {};
       if (leadIds.length > 0) {
-        const { data: leadData } = await supabase.from("leads").select("id, company, name, title").in("id", leadIds);
+        const { data: leadData } = await supabase.from("leads").select("id, company, name, title, address").in("id", leadIds);
         (leadData || []).forEach((l: any) => {
-          leadMap[l.id] = { name: l.name || l.company || "Lead", company: l.company || "", designation: l.title || "" };
+          leadMap[l.id] = { name: l.name || l.company || "Lead", company: l.company || "", designation: l.title || "", address: l.address || "" };
         });
       }
 
@@ -182,6 +201,7 @@ export function useActivities() {
           status_history: Array.isArray(a.status_history) ? a.status_history : [],
           photo_urls: Array.isArray(a.photo_urls) ? a.photo_urls : [],
           user_full_name: userMap[a.user_id] || "",
+          user_avatar_url: avatarMap[a.user_id] || "",
           project_name: a.project_id ? projectMap[a.project_id] || "" : "",
           site_name: siteInfo ? `${siteInfo.name}${!siteInfo.active ? " (Inactive)" : ""}` : "",
           site_flag: siteInfo?.flag || "",
@@ -190,6 +210,7 @@ export function useActivities() {
           lead_name: leadInfo?.name || "",
           lead_company: leadInfo?.company || "",
           lead_designation: leadInfo?.designation || "",
+          lead_address: leadInfo?.address || "",
 
         };
       });
@@ -395,6 +416,9 @@ export function useActivities() {
       'status_changed_at', 'status_change_lat', 'status_change_lng',
       'location_lat', 'location_lng', 'attachment_urls',
       'status_history', 'photo_urls',
+      'travel_distance_km', 'travel_time_mins', 'travel_from_type', 'travel_from_activity_id',
+      'travel_from_at', 'manual_distance_km', 'manual_distance_note', 'manual_distance_attachments',
+
     ];
     fields.forEach((f) => {
       if ((updates as any)[f] !== undefined) updatePayload[f] = (updates as any)[f];

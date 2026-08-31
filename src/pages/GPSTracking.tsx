@@ -225,12 +225,18 @@ export default function GPSTracking() {
 
       // Keep points inside a check-in window; if a day has no attendance record
       // at all, keep that day's points rather than blanking the trail.
+      // A grace window absorbs the seconds/minutes between the first location
+      // fix and the check-in write (and the same at check-out) — without it the
+      // opening leg of the day is silently dropped and distance reads 0 km.
+      const SESSION_GRACE_MS = 15 * 60 * 1000;
       const isInActiveSession = (p: { timestamp: string; date?: string }): boolean => {
         if (p.date && !attendanceDates.has(p.date)) return true;
         const pointTime = new Date(p.timestamp).getTime();
         return attendanceRows.some((a: any) => {
-          const checkinTime = new Date(a.check_in_time).getTime();
-          const checkoutTime = a.check_out_time ? new Date(a.check_out_time).getTime() : Infinity;
+          const checkinTime = new Date(a.check_in_time).getTime() - SESSION_GRACE_MS;
+          const checkoutTime = a.check_out_time
+            ? new Date(a.check_out_time).getTime() + SESSION_GRACE_MS
+            : Infinity;
           return pointTime >= checkinTime && pointTime <= checkoutTime;
         });
       };
@@ -239,12 +245,26 @@ export default function GPSTracking() {
 
 
       // Shared filtering — identical algorithm on web, dashboard, and APK
-      // (accuracy ≤100m, 20m stationary jitter, 160 km/h jump, 5-min gap split)
+      // (accuracy gate, stationary jitter, 160 km/h jump, 5-min gap split)
       const cleanedPoints = filterTrackPoints(sessionFilteredPoints) as GPSPoint[];
 
+      // The jitter filter collapses a stationary cluster onto its first fix, so
+      // the "Latest" reading can lag hours behind. Re-anchor the tail with the
+      // last usable raw fix (adds only a few metres of distance).
+      const lastRaw = [...sessionFilteredPoints]
+        .reverse()
+        .find((p) => p.accuracy != null && p.accuracy <= 150);
+      if (
+        lastRaw &&
+        (cleanedPoints.length === 0 ||
+          cleanedPoints[cleanedPoints.length - 1].timestamp !== lastRaw.timestamp)
+      ) {
+        cleanedPoints.push(lastRaw as GPSPoint);
+      }
 
       console.log("Filtered from", points.length, "to", cleanedPoints.length, "points");
       setGpsPoints(cleanedPoints);
+
       setGpsStops(stopsRes.data || []);
 
       const markers: ActivityAtLocation[] = [];
@@ -329,6 +349,8 @@ export default function GPSTracking() {
   // Real road distance snapped onto actual roads (falls back to straight-line)
   const isRoadDistance = route?.distanceMeters != null;
   const totalDistance = isRoadDistance ? (route!.distanceMeters as number) / 1000 : haversineDistance;
+  // Kilometres reconstructed across tracking blackouts (Routes API estimate)
+  const bridgedKm = (route?.bridgedMeters ?? 0) / 1000;
 
   // Capture diagnostics — a long hole in the trail means the phone stopped
   // reporting (Doze / battery optimisation), and no route API can recover
@@ -551,6 +573,12 @@ export default function GPSTracking() {
                   <p className="text-[10px] text-muted-foreground mt-0.5">
                     {isRoadDistance ? (route?.snapped ? "road-snapped" : "part estimated") : "estimated"}
                   </p>
+                  {bridgedKm >= 0.1 && (
+                    <p className="text-[10px] text-amber-600 mt-0.5">
+                      incl. {bridgedKm.toFixed(1)} km across tracking gaps
+                    </p>
+                  )}
+
 
                 </CardContent>
               </Card>

@@ -5,12 +5,15 @@ import {
   Clock,
   CheckCircle,
   LogIn,
-  ListTodo,
-  CalendarOff,
-  CheckSquare,
+  Users,
+  Timer,
   Activity,
+  ThumbsUp,
+  Trophy,
   TrendingUp,
   CalendarClock,
+  UserPlus,
+  Briefcase,
 } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
@@ -25,7 +28,14 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useLeads } from "@/hooks/useLeadsEvents";
 import { formatCurrencyCompact } from "@/lib/currency";
 import WorkforceOverviewSection from "@/components/dashboard/WorkforceOverviewSection";
+import WorkforceFilters from "@/components/dashboard/WorkforceFilters";
+import {
+  WorkforceFilterProvider,
+  useWorkforceFilterContext,
+} from "@/components/dashboard/WorkforceFilterContext";
 import { SignedAvatarImage, SignedImage } from "@/components/ui/signed-image";
+import { setReportPrefill } from "@/components/reports/reportPrefill";
+
 
 
 const container = {
@@ -58,7 +68,17 @@ function OverviewSkeleton() {
   );
 }
 
-export default function Dashboard() {
+function openReport(
+  navigate: ReturnType<typeof useNavigate>,
+  tab: string,
+  prefill?: Record<string, unknown>,
+) {
+  sessionStorage.setItem("analytics-tab", tab);
+  if (prefill) setReportPrefill(tab, prefill);
+  navigate("/reports");
+}
+
+function DashboardContent() {
   const navigate = useNavigate();
   const { profile, isAdmin, initials, loading: profileLoading } = useUserProfile();
   const { hasModuleAccess } = useProfilePermissions();
@@ -70,11 +90,35 @@ export default function Dashboard() {
     dayStarted,
     attendance,
     isLoading,
-    isSummaryLoading,
-    myActivities,
-    pendingLeaves,
-    todayActivities,
   } = useDashboard(userId);
+
+  const {
+    data: workforce,
+    isLoading: workforceLoading,
+    rangeLabel,
+    selectedUsers,
+    startStr,
+    endStr,
+  } = useWorkforceFilterContext();
+
+  const workforceKpis = useMemo(() => {
+    const attendanceRows = workforce?.attendanceRows || [];
+    const activityRows = workforce?.activityRows || [];
+    const present = attendanceRows.filter((r) => !!r.check_in_time).length;
+    const totalHours = attendanceRows.reduce((s, r) => s + (r.active_hours || 0), 0);
+    const productive = activityRows.filter(
+      (a) => String(a.outcome || "").trim().toLowerCase() === "productive"
+    ).length;
+    return {
+      present,
+      totalHours,
+      productive,
+      activities: activityRows.length,
+      wonDeals: workforce?.wonDeals || 0,
+      newLeads: (workforce as any)?.newLeads || 0,
+      newOpportunities: (workforce as any)?.newOpportunities || 0,
+    };
+  }, [workforce]);
 
   const { data: leads = [] } = useLeads();
   const leadKpis = useMemo(() => {
@@ -94,20 +138,37 @@ export default function Dashboard() {
     navigate("/attendance");
   };
 
+  // The exact filter state behind each number, so the report opens with the
+  // same rows that produced it.
+  const employeeFilter = selectedUsers.length === 1 ? selectedUsers[0] : "all";
+  const dateScope = (field: string) => ({
+    field,
+    preset: "custom",
+    customFrom: startStr,
+    customTo: endStr,
+  });
+  const wonStatusId = (workforce as any)?.wonStatusIds?.[0] ?? "all";
 
+  const quoteStatusId = (workforce as any)?.quoteStatusIds?.[0] ?? "all";
 
   const overviewCards = [
-    { label: "My Activities", value: myActivities.total, icon: ListTodo, colorClass: "bg-info/5 text-info", path: "/activities", module: "module_activities" },
-    { label: "Completed", value: myActivities.completed, icon: CheckSquare, colorClass: "bg-success/5 text-success", path: "/activities?status=completed", module: "module_activities" },
-    { label: "Today's Activities", value: todayActivities, icon: Activity, colorClass: "bg-primary/5 text-primary", path: "/activities", module: "module_activities" },
-    { label: "Total Pipeline", value: money(leadKpis.pipeline), icon: TrendingUp, colorClass: "bg-info/5 text-info", path: "/leads", module: "module_leads" },
-    { label: "Closing This Month", value: money(leadKpis.closingValue), icon: CalendarClock, colorClass: "bg-warning/5 text-warning", path: "/leads", module: "module_leads" },
-    { label: "Pending Leaves", value: pendingLeaves, icon: CalendarOff, colorClass: "bg-accent/5 text-accent", path: "/attendance", module: "module_attendance" },
+    { label: "Present (Days)", value: workforceKpis.present, icon: Users, colorClass: "bg-primary/5 text-primary", onClick: () => openReport(navigate, "attendance", { ...dateScope("date"), employee: employeeFilter, status: "all" }), module: "module_attendance" },
+    { label: "Active Hours", value: `${workforceKpis.totalHours.toFixed(1)}h`, icon: Timer, colorClass: "bg-info/5 text-info", onClick: () => openReport(navigate, "attendance", { ...dateScope("date"), employee: employeeFilter, status: "all" }), module: "module_attendance" },
+    { label: "Total Activities", value: workforceKpis.activities, icon: Activity, colorClass: "bg-warning/5 text-warning", onClick: () => openReport(navigate, "activities", { ...dateScope("activity_date"), employee: employeeFilter }), module: "module_activities" },
+    { label: "Productive Activities", value: workforceKpis.productive, icon: ThumbsUp, colorClass: "bg-success/5 text-success", onClick: () => openReport(navigate, "activities", { ...dateScope("activity_date"), employee: employeeFilter, outcome: "Productive" }), module: "module_activities" },
+    { label: "New Leads added", value: workforceKpis.newLeads, icon: UserPlus, colorClass: "bg-primary/5 text-primary", onClick: () => openReport(navigate, "leads", { ...dateScope("created_at"), owner: employeeFilter }), module: "module_leads" },
+    { label: "New Opportunities added", value: workforceKpis.newOpportunities, icon: Briefcase, colorClass: "bg-info/5 text-info", onClick: () => openReport(navigate, "leads", { ...dateScope("updated_at"), owner: employeeFilter, status: quoteStatusId }), module: "module_leads" },
+    { label: "Total Pipeline", value: money(leadKpis.pipeline), icon: TrendingUp, colorClass: "bg-info/5 text-info", onClick: () => openReport(navigate, "leads", { ...dateScope("created_at"), owner: employeeFilter }), module: "module_leads" },
+    { label: "Closing", value: money(leadKpis.closingValue), icon: CalendarClock, colorClass: "bg-warning/5 text-warning", onClick: () => openReport(navigate, "leads", { field: "opportunity_close_date", preset: "current_month", customFrom: startStr, customTo: endStr, owner: employeeFilter }), module: "module_leads" },
+    { label: "Won Deals", value: workforceKpis.wonDeals, icon: Trophy, colorClass: "bg-success/5 text-success", onClick: () => openReport(navigate, "leads", { ...dateScope("updated_at"), owner: employeeFilter, status: wonStatusId }), module: "module_leads" },
   ];
+
+
 
   // Filter cards by module access for all users (including admins)
   // Only show cards for enabled modules
   const visibleCards = overviewCards.filter((c) => !c.module || hasModuleAccess(c.module));
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
@@ -201,8 +262,14 @@ export default function Dashboard() {
         <motion.div variants={item}>
           <Card className="shadow-card">
             <CardContent className="p-4">
-              <p className="text-sm font-bold mb-4">Overview</p>
-              {isSummaryLoading ? (
+              <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-bold">Overview</p>
+                  <p className="text-[11px] text-muted-foreground">{rangeLabel}</p>
+                </div>
+                <WorkforceFilters />
+              </div>
+              {workforceLoading ? (
                 <OverviewSkeleton />
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -210,7 +277,7 @@ export default function Dashboard() {
                     <div
                       key={card.label}
                       className={`rounded-xl border border-border ${card.colorClass.split(" ")[0]} p-4 text-center cursor-pointer hover:shadow-md transition-shadow`}
-                      onClick={() => navigate(card.path)}
+                      onClick={card.onClick}
                     >
                       <card.icon className={`h-5 w-5 mx-auto mb-1 ${card.colorClass.split(" ")[1]}`} />
                       <p className="text-xl font-bold">{card.value}</p>
@@ -223,6 +290,7 @@ export default function Dashboard() {
           </Card>
         </motion.div>
 
+
         {/* Attendance & Workforce Overview (permission-gated) */}
         <motion.div variants={item}>
           <WorkforceOverviewSection />
@@ -231,3 +299,12 @@ export default function Dashboard() {
     </div>
   );
 }
+
+export default function Dashboard() {
+  return (
+    <WorkforceFilterProvider>
+      <DashboardContent />
+    </WorkforceFilterProvider>
+  );
+}
+

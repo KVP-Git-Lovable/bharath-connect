@@ -40,8 +40,8 @@ export function LeadStagePath({
                 active
                   ? "border-primary bg-primary text-primary-foreground shadow-sm"
                   : done
-                    ? "border-primary/30 bg-primary/10 text-primary hover:bg-primary/20"
-                    : "border-border bg-muted/40 text-muted-foreground hover:bg-muted",
+                    ? "border-emerald-300 bg-emerald-100 text-emerald-800 line-through decoration-emerald-500/70 hover:bg-emerald-200 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-300"
+                    : "border-dashed border-border bg-muted/30 text-muted-foreground/70 hover:bg-muted",
               )}
             >
               {done && <Check className="h-3 w-3" />}

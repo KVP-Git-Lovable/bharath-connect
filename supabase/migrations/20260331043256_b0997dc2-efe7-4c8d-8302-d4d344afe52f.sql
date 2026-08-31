@@ -1,0 +1,1 @@
+UPDATE activity_types_master SET is_active = false WHERE id = '9fc04023-b1d2-4c5c-b84e-77b748365194';

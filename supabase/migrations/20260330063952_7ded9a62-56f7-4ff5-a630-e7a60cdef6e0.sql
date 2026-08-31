@@ -1,0 +1,1 @@
+UPDATE activity_types_master SET is_active = false WHERE name IN ('Client Meeting', 'Travel');

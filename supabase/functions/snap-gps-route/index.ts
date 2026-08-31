@@ -64,15 +64,40 @@ Deno.serve(async (req) => {
         body: requestBody,
       });
 
-    // The gateway occasionally drops the upstream connection (502/503/504).
-    // Retry those transient failures with a short backoff before giving up.
-    let response = await callGateway();
-    for (let attempt = 1; attempt <= 2 && [429, 500, 502, 503, 504].includes(response.status); attempt++) {
-      await response.body?.cancel();
-      await new Promise((r) => setTimeout(r, attempt * 500));
-      console.warn(`Routes gateway transient failure, retry ${attempt}`);
-      response = await callGateway();
+    // The gateway occasionally drops the upstream connection — that surfaces as
+    // a thrown TypeError (connection reset), not an HTTP status. Retry both
+    // transient statuses and network-level failures with a short backoff.
+    let response: Response | null = null;
+    let lastNetworkError: unknown = null;
+
+    for (let attempt = 0; attempt <= 2; attempt++) {
+      if (attempt > 0) await new Promise((r) => setTimeout(r, attempt * 500));
+      try {
+        response = await callGateway();
+        lastNetworkError = null;
+      } catch (err) {
+        lastNetworkError = err;
+        response = null;
+        console.warn(`Routes gateway network failure, attempt ${attempt + 1}`, (err as Error).message);
+        continue;
+      }
+      if (![429, 500, 502, 503, 504].includes(response.status)) break;
+      if (attempt < 2) {
+        await response.body?.cancel();
+        console.warn(`Routes gateway transient failure ${response.status}, retry ${attempt + 1}`);
+      }
     }
+
+    if (!response) {
+      // Network never succeeded — return a soft "no route" so the client falls
+      // back to the straight-line bridge instead of surfacing a 500.
+      console.error("Routes gateway unreachable:", (lastNetworkError as Error)?.message);
+      return new Response(
+        JSON.stringify({ polyline: null, distanceMeters: null, duration: null, unavailable: true }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
 
     if (response.status === 403) {
       const details: Array<{ reason?: string }> = (await response.json().catch(() => ({})))?.error?.details ?? [];

@@ -37,6 +37,14 @@ const allAdminModules = [
     permission: "field_admin_attendance_mgmt",
   },
   {
+    title: "Expense Master",
+    description: "Configure travel allowance, daily allowance, expense categories & approvals",
+    icon: DollarSign,
+    color: "bg-green-100 text-green-600",
+    path: "/admin/expenses",
+    permission: "field_admin_expense_mgmt",
+  },
+  {
     title: "Security & Access",
     description: "Manage user profiles, permissions, and data access control",
     icon: Lock,

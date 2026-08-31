@@ -13,6 +13,7 @@ import { generateReportPdf } from "./reportPdf";
 import { useSavedReports } from "@/hooks/useSavedReports";
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { ChartConfig, ReportColumn, SavedReport } from "./reportTypes";
+import { takeReportPrefill } from "./reportPrefill";
 
 interface Props<R> {
   /** Stable key used to store saved reports, e.g. "leads". */
@@ -76,6 +77,7 @@ export function ReportWorkspace<R>({
   const [activeName, setActiveName] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
   const [cachedRows, setCachedRows] = useState<R[] | null>(null);
+  const [pendingGenerate, setPendingGenerate] = useState(false);
   const appliedFavourite = useRef(false);
   const restored = useRef(false);
 
@@ -95,10 +97,20 @@ export function ReportWorkspace<R>({
   };
 
   // Restore the last generated report for this module (e.g. after opening a
-  // record and navigating back).
+  // record and navigating back), unless a dashboard KPI handed us a prefill.
   useEffect(() => {
     if (restored.current) return;
     restored.current = true;
+
+    const prefill = takeReportPrefill(module);
+    if (prefill) {
+      appliedFavourite.current = true;
+      try { sessionStorage.removeItem(cacheKey); } catch { /* ignore */ }
+      onApplyFilterState(prefill);
+      setPendingGenerate(true);
+      return;
+    }
+
     try {
       const raw = sessionStorage.getItem(cacheKey);
       if (!raw) return;
@@ -121,6 +133,15 @@ export function ReportWorkspace<R>({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Run the generation once the prefilled filters (and report scope) are ready.
+  useEffect(() => {
+    if (!pendingGenerate || loading) return;
+    setPendingGenerate(false);
+    onGenerate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingGenerate, loading]);
+
 
   // Persist the generated result so it survives a round-trip to a record page.
   useEffect(() => {

@@ -1,0 +1,1 @@
+GRANT SELECT (updated_at) ON public.company_profile TO anon;

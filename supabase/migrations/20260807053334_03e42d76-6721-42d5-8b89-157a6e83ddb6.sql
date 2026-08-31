@@ -1,0 +1,1 @@
+GRANT EXECUTE ON FUNCTION public.get_subordinate_users(uuid) TO authenticated, service_role;

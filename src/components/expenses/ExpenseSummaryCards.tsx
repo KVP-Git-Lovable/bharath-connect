@@ -17,13 +17,14 @@ interface Props {
   fixedTaAmount?: number;
   daBasis?: "per_day" | "per_half_day";
   daAmount?: number;
+  daApplicable?: boolean;
 }
 
 const inr = (n: number) => `₹${Math.round(n).toLocaleString("en-IN")}`;
 
 export default function ExpenseSummaryCards({
   ta, da, additional, total, presentDays, totalKm = 0, orderValue = 0, loading, onTotalClick,
-  taType, taPerKmRate, fixedTaAmount, daBasis, daAmount,
+  taType, taPerKmRate, fixedTaAmount, daBasis, daAmount, daApplicable = true,
 }: Props) {
   if (loading) {
     return (
@@ -42,13 +43,13 @@ export default function ExpenseSummaryCards({
     : (presentDays ? `${presentDays} present days` : undefined);
   const items = [
     { label: "Travel (TA)", value: inr(ta), sub: taSub, icon: Car, bg: "bg-blue-50 dark:bg-blue-950/30", fg: "text-blue-600 dark:text-blue-400" },
-    { label: `Daily (DA)`, value: inr(da), sub: daSub, icon: Utensils, bg: "bg-emerald-50 dark:bg-emerald-950/30", fg: "text-emerald-600 dark:text-emerald-400" },
+    ...(daApplicable ? [{ label: `Daily (DA)`, value: inr(da), sub: daSub, icon: Utensils, bg: "bg-emerald-50 dark:bg-emerald-950/30", fg: "text-emerald-600 dark:text-emerald-400" }] : []),
     { label: "Additional", value: inr(additional), icon: Receipt, bg: "bg-fuchsia-50 dark:bg-fuchsia-950/30", fg: "text-fuchsia-600 dark:text-fuchsia-400" },
     { label: "Total Expenses", value: inr(total), icon: IndianRupee, bg: "bg-slate-100 dark:bg-slate-900/40", fg: "text-slate-700 dark:text-slate-300", clickable: !!onTotalClick },
     { label: "Order Value", value: inr(orderValue), icon: ShoppingCart, bg: "bg-amber-50 dark:bg-amber-950/30", fg: "text-amber-600 dark:text-amber-400" },
   ];
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+    <div className={cn("grid grid-cols-2 sm:grid-cols-3 gap-3", daApplicable ? "lg:grid-cols-5" : "lg:grid-cols-4")}>
       {items.map((it) => {
         const Icon = it.icon;
         return (

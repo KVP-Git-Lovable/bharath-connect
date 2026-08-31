@@ -58,7 +58,7 @@ export default function RolePermissionsMatrix() {
     module_admin_panel: {},
     module_attendance: {},
     module_activities: {},
-    module_expenses: {},
+    module_expenses: { label: "Expenses", alwaysShow: true },
     module_gps_tracking: { alwaysShow: true },
     module_procurement: {},
     module_projects: { label: "Projects / Sites", alwaysShow: true },

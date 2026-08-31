@@ -15,6 +15,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import OverrideTable, { type OverrideEntry } from "./OverrideTable";
 import ExpenseGroupsInline, { type ExpenseGroup } from "./ExpenseGroupsInline";
+import TaRateHistory from "./TaRateHistory";
+
 
 interface ExpenseConfig {
   id: string;
@@ -23,6 +25,7 @@ interface ExpenseConfig {
   ta_per_km_rate: number;
   fixed_da_amount: number;
   da_calculation_basis: "per_day" | "per_half_day";
+  da_applicable: boolean;
 }
 interface PolicyRow {
   id: string;
@@ -91,6 +94,7 @@ export default function ExpensePolicyConfig() {
       ta_per_km_rate: Number(cfgRow.ta_per_km_rate || 0),
       fixed_da_amount: Number(cfgRow.fixed_da_amount || 0),
       da_calculation_basis: cfgRow.da_calculation_basis || "per_day",
+      da_applicable: cfgRow.da_applicable !== false,
     });
 
     // policy
@@ -152,6 +156,7 @@ export default function ExpensePolicyConfig() {
         ta_per_km_rate: config.ta_per_km_rate,
         fixed_da_amount: config.fixed_da_amount,
         da_calculation_basis: config.da_calculation_basis,
+        da_applicable: config.da_applicable,
       }).eq("id", config.id),
       supabase.from("expense_policy").update({
         max_additional_expense_per_day: policy.max_additional_expense_per_day,
@@ -289,6 +294,8 @@ export default function ExpensePolicyConfig() {
                     onChange={(e) => setConfig({ ...config, ta_per_km_rate: Number(e.target.value) })} className="max-w-[200px]" />
                   <p className="text-[11px] text-muted-foreground">Example: If rate is ₹8/km and user travels 45 km, TA = ₹360</p>
                 </div>
+                <TaRateHistory onCurrentRateChange={(r) => setConfig((c) => (c ? { ...c, ta_per_km_rate: r } : c))} />
+
               </>
             ) : (
               <div className="space-y-1">
@@ -327,6 +334,21 @@ export default function ExpensePolicyConfig() {
           <CardTitle className="text-base flex items-center gap-2"><Utensils className="h-4 w-4 text-emerald-500" />Daily Allowance (DA) Policy</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="flex items-center justify-between rounded-md border p-3">
+            <div>
+              <Label className="text-xs font-medium">DA applicable</Label>
+              <p className="text-[11px] text-muted-foreground">
+                If turned off, Daily Allowance is hidden everywhere in the Expenses module.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">{config.da_applicable ? "Yes" : "No"}</span>
+              <Switch checked={config.da_applicable}
+                onCheckedChange={(v) => setConfig({ ...config, da_applicable: v })} />
+            </div>
+          </div>
+
+          {config.da_applicable && (<>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1"><Label className="text-xs">DA Amount (₹)</Label>
               <Input type="number" min="0" value={config.fixed_da_amount}
@@ -341,6 +363,7 @@ export default function ExpensePolicyConfig() {
               </Select>
             </div>
           </div>
+
 
           <div className="space-y-1.5">
             <Label className="text-xs">Distribution</Label>
@@ -359,6 +382,8 @@ export default function ExpensePolicyConfig() {
               <ExpenseGroupsInline field="da" groups={groups} reload={fetchAll} />
             </>
           )}
+          </>)}
+
         </CardContent>
       </Card>
 

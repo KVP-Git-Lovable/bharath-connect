@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Check, X, Clock, Loader2, IndianRupee, CheckCircle2, XCircle, Eye, ChevronLeft, ChevronRight, Users, Car, Utensils, Receipt } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { useDaApplicable } from '@/hooks/useDaApplicable';
 import { format, subMonths, addMonths, parse, endOfMonth } from 'date-fns';
 import { toast } from 'sonner';
 import RejectionReasonDialog from '@/components/RejectionReasonDialog';
@@ -29,6 +30,7 @@ export default function TeamExpenseSummary() {
   const [expenses, setExpenses] = useState<TeamExpense[]>([]);
   const [loading, setLoading] = useState(true);
   const [summariesLoading, setSummariesLoading] = useState(false);
+  const { daApplicable } = useDaApplicable();
   const [memberSummaries, setMemberSummaries] = useState<Array<{ user_id: string; name: string; ta: number; da: number; additional: number; total: number; present_days: number; total_km: number }>>([]);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [showRejectionDialog, setShowRejectionDialog] = useState(false);
@@ -344,7 +346,7 @@ export default function TeamExpenseSummary() {
               {/* Team-wide TA/DA/Additional Totals */}
               {(() => {
                 const teamTA = memberSummaries.reduce((s, m) => s + m.ta, 0);
-                const teamDA = memberSummaries.reduce((s, m) => s + m.da, 0);
+                const teamDA = daApplicable ? memberSummaries.reduce((s, m) => s + m.da, 0) : 0;
                 const teamAdd = memberSummaries.reduce((s, m) => s + m.additional, 0);
                 const teamTotal = teamTA + teamDA + teamAdd;
                 return (
@@ -356,13 +358,15 @@ export default function TeamExpenseSummary() {
                         <p className="text-xs text-muted-foreground">Team total</p>
                       </CardContent>
                     </Card>
-                    <Card>
-                      <CardContent className="p-4 text-center">
-                        <p className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center justify-center gap-1"><Utensils className="h-3 w-3" />Daily (DA)</p>
-                        <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">₹{teamDA.toFixed(0)}</p>
-                        <p className="text-xs text-muted-foreground">Team total</p>
-                      </CardContent>
-                    </Card>
+                    {daApplicable && (
+                      <Card>
+                        <CardContent className="p-4 text-center">
+                          <p className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center justify-center gap-1"><Utensils className="h-3 w-3" />Daily (DA)</p>
+                          <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">₹{teamDA.toFixed(0)}</p>
+                          <p className="text-xs text-muted-foreground">Team total</p>
+                        </CardContent>
+                      </Card>
+                    )}
                     <Card>
                       <CardContent className="p-4 text-center">
                         <p className="text-xs text-purple-600 dark:text-purple-400 flex items-center justify-center gap-1"><Receipt className="h-3 w-3" />Additional</p>
@@ -374,7 +378,7 @@ export default function TeamExpenseSummary() {
                       <CardContent className="p-4 text-center">
                         <p className="text-xs text-muted-foreground">Grand Total</p>
                         <p className="text-lg font-bold">₹{teamTotal.toFixed(0)}</p>
-                        <p className="text-xs text-muted-foreground">TA + DA + Add</p>
+                        <p className="text-xs text-muted-foreground">{daApplicable ? "TA + DA + Add" : "TA + Add"}</p>
                       </CardContent>
                     </Card>
                   </div>
@@ -403,6 +407,9 @@ export default function TeamExpenseSummary() {
                 </Card>
               </div>
 
+              {/* Report Generator */}
+              <ExpenseReportGenerator isAdmin={isAdmin} />
+
               {/* Per-member TA/DA/Additional breakdown */}
               <div>
                 <h3 className="text-sm font-semibold mb-2 flex items-center gap-1"><Users className="h-4 w-4" />Expenses by Team Member</h3>
@@ -420,17 +427,19 @@ export default function TeamExpenseSummary() {
                               <p className="font-semibold text-sm">{u.name}</p>
                               <p className="text-[11px] text-muted-foreground">{u.present_days} present · {u.total_km.toFixed(1)} km</p>
                             </div>
-                            <span className="font-bold text-sm">₹{u.total.toFixed(0)}</span>
+                            <span className="font-bold text-sm">₹{(daApplicable ? u.total : u.total - u.da).toFixed(0)}</span>
                           </div>
-                          <div className="grid grid-cols-3 gap-2 text-xs">
+                          <div className={`grid ${daApplicable ? 'grid-cols-3' : 'grid-cols-2'} gap-2 text-xs`}>
                             <div className="rounded bg-blue-50 dark:bg-blue-950/30 p-1.5 text-center">
                               <p className="text-[10px] text-blue-600 dark:text-blue-400">TA</p>
                               <p className="font-semibold text-blue-700 dark:text-blue-300">₹{u.ta.toFixed(0)}</p>
                             </div>
-                            <div className="rounded bg-emerald-50 dark:bg-emerald-950/30 p-1.5 text-center">
-                              <p className="text-[10px] text-emerald-600 dark:text-emerald-400">DA</p>
-                              <p className="font-semibold text-emerald-700 dark:text-emerald-300">₹{u.da.toFixed(0)}</p>
-                            </div>
+                            {daApplicable && (
+                              <div className="rounded bg-emerald-50 dark:bg-emerald-950/30 p-1.5 text-center">
+                                <p className="text-[10px] text-emerald-600 dark:text-emerald-400">DA</p>
+                                <p className="font-semibold text-emerald-700 dark:text-emerald-300">₹{u.da.toFixed(0)}</p>
+                              </div>
+                            )}
                             <div className="rounded bg-purple-50 dark:bg-purple-950/30 p-1.5 text-center">
                               <p className="text-[10px] text-purple-600 dark:text-purple-400">Add</p>
                               <p className="font-semibold text-purple-700 dark:text-purple-300">₹{u.additional.toFixed(0)}</p>
@@ -442,9 +451,6 @@ export default function TeamExpenseSummary() {
                   </div>
                 )}
               </div>
-
-              {/* Report Generator */}
-              <ExpenseReportGenerator isAdmin={isAdmin} />
             </div>
 
           )}

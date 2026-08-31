@@ -126,14 +126,29 @@ export default function WorkforceActivityCalendar({ activities, anchorDate }: Pr
                         "text-left rounded-md px-1 py-0.5 text-[9px] leading-tight sm:text-[10px] cursor-pointer transition-opacity hover:opacity-80 active:opacity-60",
                         statusStyles[e.status] || "bg-muted text-muted-foreground"
                       )}
-                      title={`${e.full_name} · ${e.site_name || "No site"} · ${
-                        statusLabels[e.status] || e.status
-                      }`}
+                      title={[
+                        e.full_name,
+                        e.customer_name,
+                        e.activity_type,
+                        e.outcome,
+                        statusLabels[e.status] || e.status,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
                     >
-                      <p className="truncate font-semibold">{e.full_name}</p>
-                      <p className="truncate opacity-80">{e.site_name || "No site"}</p>
+                      <p className="truncate font-semibold">
+                        {e.short_name}
+                        {e.customer_name ? ` · ${e.customer_name}` : ""}
+                      </p>
+                      {e.activity_type && (
+                        <p className="truncate opacity-80">{e.activity_type}</p>
+                      )}
+                      {e.outcome && (
+                        <p className="truncate opacity-70 italic">{e.outcome}</p>
+                      )}
                     </button>
                   ))}
+
                 </div>
               </div>
             );

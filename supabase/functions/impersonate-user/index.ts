@@ -123,47 +123,40 @@ serve(async (req) => {
       },
     }).catch((err) => console.warn("Audit log error:", err))
 
-    // Generate session for target user using admin API
-    const { data: generatedSession, error: sessionError } = await supabaseAdmin.auth.admin.getUserById(
-      target_user_id
-    )
+    // Generate passwordless link for target user (email signin)
+    const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
+      type: "email_signin",
+      email: targetUser.email,
+      options: {
+        redirectTo: new URL(req.url).origin + "/auth/impersonate-callback",
+      }
+    })
 
-    if (sessionError) {
-      console.error("Session generation error:", sessionError)
+    if (linkError || !linkData?.properties?.email_link) {
+      console.error("Link generation error:", linkError)
       return new Response(
-        JSON.stringify({ error: "Failed to generate session" }),
+        JSON.stringify({ error: "Failed to generate impersonation link" }),
         { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
       )
     }
 
-    // Create a session for the target user
-    // We'll use the refresh token approach
-    const { data: { session }, error: refreshError } = await supabaseAdmin.auth.admin.createSession(
-      target_user_id
-    )
+    // Extract access token from the magic link
+    // The link contains a token parameter that can be used to authenticate
+    const emailLink = linkData.properties.email_link
+    const linkUrl = new URL(emailLink)
+    const accessToken = linkUrl.searchParams.get("token_hash")
 
-    if (refreshError || !session) {
-      console.error("Refresh error:", refreshError)
-      return new Response(
-        JSON.stringify({ error: "Failed to create session" }),
-        { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      )
-    }
-
-    // Return session and user details
+    // Return impersonation link and user details
     return new Response(
       JSON.stringify({
         success: true,
-        session: {
-          access_token: session.access_token,
-          refresh_token: session.refresh_token,
-          expires_in: session.expires_in,
-          expires_at: session.expires_at,
-        },
+        impersonate_link: emailLink,
+        direct_link: emailLink.split("?")[0] + "?token_hash=" + accessToken,
         user: {
           id: target_user_id,
           email: targetUser.email,
         },
+        instructions: "Admin can click the impersonate_link or use the token_hash to authenticate as this user",
       }),
       {
         status: 200,

@@ -1,0 +1,1 @@
+ALTER TABLE public.opportunity_quote_items ADD COLUMN IF NOT EXISTS uom text;

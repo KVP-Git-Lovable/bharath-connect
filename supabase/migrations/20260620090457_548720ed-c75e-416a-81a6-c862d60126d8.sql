@@ -1,0 +1,1 @@
+ALTER TABLE public.activity_events ADD COLUMN IF NOT EXISTS grn_po_id uuid REFERENCES public.procurement_orders(id) ON DELETE SET NULL;
