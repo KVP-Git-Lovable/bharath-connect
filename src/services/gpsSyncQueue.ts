@@ -47,7 +47,7 @@ let persistTimer: ReturnType<typeof setTimeout> | null = null;
 /** Points dropped by the hard cap or by permanent rejection — never silent. */
 let droppedPoints = 0;
 /** Timestamp of the last acknowledged upload (freshness/idle-flush trigger). */
-let lastFlushAt = 0;
+let lastFlushAt = Date.now();
 
 
 function persistNow() {
@@ -235,6 +235,7 @@ export function peekNewestQueuedPoint(userId: string, date: string): QueuedGpsPo
 export function initGpsSyncQueue(): void {
   if (initialized) return;
   initialized = true;
+  lastFlushAt = Date.now();
   restore();
 
   // Best-effort interval flush (timers can be throttled while backgrounded;
@@ -273,7 +274,7 @@ export function __resetGpsSyncQueueForTests(): void {
   inFlight = null;
   consecutiveFailures = 0;
   droppedPoints = 0;
-  lastFlushAt = 0;
+  lastFlushAt = Date.now();
 
   if (retryTimer) clearTimeout(retryTimer);
   if (intervalTimer) clearInterval(intervalTimer);
