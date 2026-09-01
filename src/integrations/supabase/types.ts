@@ -5682,6 +5682,10 @@ export type Database = {
         Args: { _object_name: string; _permission: string; _user_id: string }
         Returns: boolean
       }
+      compute_filtered_distance_km: {
+        Args: { _date: string; _user_id: string }
+        Returns: number
+      }
       convert_lead: {
         Args: { _lead_id: string; _payload: Json }
         Returns: string
