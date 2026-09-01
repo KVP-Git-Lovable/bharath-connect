@@ -8,6 +8,8 @@ import {
   enqueueGpsPoint,
   flushPendingGpsPoints,
   peekNewestQueuedPoint,
+  setGpsQueueOwner,
+
 } from "@/services/gpsSyncQueue";
 import { format } from "date-fns";
 
@@ -18,6 +20,10 @@ const FOREGROUND_POLL_MS = 15_000;   // web / non-native fallback (screen-on onl
 // NOT acquire GPS itself — the watcher is the single acquisition source.)
 const WATCHDOG_MS = GPS_CAPTURE_CONFIG.WATCHDOG_MS;
 const WATCHDOG_TICK_MS = GPS_CAPTURE_CONFIG.WATCHDOG_TICK_MS;
+// Silence this long while the day is open ⇒ take ONE low-power probe fix so a
+// stationary device still leaves a trail (and to health-test the watcher).
+const STATIONARY_PROBE_MS = GPS_CAPTURE_CONFIG.STATIONARY_PROBE_MS;
+
 // Reject fixes worse than this (cell-tower guesses create phantom distance) —
 // same threshold the display-side trajectory engine uses.
 const MAX_ACCURACY_M = GPS_PROCESSING_CONFIG.MAX_ACCURACY_METERS;
@@ -282,14 +288,38 @@ export function useGPSTracker(userId: string | null | undefined) {
         lastCallbackTsRef.current = Date.now();
 
         // Watchdog ONLY — acquires no GPS of its own (the watcher is the
-        // single acquisition source). Android's Doze / battery optimiser can
-        // silently kill the background watcher, which is what leaves
-        // multi-hour holes in the trail: if no callback has arrived for
-        // WATCHDOG_MS while the day is open, tear the watcher down and
-        // register a fresh one.
+        // single acquisition source). A stationary device legitimately
+        // produces no watcher callbacks (distanceFilter), so silence alone is
+        // NOT proof of a dead watcher: after STATIONARY_PROBE_MS of silence we
+        // take exactly ONE low-power probe fix — that both keeps the trail
+        // dense while parked and acts as the health test. Only when the probe
+        // itself fails (and the silence exceeds WATCHDOG_MS) do we conclude
+        // Android killed the watcher and re-register it.
         pollTimer = window.setInterval(async () => {
           if (!activeRef.current || cancelled) return;
-          if (Date.now() - lastCallbackTsRef.current > WATCHDOG_MS) {
+          const silenceMs = Date.now() - lastCallbackTsRef.current;
+          if (silenceMs < STATIONARY_PROBE_MS) return;
+
+          let probeOk = false;
+          try {
+            const pos = await getCurrentPosition({ enableHighAccuracy: false, timeout: 20000 });
+            probeOk = true;
+            if (!cancelled && activeRef.current) {
+              // Trail-density sample: insertPoint's gates decide whether this
+              // counts as movement — distance maths is untouched.
+              insertPoint(
+                pos.latitude,
+                pos.longitude,
+                pos.accuracy ?? null,
+                pos.speed ?? null,
+                pos.heading ?? null
+              );
+            }
+          } catch (e) {
+            console.warn("[GPSTracker] stationary probe failed", e);
+          }
+
+          if (!probeOk && silenceMs > WATCHDOG_MS) {
             console.warn("[GPSTracker] watcher appears dead — re-registering");
             try {
               if (watcherIdRef.current) {
@@ -303,6 +333,7 @@ export function useGPSTracker(userId: string | null | undefined) {
             }
           }
         }, WATCHDOG_TICK_MS);
+
 
 
         stopBackground = async () => {
@@ -359,6 +390,10 @@ export function useGPSTracker(userId: string | null | undefined) {
 
     (async () => {
       initGpsSyncQueue();
+      // Shared-device safety: discard any points buffered for another user —
+      // the server would reject them forever and block this user's uploads.
+      setGpsQueueOwner(userId!);
+
       await bootstrapLastPoint();
       await evaluate();
       if (!activeRef.current) {

@@ -44,8 +44,11 @@ let consecutiveFailures = 0;
 let retryTimer: ReturnType<typeof setTimeout> | null = null;
 let intervalTimer: ReturnType<typeof setInterval> | null = null;
 let persistTimer: ReturnType<typeof setTimeout> | null = null;
-/** Points dropped by the hard cap — counted, never silent. */
+/** Points dropped by the hard cap or by permanent rejection — never silent. */
 let droppedPoints = 0;
+/** Timestamp of the last acknowledged upload (freshness/idle-flush trigger). */
+let lastFlushAt = Date.now();
+
 
 function persistNow() {
   if (persistTimer) {
@@ -87,13 +90,55 @@ function scheduleRetry() {
   }, backoffMs());
 }
 
+/** Permission failures never resolve by retrying — drop, don't block. */
+function isPermissionError(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false;
+  const code = error.code ?? "";
+  return (
+    code === "42501" ||
+    code === "PGRST301" ||
+    /row-level security|permission denied|violates row-level/i.test(error.message ?? "")
+  );
+}
+
+/**
+ * Shared devices: the queue is a single local buffer, but the database only
+ * lets a user insert their own rows. Points left behind by a previously
+ * signed-in user would fail forever and block every later point — so the
+ * tracker declares the current owner and any foreign point is dropped
+ * (counted, never silent). Synchronous by design: the flush path must not
+ * gain an extra await before the upload.
+ */
+export function setGpsQueueOwner(userId: string): void {
+  const before = queue.length;
+  queue = queue.filter((p) => p.user_id === userId);
+  const removed = before - queue.length;
+  if (removed > 0) {
+    droppedPoints += removed;
+    persistNow();
+    console.warn(`[gpsSyncQueue] dropped ${removed} queued points belonging to a previous user`);
+  }
+}
+
+
 async function flushOnce(): Promise<{ remaining: number }> {
+  
   while (queue.length > 0) {
     const chunk = queue.slice(0, CFG.CHUNK_SIZE);
     const { error } = await supabase
       .from("gps_tracking")
       .upsert(chunk, { onConflict: "id", ignoreDuplicates: true });
     if (error) {
+      if (isPermissionError(error)) {
+        // Unacceptable to the server no matter how often we retry — discard
+        // this chunk (counted) and keep the rest of the queue moving.
+        const sent = new Set(chunk.map((c) => c.id));
+        queue = queue.filter((p) => !sent.has(p.id));
+        droppedPoints += chunk.length;
+        persistNow();
+        console.warn(`[gpsSyncQueue] dropped ${chunk.length} rejected points`, error.message);
+        continue;
+      }
       consecutiveFailures++;
       scheduleRetry();
       if (import.meta.env.DEV) {
@@ -108,6 +153,7 @@ async function flushOnce(): Promise<{ remaining: number }> {
     const sent = new Set(chunk.map((c) => c.id));
     queue = queue.filter((p) => !sent.has(p.id));
     persistNow();
+    lastFlushAt = Date.now();
     consecutiveFailures = 0;
     if (retryTimer) {
       clearTimeout(retryTimer);
@@ -116,6 +162,7 @@ async function flushOnce(): Promise<{ remaining: number }> {
   }
   return { remaining: 0 };
 }
+
 
 /**
  * Single-flight coordinator: concurrent callers share one upload pass, plus
@@ -158,8 +205,13 @@ export function enqueueGpsPoint(p: Omit<QueuedGpsPoint, "id">): void {
     }
   }
   persistDebounced();
-  if (queue.length >= CFG.BATCH_SIZE) void flushPendingGpsPoints();
+  // Batch trigger, plus a freshness trigger: after a quiet spell send the
+  // point straight away so live/admin views aren't a full interval behind.
+  if (queue.length >= CFG.BATCH_SIZE || Date.now() - lastFlushAt >= CFG.IDLE_FLUSH_MS) {
+    void flushPendingGpsPoints();
+  }
 }
+
 
 export function getQueueSize(): number {
   return queue.length;
@@ -183,6 +235,7 @@ export function peekNewestQueuedPoint(userId: string, date: string): QueuedGpsPo
 export function initGpsSyncQueue(): void {
   if (initialized) return;
   initialized = true;
+  lastFlushAt = Date.now();
   restore();
 
   // Best-effort interval flush (timers can be throttled while backgrounded;
@@ -221,6 +274,8 @@ export function __resetGpsSyncQueueForTests(): void {
   inFlight = null;
   consecutiveFailures = 0;
   droppedPoints = 0;
+  lastFlushAt = Date.now();
+
   if (retryTimer) clearTimeout(retryTimer);
   if (intervalTimer) clearInterval(intervalTimer);
   if (persistTimer) clearTimeout(persistTimer);
