@@ -44,8 +44,11 @@ let consecutiveFailures = 0;
 let retryTimer: ReturnType<typeof setTimeout> | null = null;
 let intervalTimer: ReturnType<typeof setInterval> | null = null;
 let persistTimer: ReturnType<typeof setTimeout> | null = null;
-/** Points dropped by the hard cap — counted, never silent. */
+/** Points dropped by the hard cap or by permanent rejection — never silent. */
 let droppedPoints = 0;
+/** Timestamp of the last acknowledged upload (freshness/idle-flush trigger). */
+let lastFlushAt = 0;
+
 
 function persistNow() {
   if (persistTimer) {
