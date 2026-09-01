@@ -104,19 +104,14 @@ function isPermissionError(error: { code?: string; message?: string } | null): b
 /**
  * Shared devices: the queue is a single local buffer, but the database only
  * lets a user insert their own rows. Points left behind by a previously
- * signed-in user would fail forever and block every later point — drop them.
+ * signed-in user would fail forever and block every later point — so the
+ * tracker declares the current owner and any foreign point is dropped
+ * (counted, never silent). Synchronous by design: the flush path must not
+ * gain an extra await before the upload.
  */
-async function dropForeignUserPoints(): Promise<void> {
-  let uid: string | undefined;
-  try {
-    const { data } = await supabase.auth.getSession();
-    uid = data.session?.user?.id;
-  } catch {
-    return;
-  }
-  if (!uid) return;
+export function setGpsQueueOwner(userId: string): void {
   const before = queue.length;
-  queue = queue.filter((p) => p.user_id === uid);
+  queue = queue.filter((p) => p.user_id === userId);
   const removed = before - queue.length;
   if (removed > 0) {
     droppedPoints += removed;
@@ -124,6 +119,7 @@ async function dropForeignUserPoints(): Promise<void> {
     console.warn(`[gpsSyncQueue] dropped ${removed} queued points belonging to a previous user`);
   }
 }
+
 
 async function flushOnce(): Promise<{ remaining: number }> {
   await dropForeignUserPoints();
