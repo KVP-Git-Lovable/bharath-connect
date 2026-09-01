@@ -277,6 +277,8 @@ export function __resetGpsSyncQueueForTests(): void {
   inFlight = null;
   consecutiveFailures = 0;
   droppedPoints = 0;
+  lastFlushAt = 0;
+
   if (retryTimer) clearTimeout(retryTimer);
   if (intervalTimer) clearInterval(intervalTimer);
   if (persistTimer) clearTimeout(persistTimer);
