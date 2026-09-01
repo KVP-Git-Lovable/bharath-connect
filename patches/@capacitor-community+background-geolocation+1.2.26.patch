@@ -1,0 +1,46 @@
+diff --git a/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/BackgroundGeolocation.java b/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/BackgroundGeolocation.java
+index a92fcf9..18712e2 100644
+--- a/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/BackgroundGeolocation.java
++++ b/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/BackgroundGeolocation.java
+@@ -159,7 +159,10 @@ public class BackgroundGeolocation extends Plugin {
+         service.addWatcher(
+                 call.getCallbackId(),
+                 backgroundNotification,
+-                call.getFloat("distanceFilter", 0f)
++                call.getFloat("distanceFilter", 0f),
++                call.getInt("interval", 1000),
++                call.getInt("fastestInterval", 1000),
++                call.getInt("maxWaitTime", 1000)
+         );
+     }
+ 
+diff --git a/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService.java b/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService.java
+index fafbb86..10c2699 100644
+--- a/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService.java
++++ b/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService.java
+@@ -75,14 +75,22 @@ public class BackgroundGeolocationService extends Service {
+         void addWatcher(
+                 final String id,
+                 Notification backgroundNotification,
+-                float distanceFilter
++                float distanceFilter,
++                long interval,
++                long fastestInterval,
++                long maxWaitTime
+         ) {
+             FusedLocationProviderClient client = LocationServices.getFusedLocationProviderClient(
+                     BackgroundGeolocationService.this
+             );
+             LocationRequest locationRequest = new LocationRequest();
+-            locationRequest.setMaxWaitTime(1000);
+-            locationRequest.setInterval(1000);
++            // Configurable acquisition cadence (defaults preserve upstream's
++            // 1000ms behavior). maxWaitTime > interval enables fused-location
++            // batched delivery so the radio can duty-cycle between batches.
++            // Priority stays HIGH_ACCURACY: precise fixes are required.
++            locationRequest.setMaxWaitTime(maxWaitTime);
++            locationRequest.setInterval(interval);
++            locationRequest.setFastestInterval(fastestInterval);
+             locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+             locationRequest.setSmallestDisplacement(distanceFilter);
+ 

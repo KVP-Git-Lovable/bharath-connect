@@ -214,6 +214,17 @@ export function useAttendance(userId: string | undefined) {
     // to raw unfiltered GPS.
     let lockedDistanceKm: number | null = null;
     try {
+      // Drain the local GPS buffer first so the locked distance includes the
+      // tail points that haven't been batch-uploaded yet. If some points
+      // remain unflushable, proceed anyway — same exposure as a failed write
+      // before buffering existed, and the SQL fallback still covers the day.
+      try {
+        const { flushPendingGpsPoints, getQueueSize } = await import("@/services/gpsSyncQueue");
+        await flushPendingGpsPoints();
+        if (getQueueSize() > 0) {
+          console.warn(`[Attendance] ${getQueueSize()} GPS points still unsynced at checkout`);
+        }
+      } catch { /* queue module unavailable — nothing buffered */ }
       const { data: track } = await supabase
         .from("gps_tracking")
         .select("latitude, longitude, timestamp, accuracy, speed, heading")
