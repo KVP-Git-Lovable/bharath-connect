@@ -388,6 +388,10 @@ export function useGPSTracker(userId: string | null | undefined) {
 
     (async () => {
       initGpsSyncQueue();
+      // Shared-device safety: discard any points buffered for another user —
+      // the server would reject them forever and block this user's uploads.
+      setGpsQueueOwner(userId!);
+
       await bootstrapLastPoint();
       await evaluate();
       if (!activeRef.current) {
