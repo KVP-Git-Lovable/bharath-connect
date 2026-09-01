@@ -20,13 +20,17 @@ export function useGPSTeamMembers() {
       if (!user || cancelled) return;
       setCurrentUserId(user.id);
 
-      // Check if admin
+      // Check if admin. A user can hold SEVERAL role rows (e.g. the signup
+      // 'user' row plus a granted 'admin' row), so filter for the admin row
+      // instead of .single(), which errors on multiple rows and silently
+      // demoted multi-role admins.
       const { data: roleData } = await supabase
         .from("user_roles")
         .select("role")
         .eq("user_id", user.id)
-        .single();
-      const admin = roleData?.role === "admin";
+        .eq("role", "admin")
+        .maybeSingle();
+      const admin = !!roleData;
       if (!cancelled) setIsAdmin(admin);
 
       if (admin) {

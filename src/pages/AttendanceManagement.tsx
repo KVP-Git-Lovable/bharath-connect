@@ -87,13 +87,15 @@ export default function AttendanceManagement() {
       if (!user) return;
       setCurrentUserId(user.id);
 
-      // Check if admin
+      // Check if admin. Users can hold several role rows ('user' + 'admin'),
+      // so filter for the admin row — .single() errors on multiple rows.
       const { data: roleData } = await supabase
         .from("user_roles")
         .select("role")
         .eq("user_id", user.id)
-        .single();
-      const admin = roleData?.role === "admin";
+        .eq("role", "admin")
+        .maybeSingle();
+      const admin = !!roleData;
       setIsAdmin(admin);
 
       if (!admin) {
