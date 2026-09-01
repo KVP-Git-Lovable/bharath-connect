@@ -209,8 +209,13 @@ export function enqueueGpsPoint(p: Omit<QueuedGpsPoint, "id">): void {
     }
   }
   persistDebounced();
-  if (queue.length >= CFG.BATCH_SIZE) void flushPendingGpsPoints();
+  // Batch trigger, plus a freshness trigger: after a quiet spell send the
+  // point straight away so live/admin views aren't a full interval behind.
+  if (queue.length >= CFG.BATCH_SIZE || Date.now() - lastFlushAt >= CFG.IDLE_FLUSH_MS) {
+    void flushPendingGpsPoints();
+  }
 }
+
 
 export function getQueueSize(): number {
   return queue.length;
