@@ -122,7 +122,7 @@ export function setGpsQueueOwner(userId: string): void {
 
 
 async function flushOnce(): Promise<{ remaining: number }> {
-  await dropForeignUserPoints();
+  
   while (queue.length > 0) {
     const chunk = queue.slice(0, CFG.CHUNK_SIZE);
     const { error } = await supabase
