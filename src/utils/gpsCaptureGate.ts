@@ -34,19 +34,28 @@ export const GPS_CAPTURE_CONFIG = {
     fastestIntervalMs: 2000,
     maxWaitMs: 8000,
   },
-  /** No watcher callback for this long while the day is open ⇒ re-register. */
+  /** No watcher callback for this long while the day is open ⇒ health probe. */
   WATCHDOG_MS: 5 * 60_000,
   /** Cadence of the watchdog check (holds NO GPS acquisition of its own). */
   WATCHDOG_TICK_MS: 60_000,
+  /**
+   * Stationary trail density: no watcher callback for this long while the day
+   * is open ⇒ take ONE low-power probe fix so a parked/stationary device still
+   * leaves a trail. This is not a poll — it only fires during silence.
+   */
+  STATIONARY_PROBE_MS: 2 * 60_000,
   QUEUE: {
     BATCH_SIZE: 20, // flush when this many points are pending
     FLUSH_INTERVAL_MS: 60_000, // ...or at most this long between flushes
+    /** Freshness path: flush a lone point if nothing has been sent recently. */
+    IDLE_FLUSH_MS: 20_000,
     RETRY_BASE_MS: 15_000, // backoff: min(BASE * 2^failures, MAX)
     MAX_BACKOFF_MS: 5 * 60_000,
     CHUNK_SIZE: 100, // rows per upsert request
     MAX_POINTS: 10_000, // hard queue cap (multi-day-offline pathology)
     PERSIST_DEBOUNCE_MS: 3_000,
   },
+
 } as const;
 
 function haversineMeters(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
