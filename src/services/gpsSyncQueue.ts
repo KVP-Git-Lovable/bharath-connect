@@ -87,13 +87,59 @@ function scheduleRetry() {
   }, backoffMs());
 }
 
+/** Permission failures never resolve by retrying — drop, don't block. */
+function isPermissionError(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false;
+  const code = error.code ?? "";
+  return (
+    code === "42501" ||
+    code === "PGRST301" ||
+    /row-level security|permission denied|violates row-level/i.test(error.message ?? "")
+  );
+}
+
+/**
+ * Shared devices: the queue is a single local buffer, but the database only
+ * lets a user insert their own rows. Points left behind by a previously
+ * signed-in user would fail forever and block every later point — drop them.
+ */
+async function dropForeignUserPoints(): Promise<void> {
+  let uid: string | undefined;
+  try {
+    const { data } = await supabase.auth.getSession();
+    uid = data.session?.user?.id;
+  } catch {
+    return;
+  }
+  if (!uid) return;
+  const before = queue.length;
+  queue = queue.filter((p) => p.user_id === uid);
+  const removed = before - queue.length;
+  if (removed > 0) {
+    droppedPoints += removed;
+    persistNow();
+    console.warn(`[gpsSyncQueue] dropped ${removed} queued points belonging to a previous user`);
+  }
+}
+
 async function flushOnce(): Promise<{ remaining: number }> {
+  await dropForeignUserPoints();
   while (queue.length > 0) {
     const chunk = queue.slice(0, CFG.CHUNK_SIZE);
     const { error } = await supabase
       .from("gps_tracking")
       .upsert(chunk, { onConflict: "id", ignoreDuplicates: true });
     if (error) {
+      if (isPermissionError(error)) {
+        // Unacceptable to the server no matter how often we retry — discard
+        // this chunk (counted) and keep the rest of the queue moving.
+        const sent = new Set(chunk.map((c) => c.id));
+        queue = queue.filter((p) => !sent.has(p.id));
+        droppedPoints += chunk.length;
+        persistNow();
+        console.warn(`[gpsSyncQueue] dropped ${chunk.length} rejected points`, error.message);
+        continue;
+      }
       consecutiveFailures++;
       scheduleRetry();
       if (import.meta.env.DEV) {
@@ -108,6 +154,7 @@ async function flushOnce(): Promise<{ remaining: number }> {
     const sent = new Set(chunk.map((c) => c.id));
     queue = queue.filter((p) => !sent.has(p.id));
     persistNow();
+    lastFlushAt = Date.now();
     consecutiveFailures = 0;
     if (retryTimer) {
       clearTimeout(retryTimer);
@@ -116,6 +163,7 @@ async function flushOnce(): Promise<{ remaining: number }> {
   }
   return { remaining: 0 };
 }
+
 
 /**
  * Single-flight coordinator: concurrent callers share one upload pass, plus
