@@ -38,21 +38,14 @@ const ActivityTypeMasterPage = lazy(() => import("./pages/ActivityTypeMaster"));
 const InstallApp = lazy(() => import("./pages/InstallApp"));
 const Profile = lazy(() => import("./pages/Profile"));
 const MyTeam = lazy(() => import("./pages/MyTeam"));
-const Vendors = lazy(() => import("./pages/Vendors"));
 const VendorDetail = lazy(() => import("./pages/VendorDetail"));
 const MasterData = lazy(() => import("./pages/MasterData"));
 const CategoryMaster = lazy(() => import("./pages/master/CategoryMaster"));
 const ProductMaster = lazy(() => import("./pages/master/ProductMaster"));
 const AddressBook = lazy(() => import("./pages/master/AddressBook"));
 
-const Procurement = lazy(() => import("./pages/Procurement"));
-const GRN = lazy(() => import("./pages/GRN"));
 const Analytics = lazy(() => import("./pages/Analytics"));
-const Customers = lazy(() => import("./pages/Customers"));
-const CustomerDetail = lazy(() => import("./pages/CustomerDetail"));
 
-const OpportunityDetail = lazy(() => import("./pages/OpportunityDetail"));
-const Opportunities = lazy(() => import("./pages/Opportunities"));
 const OpportunityStagesMaster = lazy(() => import("./pages/master/OpportunityStagesMaster"));
 const OpportunityTypesMaster = lazy(() => import("./pages/master/OpportunityTypesMaster"));
 const UomMaster = lazy(() => import("./pages/master/UomMaster"));
@@ -137,20 +130,12 @@ const App = () => {
             <Route path="/activity-timeline" element={<Suspense fallback={<PageFallback />}><ActivityTimeline /></Suspense>} />
             <Route path="/profile" element={<Suspense fallback={<PageFallback />}><Profile /></Suspense>} />
             <Route path="/my-team" element={<Suspense fallback={<PageFallback />}><MyTeam /></Suspense>} />
-            <Route path="/vendors" element={<Suspense fallback={<PageFallback />}><Vendors /></Suspense>} />
             <Route path="/vendors/:id" element={<Suspense fallback={<PageFallback />}><VendorDetail /></Suspense>} />
             <Route path="/master-data" element={<Suspense fallback={<PageFallback />}><MasterData /></Suspense>} />
             <Route path="/master-data/categories" element={<Suspense fallback={<PageFallback />}><CategoryMaster /></Suspense>} />
             <Route path="/master-data/products" element={<Suspense fallback={<PageFallback />}><ProductMaster /></Suspense>} />
             <Route path="/master-data/addresses" element={<Suspense fallback={<PageFallback />}><AddressBook /></Suspense>} />
             
-            <Route path="/procurement" element={<Suspense fallback={<PageFallback />}><Procurement /></Suspense>} />
-            <Route path="/grn" element={<Suspense fallback={<PageFallback />}><GRN /></Suspense>} />
-            <Route path="/customers" element={<Suspense fallback={<PageFallback />}><Customers /></Suspense>} />
-            <Route path="/crm" element={<Navigate to="/customers" replace />} />
-            <Route path="/customers/:id" element={<Suspense fallback={<PageFallback />}><CustomerDetail /></Suspense>} />
-            <Route path="/opportunities" element={<Suspense fallback={<PageFallback />}><Opportunities /></Suspense>} />
-            <Route path="/opportunities/:id" element={<Suspense fallback={<PageFallback />}><OpportunityDetail /></Suspense>} />
             <Route path="/master-data/opportunity-stages" element={<Suspense fallback={<PageFallback />}><OpportunityStagesMaster /></Suspense>} />
             <Route path="/master-data/opportunity-types" element={<Suspense fallback={<PageFallback />}><OpportunityTypesMaster /></Suspense>} />
             <Route path="/master-data/uom" element={<Suspense fallback={<PageFallback />}><UomMaster /></Suspense>} />

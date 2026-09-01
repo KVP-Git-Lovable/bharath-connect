@@ -10,9 +10,7 @@ import {
   Navigation2,
   Receipt,
   FolderKanban,
-  Handshake,
   Database,
-  ShoppingCart,
   LogOut,
   ChevronRight,
   Search,
@@ -22,7 +20,6 @@ import {
   FileText,
   FileBarChart,
   Building2,
-  Target,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { NavLink } from "@/components/NavLink";
@@ -38,10 +35,6 @@ const allNavigationItems = [
   { icon: Clock, label: "Attendance", href: "/attendance", color: "from-blue-500 to-blue-600", module: "module_attendance" },
   { icon: Navigation2, label: "GPS Track", href: "/gps-tracking", color: "from-purple-500 to-purple-600", module: "module_gps_tracking" },
   { icon: FolderKanban, label: "Projects", href: "/projects", color: "from-indigo-500 to-indigo-600", module: "module_projects" },
-  { icon: ShoppingCart, label: "Procurement", href: "/procurement", color: "from-rose-500 to-rose-600", module: "module_procurement" },
-  { icon: Handshake, label: "Vendors", href: "/vendors", color: "from-pink-500 to-pink-600", module: "module_vendors" },
-  { icon: Handshake, label: "Customers", href: "/customers", color: "from-sky-500 to-sky-600", module: "module_customers" },
-  { icon: Target, label: "Opportunities", href: "/opportunities", color: "from-violet-500 to-violet-600", module: "module_opportunities" },
   { icon: FileBarChart, label: "Reports", href: "/reports", color: "from-teal-500 to-teal-600", module: "module_reports" },
 ];
 
