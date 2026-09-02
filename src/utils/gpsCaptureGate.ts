@@ -50,6 +50,22 @@ export const GPS_CAPTURE_CONFIG = {
    * the movement threshold to ~70 m, collapsing the whole day to 0 km.
    */
   PROBE_MAX_ACCURACY_M: 50,
+  /**
+   * Any fix (watcher included, not just probes) worse than this is treated as
+   * a coarse / fused-network guess: it is still written so the trail and the
+   * "last known position" stay populated, but it never advances the movement
+   * anchor, so it cannot inflate the gate for the fixes that follow.
+   */
+  COARSE_FIX_ACCURACY_M: 50,
+  /**
+   * Hard ceiling for the accuracy-derived movement threshold. Without it a
+   * day of 35 m fused fixes demands a ~70 m jump before anything counts as
+   * movement, and an entire workday collapses into one stationary cluster
+   * (the 0 km symptom). Real走 movement of ~50 m must always be able to
+   * register regardless of how pessimistic the reported accuracy is.
+   */
+  MOVEMENT_THRESHOLD_CAP_M: 50,
+
 
   QUEUE: {
     BATCH_SIZE: 20, // flush when this many points are pending
