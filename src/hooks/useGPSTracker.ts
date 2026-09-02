@@ -202,12 +202,29 @@ export function useGPSTracker(userId: string | null | undefined) {
           // Returned near the last good point — drop the held outlier.
           pendingJumpRef.current = null;
         }
+        // Coarse (fused/network) fixes — typically the tell-tale flat 35 m —
+        // are kept for trail/last-known purposes but must never become the
+        // movement anchor: anchoring on them is what flattened whole days to
+        // 0 km. They are written without advancing the anchor.
+        if (isCoarseFix(accuracy)) {
+          coarseFixCountRef.current += 1;
+          if (coarseFixCountRef.current % 20 === 1) {
+            console.debug("[GPSTracker] coarse fix kept as trail-only", {
+              accuracy,
+              coarseFixes: coarseFixCountRef.current,
+            });
+          }
+          if (elapsed < MIN_FORCED_WRITE_MS) return;
+          persistPoint(lat, lng, accuracy, now, false, speed, heading);
+          return;
+        }
         // Accuracy-aware movement gate: don't credit — or anchor on — a jump
-        // smaller than the combined declared error radius of both fixes.
-        // Ordinary GPS jitter (accuracy up to MAX_ACCURACY_M is accepted
-        // above) can otherwise silently drift the anchor every heartbeat,
-        // making each subsequent noisy fix measure from an already-drifted
-        // point instead of the last confirmed real position.
+        // smaller than the combined declared error radius of both fixes
+        // (clamped by MOVEMENT_THRESHOLD_CAP_M). Ordinary GPS jitter
+        // (accuracy up to MAX_ACCURACY_M is accepted above) can otherwise
+        // silently drift the anchor every heartbeat, making each subsequent
+        // noisy fix measure from an already-drifted point instead of the last
+        // confirmed real position.
         const { isRealMove } = shouldAcceptMove(last, { lat, lng, ts: now, accuracy });
         if (!isRealMove) {
           if (elapsed < MIN_FORCED_WRITE_MS) return; // too soon, no real movement — skip write entirely
