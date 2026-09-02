@@ -61,7 +61,7 @@ export const GPS_CAPTURE_CONFIG = {
    * Hard ceiling for the accuracy-derived movement threshold. Without it a
    * day of 35 m fused fixes demands a ~70 m jump before anything counts as
    * movement, and an entire workday collapses into one stationary cluster
-   * (the 0 km symptom). Real走 movement of ~50 m must always be able to
+   * (the 0 km symptom). Real movement of ~50 m must always be able to
    * register regardless of how pessimistic the reported accuracy is.
    */
   MOVEMENT_THRESHOLD_CAP_M: 50,
