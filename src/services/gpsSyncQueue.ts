@@ -48,6 +48,8 @@ let persistTimer: ReturnType<typeof setTimeout> | null = null;
 let droppedPoints = 0;
 /** Timestamp of the last acknowledged upload (freshness/idle-flush trigger). */
 let lastFlushAt = Date.now();
+/** Last upload error message (diagnostics — "capture works, sync stuck"). */
+let lastError: string | null = null;
 
 
 function persistNow() {
@@ -136,10 +138,12 @@ async function flushOnce(): Promise<{ remaining: number }> {
         queue = queue.filter((p) => !sent.has(p.id));
         droppedPoints += chunk.length;
         persistNow();
+        lastError = `rejected: ${error.message}`;
         console.warn(`[gpsSyncQueue] dropped ${chunk.length} rejected points`, error.message);
         continue;
       }
       consecutiveFailures++;
+      lastError = error.message;
       scheduleRetry();
       if (import.meta.env.DEV) {
         console.warn(
@@ -155,6 +159,7 @@ async function flushOnce(): Promise<{ remaining: number }> {
     persistNow();
     lastFlushAt = Date.now();
     consecutiveFailures = 0;
+    lastError = null;
     if (retryTimer) {
       clearTimeout(retryTimer);
       retryTimer = null;
@@ -219,6 +224,34 @@ export function getQueueSize(): number {
 
 export function getDroppedPointCount(): number {
   return droppedPoints;
+}
+
+export interface GpsQueueStats {
+  /** Points captured locally but not yet acknowledged by the server. */
+  pending: number;
+  /** Points discarded (hard cap, foreign user, or permanent rejection). */
+  dropped: number;
+  /** Consecutive failed upload attempts (0 when healthy). */
+  failures: number;
+  /** Message of the last upload failure, cleared on the next success. */
+  lastError: string | null;
+  /** Epoch ms of the last acknowledged upload. */
+  lastFlushAt: number;
+}
+
+/**
+ * Observability for the "capture works but sync is stuck" case — surfaced in
+ * the Day Tracking diagnostics so it can be read on the device without
+ * attaching DevTools.
+ */
+export function getGpsQueueStats(): GpsQueueStats {
+  return {
+    pending: queue.length,
+    dropped: droppedPoints,
+    failures: consecutiveFailures,
+    lastError,
+    lastFlushAt,
+  };
 }
 
 /** Newest locally queued point for a user/date — restart continuity. */
