@@ -33,6 +33,8 @@ const MAX_JUMP_METERS = 10000;       // reject teleport jumps >10km between cons
 // A check-in still open after this long means the user forgot to check out —
 // stop tracking instead of running (and draining) all night.
 const MAX_OPEN_DAY_MS = 16 * 60 * 60_000;
+// How often the tracker re-checks attendance state while actively tracking.
+const DAY_RECHECK_MS = 15 * 60_000;
 
 function haversineMeters(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
   return haversine(a.lat, a.lng, b.lat, b.lng);
