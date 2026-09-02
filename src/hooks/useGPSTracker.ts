@@ -357,6 +357,14 @@ export function useGPSTracker(userId: string | null | undefined) {
         //    the watcher, whether or not the probe succeeded — re-register.
         pollTimer = window.setInterval(async () => {
           if (!activeRef.current || cancelled) return;
+          // Cheap periodic day-state check (every DAY_RECHECK_MS, not every
+          // tick) so a forgotten check-out or a real check-out that happened
+          // while the app was backgrounded stops the tracker.
+          if (Date.now() - lastDayCheckRef.current > DAY_RECHECK_MS) {
+            lastDayCheckRef.current = Date.now();
+            await evaluate();
+            if (!activeRef.current || cancelled) return;
+          }
           const silenceMs = Date.now() - lastCallbackTsRef.current;
           if (silenceMs < STATIONARY_PROBE_MS) return;
 
