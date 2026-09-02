@@ -20,9 +20,11 @@ const FOREGROUND_POLL_MS = 15_000;   // web / non-native fallback (screen-on onl
 // NOT acquire GPS itself — the watcher is the single acquisition source.)
 const WATCHDOG_MS = GPS_CAPTURE_CONFIG.WATCHDOG_MS;
 const WATCHDOG_TICK_MS = GPS_CAPTURE_CONFIG.WATCHDOG_TICK_MS;
-// Silence this long while the day is open ⇒ take ONE low-power probe fix so a
-// stationary device still leaves a trail (and to health-test the watcher).
+// Silence this long while the day is open ⇒ take ONE high-accuracy probe fix
+// so a stationary device still leaves a trail.
 const STATIONARY_PROBE_MS = GPS_CAPTURE_CONFIG.STATIONARY_PROBE_MS;
+// Probe fixes worse than this are discarded (coarse network guesses).
+const PROBE_MAX_ACCURACY_M = GPS_CAPTURE_CONFIG.PROBE_MAX_ACCURACY_M;
 
 // Reject fixes worse than this (cell-tower guesses create phantom distance) —
 // same threshold the display-side trajectory engine uses.
