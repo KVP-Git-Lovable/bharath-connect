@@ -88,14 +88,25 @@ export function useGPSTracker(userId: string | null | undefined) {
     let stopBackground: (() => Promise<void>) | null = null;
     let pollTimer: number | null = null;
 
-    async function isDayOpen(): Promise<boolean> {
+    /**
+     * Whether the attendance day is open. Returns null when the answer is
+     * UNKNOWN — the query failed (offline / server unreachable). "I couldn't
+     * reach the server" must never be read as "checked out": doing so used to
+     * silently kill tracking the moment the app was foregrounded without
+     * internet, and it never recovered.
+     */
+    async function isDayOpen(): Promise<boolean | null> {
       const today = format(new Date(), "yyyy-MM-dd");
-      const { data: att } = await supabase
+      const { data: att, error } = await supabase
         .from("attendance")
         .select("check_in_time, check_out_time")
         .eq("user_id", userId!)
         .eq("date", today)
         .maybeSingle();
+      if (error) {
+        console.warn("[GPSTracker] attendance check failed (offline?) — keeping current tracking state", error.message);
+        return null;
+      }
       if (!att?.check_in_time || att?.check_out_time) return false;
       // Forgotten check-out guard: an attendance row that has been open longer
       // than a plausible workday keeps the tracker (and the battery drain)
@@ -457,8 +468,30 @@ export function useGPSTracker(userId: string | null | undefined) {
       timerRef.current = window.setInterval(tick, FOREGROUND_POLL_MS);
     }
 
+    // Self-healing start: (re)start acquisition when the day is open but no
+    // watcher/poll is running (e.g. after a transient stop, or when the user
+    // checks in later). Single-flight + idempotent-start guards make it safe
+    // to call from every evaluate() — it can never create a second stream.
+    let startingAcquisition = false;
+    async function ensureAcquisitionRunning() {
+      if (startingAcquisition || cancelled || !activeRef.current) return;
+      if (watcherIdRef.current != null || timerRef.current != null) return;
+      startingAcquisition = true;
+      try {
+        if (isNative()) {
+          const ok = await startNativeBackground();
+          if (!ok) await startForeground();
+        } else {
+          await startForeground();
+        }
+      } finally {
+        startingAcquisition = false;
+      }
+    }
+
     async function evaluate() {
       const open = await isDayOpen();
+      if (open === null) return; // unknown (offline) — keep the current state
       activeRef.current = open;
       if (!open) {
         // Day closed → stop background watcher if any, then drain the queue
@@ -466,6 +499,8 @@ export function useGPSTracker(userId: string | null | undefined) {
         if (pollTimer) { window.clearInterval(pollTimer); pollTimer = null; }
         if (timerRef.current) { window.clearInterval(timerRef.current); timerRef.current = null; }
         void flushPendingGpsPoints();
+      } else {
+        void ensureAcquisitionRunning();
       }
     }
 
@@ -476,29 +511,14 @@ export function useGPSTracker(userId: string | null | undefined) {
       setGpsQueueOwner(userId!);
 
       await bootstrapLastPoint();
-      await evaluate();
+      await evaluate(); // starts acquisition itself when the day is open
       if (!activeRef.current) {
         // Re-check periodically in case user checks in later
         const recheck = window.setInterval(async () => {
           if (cancelled) return;
           await evaluate();
-          if (activeRef.current) {
-            window.clearInterval(recheck);
-            if (isNative()) {
-              const ok = await startNativeBackground();
-              if (!ok) await startForeground();
-            } else {
-              await startForeground();
-            }
-          }
+          if (activeRef.current) window.clearInterval(recheck);
         }, 30_000);
-        return;
-      }
-      if (isNative()) {
-        const ok = await startNativeBackground();
-        if (!ok) await startForeground();
-      } else {
-        await startForeground();
       }
     })();
 
@@ -510,9 +530,9 @@ export function useGPSTracker(userId: string | null | undefined) {
 
     // Re-evaluate immediately when useAttendance signals a successful
     // check-in/check-out, instead of waiting for the next visibility-change
-    // or the 30s recheck loop. evaluate() only ever stops tracking when the
-    // day is closed — it never starts a watcher on its own — so this can't
-    // start a second tracking path.
+    // or the 30s recheck loop. evaluate() starts acquisition only through
+    // ensureAcquisitionRunning, whose guards make a second tracking path
+    // impossible.
     const onAttendanceChanged = () => evaluate();
     window.addEventListener("attendance-changed", onAttendanceChanged);
 
