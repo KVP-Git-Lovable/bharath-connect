@@ -265,9 +265,20 @@ export function useGPSTracker(userId: string | null | undefined) {
               maxWaitTime: GPS_CAPTURE_CONFIG.MOVING.maxWaitMs,
             },
             (location: any, error: any) => {
-              if (error || !location) return;
+              if (error) {
+                console.warn("[GPSTracker] watcher error", error);
+                return;
+              }
+              if (!location) return;
               // Health signal first — even fixes the gates reject prove the
               // watcher is alive.
+              if (!firstCallbackSeenRef.current) {
+                firstCallbackSeenRef.current = true;
+                console.info("[GPSTracker] first watcher callback", {
+                  accuracy: location.accuracy,
+                  speed: location.speed,
+                });
+              }
               lastCallbackTsRef.current = Date.now();
               if (!activeRef.current) return;
               if (cancelled) return;
