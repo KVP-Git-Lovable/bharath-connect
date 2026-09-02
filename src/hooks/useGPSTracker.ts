@@ -77,6 +77,8 @@ export function useGPSTracker(userId: string | null | undefined) {
   const firstCallbackSeenRef = useRef(false);
   /** Diagnostics: fixes too coarse to anchor on (fused/network provider). */
   const coarseFixCountRef = useRef(0);
+  /** Throttle for the periodic attendance-state recheck while tracking. */
+  const lastDayCheckRef = useRef<number>(Date.now());
 
   useEffect(() => {
     if (!userId) return;
