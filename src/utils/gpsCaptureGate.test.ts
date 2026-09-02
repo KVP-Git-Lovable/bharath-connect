@@ -28,7 +28,7 @@ describe("shouldAcceptMove", () => {
   });
 
   it("flags fused/network-grade fixes as coarse", () => {
-    expect(isCoarseFix(35)).toBe(false); // 35m is at GPS-grade edge? no: below 50m threshold
+    expect(isCoarseFix(35)).toBe(false); // below the 50m coarse threshold
     expect(isCoarseFix(80)).toBe(true);
     expect(isCoarseFix(null)).toBe(true);
     expect(isCoarseFix(12)).toBe(false);
