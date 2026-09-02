@@ -50,6 +50,22 @@ export const GPS_CAPTURE_CONFIG = {
    * the movement threshold to ~70 m, collapsing the whole day to 0 km.
    */
   PROBE_MAX_ACCURACY_M: 50,
+  /**
+   * Any fix (watcher included, not just probes) worse than this is treated as
+   * a coarse / fused-network guess: it is still written so the trail and the
+   * "last known position" stay populated, but it never advances the movement
+   * anchor, so it cannot inflate the gate for the fixes that follow.
+   */
+  COARSE_FIX_ACCURACY_M: 50,
+  /**
+   * Hard ceiling for the accuracy-derived movement threshold. Without it a
+   * day of 35 m fused fixes demands a ~70 m jump before anything counts as
+   * movement, and an entire workday collapses into one stationary cluster
+   * (the 0 km symptom). Real movement of ~50 m must always be able to
+   * register regardless of how pessimistic the reported accuracy is.
+   */
+  MOVEMENT_THRESHOLD_CAP_M: 50,
+
 
   QUEUE: {
     BATCH_SIZE: 20, // flush when this many points are pending
@@ -70,10 +86,21 @@ function haversineMeters(a: { lat: number; lng: number }, b: { lat: number; lng:
 }
 
 /**
+ * A fix this coarse is a fused/network guess, not a GPS fix: usable for the
+ * trail and last-known position, never trustworthy enough to become the
+ * movement anchor.
+ */
+export function isCoarseFix(accuracy: number | null): boolean {
+  return accuracy == null || accuracy > GPS_CAPTURE_CONFIG.COARSE_FIX_ACCURACY_M;
+}
+
+/**
  * Pure decision of whether a candidate fix represents real movement from the
  * last confirmed point, gated on the combined declared accuracy of both
  * fixes rather than a flat constant (a noisy fix with poor accuracy needs a
- * bigger jump to count than a precise one).
+ * bigger jump to count than a precise one) — but clamped by
+ * MOVEMENT_THRESHOLD_CAP_M so pessimistic accuracy can never suppress an
+ * entire day of real movement.
  */
 export function shouldAcceptMove(
   last: GateFix | null,
@@ -83,9 +110,11 @@ export function shouldAcceptMove(
     return { isRealMove: true, requiredMoveM: 0, distM: 0 };
   }
   const distM = haversineMeters(last, candidate);
+  const accuracySum =
+    (last.accuracy ?? MAX_ACCURACY_M) + (candidate.accuracy ?? MAX_ACCURACY_M);
   const requiredMoveM = Math.max(
     MIN_MOVE_METERS_FLOOR,
-    (last.accuracy ?? MAX_ACCURACY_M) + (candidate.accuracy ?? MAX_ACCURACY_M)
+    Math.min(accuracySum, GPS_CAPTURE_CONFIG.MOVEMENT_THRESHOLD_CAP_M)
   );
   return { isRealMove: distM >= requiredMoveM, requiredMoveM, distM };
 }

@@ -30,6 +30,7 @@ import {
   type ProcessedTrajectory,
 } from "@/utils/gpsDistance";
 import { filterPointsByAttendance } from "@/utils/attendanceGate";
+import { getGpsQueueStats, flushPendingGpsPoints, type GpsQueueStats } from "@/services/gpsSyncQueue";
 
 
 const GoogleTrackMap = lazy(() =>
@@ -156,6 +157,18 @@ export default function GPSTracking() {
   // dataset (and therefore the distance) is incomplete. Not shown in the UI
   // yet, but the system must know the day was truncated.
   const [trackingDataTruncated, setTrackingDataTruncated] = useState(false);
+  // Local capture/sync health: distinguishes "nothing captured" from
+  // "captured but stuck in the device queue" without attaching DevTools.
+  const [queueStats, setQueueStats] = useState<GpsQueueStats>(() => getGpsQueueStats());
+
+  useEffect(() => {
+    const tick = () => setQueueStats(getGpsQueueStats());
+    tick();
+    const id = window.setInterval(tick, 10_000);
+    return () => window.clearInterval(id);
+  }, []);
+
+
 
 
   // Get own location
@@ -666,6 +679,37 @@ export default function GPSTracking() {
                 <Button variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={handleFixTrackingGap}>
                   Open Settings
                 </Button>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Sync health: points captured on this device but not yet uploaded */}
+          {(queueStats.pending > 0 || queueStats.dropped > 0 || queueStats.lastError) && (
+            <Card className="shadow-card">
+              <CardContent className="p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold">Location sync</p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 px-2 text-xs"
+                    onClick={async () => {
+                      await flushPendingGpsPoints();
+                      setQueueStats(getGpsQueueStats());
+                    }}
+                  >
+                    Sync now
+                  </Button>
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  {queueStats.pending} point{queueStats.pending === 1 ? "" : "s"} waiting on this
+                  device
+                  {queueStats.dropped > 0 && ` · ${queueStats.dropped} discarded`}
+                  {queueStats.failures > 0 && ` · ${queueStats.failures} failed attempt(s)`}
+                </p>
+                {queueStats.lastError && (
+                  <p className="text-[11px] text-destructive">Last error: {queueStats.lastError}</p>
+                )}
               </CardContent>
             </Card>
           )}

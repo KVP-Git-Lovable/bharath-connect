@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { getCurrentPosition, isNative, prepareNativeLocationSettings } from "@/utils/nativePermissions";
-import { shouldAcceptMove, GPS_CAPTURE_CONFIG } from "@/utils/gpsCaptureGate";
+import { shouldAcceptMove, isCoarseFix, GPS_CAPTURE_CONFIG } from "@/utils/gpsCaptureGate";
 import { GPS_PROCESSING_CONFIG, haversineMeters as haversine } from "@/utils/gpsDistance";
 import {
   initGpsSyncQueue,
@@ -30,6 +30,11 @@ const PROBE_MAX_ACCURACY_M = GPS_CAPTURE_CONFIG.PROBE_MAX_ACCURACY_M;
 // same threshold the display-side trajectory engine uses.
 const MAX_ACCURACY_M = GPS_PROCESSING_CONFIG.MAX_ACCURACY_METERS;
 const MAX_JUMP_METERS = 10000;       // reject teleport jumps >10km between consecutive samples
+// A check-in still open after this long means the user forgot to check out —
+// stop tracking instead of running (and draining) all night.
+const MAX_OPEN_DAY_MS = 16 * 60 * 60_000;
+// How often the tracker re-checks attendance state while actively tracking.
+const DAY_RECHECK_MS = 15 * 60_000;
 
 function haversineMeters(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
   return haversine(a.lat, a.lng, b.lat, b.lng);
@@ -72,6 +77,10 @@ export function useGPSTracker(userId: string | null | undefined) {
   const lastCallbackTsRef = useRef<number>(0);
   /** Diagnostics: has the plugin watcher ever delivered a fix this session? */
   const firstCallbackSeenRef = useRef(false);
+  /** Diagnostics: fixes too coarse to anchor on (fused/network provider). */
+  const coarseFixCountRef = useRef(0);
+  /** Throttle for the periodic attendance-state recheck while tracking. */
+  const lastDayCheckRef = useRef<number>(Date.now());
 
   useEffect(() => {
     if (!userId) return;
@@ -87,7 +96,21 @@ export function useGPSTracker(userId: string | null | undefined) {
         .eq("user_id", userId!)
         .eq("date", today)
         .maybeSingle();
-      return !!att?.check_in_time && !att?.check_out_time;
+      if (!att?.check_in_time || att?.check_out_time) return false;
+      // Forgotten check-out guard: an attendance row that has been open longer
+      // than a plausible workday keeps the tracker (and the battery drain)
+      // running all night and pollutes the next day's totals. Treat it as
+      // closed for tracking purposes — the attendance record is untouched.
+      const openMs = Date.now() - new Date(att.check_in_time).getTime();
+      if (openMs > MAX_OPEN_DAY_MS) {
+        console.warn(
+          "[GPSTracker] attendance open for",
+          Math.round(openMs / 3_600_000),
+          "h with no check-out — stopping tracking"
+        );
+        return false;
+      }
+      return true;
     }
 
     async function bootstrapLastPoint() {
@@ -202,12 +225,29 @@ export function useGPSTracker(userId: string | null | undefined) {
           // Returned near the last good point — drop the held outlier.
           pendingJumpRef.current = null;
         }
+        // Coarse (fused/network) fixes — typically the tell-tale flat 35 m —
+        // are kept for trail/last-known purposes but must never become the
+        // movement anchor: anchoring on them is what flattened whole days to
+        // 0 km. They are written without advancing the anchor.
+        if (isCoarseFix(accuracy)) {
+          coarseFixCountRef.current += 1;
+          if (coarseFixCountRef.current % 20 === 1) {
+            console.debug("[GPSTracker] coarse fix kept as trail-only", {
+              accuracy,
+              coarseFixes: coarseFixCountRef.current,
+            });
+          }
+          if (elapsed < MIN_FORCED_WRITE_MS) return;
+          persistPoint(lat, lng, accuracy, now, false, speed, heading);
+          return;
+        }
         // Accuracy-aware movement gate: don't credit — or anchor on — a jump
-        // smaller than the combined declared error radius of both fixes.
-        // Ordinary GPS jitter (accuracy up to MAX_ACCURACY_M is accepted
-        // above) can otherwise silently drift the anchor every heartbeat,
-        // making each subsequent noisy fix measure from an already-drifted
-        // point instead of the last confirmed real position.
+        // smaller than the combined declared error radius of both fixes
+        // (clamped by MOVEMENT_THRESHOLD_CAP_M). Ordinary GPS jitter
+        // (accuracy up to MAX_ACCURACY_M is accepted above) can otherwise
+        // silently drift the anchor every heartbeat, making each subsequent
+        // noisy fix measure from an already-drifted point instead of the last
+        // confirmed real position.
         const { isRealMove } = shouldAcceptMove(last, { lat, lng, ts: now, accuracy });
         if (!isRealMove) {
           if (elapsed < MIN_FORCED_WRITE_MS) return; // too soon, no real movement — skip write entirely
@@ -321,6 +361,14 @@ export function useGPSTracker(userId: string | null | undefined) {
         //    the watcher, whether or not the probe succeeded — re-register.
         pollTimer = window.setInterval(async () => {
           if (!activeRef.current || cancelled) return;
+          // Cheap periodic day-state check (every DAY_RECHECK_MS, not every
+          // tick) so a forgotten check-out or a real check-out that happened
+          // while the app was backgrounded stops the tracker.
+          if (Date.now() - lastDayCheckRef.current > DAY_RECHECK_MS) {
+            lastDayCheckRef.current = Date.now();
+            await evaluate();
+            if (!activeRef.current || cancelled) return;
+          }
           const silenceMs = Date.now() - lastCallbackTsRef.current;
           if (silenceMs < STATIONARY_PROBE_MS) return;
 
