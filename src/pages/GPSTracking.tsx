@@ -157,6 +157,18 @@ export default function GPSTracking() {
   // dataset (and therefore the distance) is incomplete. Not shown in the UI
   // yet, but the system must know the day was truncated.
   const [trackingDataTruncated, setTrackingDataTruncated] = useState(false);
+  // Local capture/sync health: distinguishes "nothing captured" from
+  // "captured but stuck in the device queue" without attaching DevTools.
+  const [queueStats, setQueueStats] = useState<GpsQueueStats>(() => getGpsQueueStats());
+
+  useEffect(() => {
+    const tick = () => setQueueStats(getGpsQueueStats());
+    tick();
+    const id = window.setInterval(tick, 10_000);
+    return () => window.clearInterval(id);
+  }, []);
+
+
 
 
   // Get own location
