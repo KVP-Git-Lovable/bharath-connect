@@ -30,6 +30,9 @@ const PROBE_MAX_ACCURACY_M = GPS_CAPTURE_CONFIG.PROBE_MAX_ACCURACY_M;
 // same threshold the display-side trajectory engine uses.
 const MAX_ACCURACY_M = GPS_PROCESSING_CONFIG.MAX_ACCURACY_METERS;
 const MAX_JUMP_METERS = 10000;       // reject teleport jumps >10km between consecutive samples
+// A check-in still open after this long means the user forgot to check out —
+// stop tracking instead of running (and draining) all night.
+const MAX_OPEN_DAY_MS = 16 * 60 * 60_000;
 
 function haversineMeters(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
   return haversine(a.lat, a.lng, b.lat, b.lng);
