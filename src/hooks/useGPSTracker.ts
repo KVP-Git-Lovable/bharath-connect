@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { getCurrentPosition, isNative, prepareNativeLocationSettings } from "@/utils/nativePermissions";
-import { shouldAcceptMove, GPS_CAPTURE_CONFIG } from "@/utils/gpsCaptureGate";
+import { shouldAcceptMove, isCoarseFix, GPS_CAPTURE_CONFIG } from "@/utils/gpsCaptureGate";
 import { GPS_PROCESSING_CONFIG, haversineMeters as haversine } from "@/utils/gpsDistance";
 import {
   initGpsSyncQueue,
