@@ -40,10 +40,17 @@ export const GPS_CAPTURE_CONFIG = {
   WATCHDOG_TICK_MS: 60_000,
   /**
    * Stationary trail density: no watcher callback for this long while the day
-   * is open ⇒ take ONE low-power probe fix so a parked/stationary device still
-   * leaves a trail. This is not a poll — it only fires during silence.
+   * is open ⇒ take ONE high-accuracy probe fix so a parked/stationary device
+   * still leaves a trail. This is not a poll — it only fires during silence.
    */
   STATIONARY_PROBE_MS: 2 * 60_000,
+  /**
+   * Probe fixes worse than this are discarded instead of written: a coarse
+   * network fix (typically 35 m) would otherwise become the anchor and push
+   * the movement threshold to ~70 m, collapsing the whole day to 0 km.
+   */
+  PROBE_MAX_ACCURACY_M: 50,
+
   QUEUE: {
     BATCH_SIZE: 20, // flush when this many points are pending
     FLUSH_INTERVAL_MS: 60_000, // ...or at most this long between flushes

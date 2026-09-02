@@ -20,9 +20,11 @@ const FOREGROUND_POLL_MS = 15_000;   // web / non-native fallback (screen-on onl
 // NOT acquire GPS itself — the watcher is the single acquisition source.)
 const WATCHDOG_MS = GPS_CAPTURE_CONFIG.WATCHDOG_MS;
 const WATCHDOG_TICK_MS = GPS_CAPTURE_CONFIG.WATCHDOG_TICK_MS;
-// Silence this long while the day is open ⇒ take ONE low-power probe fix so a
-// stationary device still leaves a trail (and to health-test the watcher).
+// Silence this long while the day is open ⇒ take ONE high-accuracy probe fix
+// so a stationary device still leaves a trail.
 const STATIONARY_PROBE_MS = GPS_CAPTURE_CONFIG.STATIONARY_PROBE_MS;
+// Probe fixes worse than this are discarded (coarse network guesses).
+const PROBE_MAX_ACCURACY_M = GPS_CAPTURE_CONFIG.PROBE_MAX_ACCURACY_M;
 
 // Reject fixes worse than this (cell-tower guesses create phantom distance) —
 // same threshold the display-side trajectory engine uses.
@@ -68,6 +70,8 @@ export function useGPSTracker(userId: string | null | undefined) {
   // gates reject — write recency no longer proxies callback receipt now that
   // writes are batched.
   const lastCallbackTsRef = useRef<number>(0);
+  /** Diagnostics: has the plugin watcher ever delivered a fix this session? */
+  const firstCallbackSeenRef = useRef(false);
 
   useEffect(() => {
     if (!userId) return;
@@ -223,7 +227,13 @@ export function useGPSTracker(userId: string | null | undefined) {
         return true;
       }
       try {
-        await prepareNativeLocationSettings();
+        // Foreground-service prerequisites: fine location, background
+        // location and the battery-optimisation exemption. Logged so a
+        // workday's logs show whether Android is allowed to keep us alive.
+        const powerStatus = await prepareNativeLocationSettings();
+        console.info("[GPSTracker] native location power status", powerStatus);
+
+
 
         // Only register the watcher once the OS has actually granted location.
         // Requesting here too would race the startup permission request and
@@ -263,9 +273,20 @@ export function useGPSTracker(userId: string | null | undefined) {
               maxWaitTime: GPS_CAPTURE_CONFIG.MOVING.maxWaitMs,
             },
             (location: any, error: any) => {
-              if (error || !location) return;
+              if (error) {
+                console.warn("[GPSTracker] watcher error", error);
+                return;
+              }
+              if (!location) return;
               // Health signal first — even fixes the gates reject prove the
               // watcher is alive.
+              if (!firstCallbackSeenRef.current) {
+                firstCallbackSeenRef.current = true;
+                console.info("[GPSTracker] first watcher callback", {
+                  accuracy: location.accuracy,
+                  speed: location.speed,
+                });
+              }
               lastCallbackTsRef.current = Date.now();
               if (!activeRef.current) return;
               if (cancelled) return;
@@ -286,31 +307,35 @@ export function useGPSTracker(userId: string | null | undefined) {
         await register();
         lastWriteRef.current = Date.now();
         lastCallbackTsRef.current = Date.now();
+        console.info("[GPSTracker] watcher registered", {
+          id: watcherIdRef.current,
+          config: GPS_CAPTURE_CONFIG.MOVING,
+        });
 
-        // Watchdog ONLY — acquires no GPS of its own (the watcher is the
-        // single acquisition source). A stationary device legitimately
-        // produces no watcher callbacks (distanceFilter), so silence alone is
-        // NOT proof of a dead watcher: after STATIONARY_PROBE_MS of silence we
-        // take exactly ONE low-power probe fix — that both keeps the trail
-        // dense while parked and acts as the health test. Only when the probe
-        // itself fails (and the silence exceeds WATCHDOG_MS) do we conclude
-        // Android killed the watcher and re-register it.
+        // Watchdog + stationary probe.
+        //  - Probe: after STATIONARY_PROBE_MS of watcher silence take ONE
+        //    HIGH-ACCURACY fix so a parked device still leaves a usable trail.
+        //    Coarse fixes (network provider, ~35 m) are discarded — writing
+        //    them poisons the movement anchor and flattens the day to 0 km.
+        //  - Health: watcher silence beyond WATCHDOG_MS means Android killed
+        //    the watcher, whether or not the probe succeeded — re-register.
         pollTimer = window.setInterval(async () => {
           if (!activeRef.current || cancelled) return;
           const silenceMs = Date.now() - lastCallbackTsRef.current;
           if (silenceMs < STATIONARY_PROBE_MS) return;
 
-          let probeOk = false;
           try {
-            const pos = await getCurrentPosition({ enableHighAccuracy: false, timeout: 20000 });
-            probeOk = true;
-            if (!cancelled && activeRef.current) {
+            const pos = await getCurrentPosition({ enableHighAccuracy: true, timeout: 20000 });
+            const acc = pos.accuracy ?? null;
+            if (acc != null && acc > PROBE_MAX_ACCURACY_M) {
+              console.debug("[GPSTracker] discarded coarse probe fix", acc);
+            } else if (!cancelled && activeRef.current) {
               // Trail-density sample: insertPoint's gates decide whether this
               // counts as movement — distance maths is untouched.
               insertPoint(
                 pos.latitude,
                 pos.longitude,
-                pos.accuracy ?? null,
+                acc,
                 pos.speed ?? null,
                 pos.heading ?? null
               );
@@ -319,8 +344,14 @@ export function useGPSTracker(userId: string | null | undefined) {
             console.warn("[GPSTracker] stationary probe failed", e);
           }
 
-          if (!probeOk && silenceMs > WATCHDOG_MS) {
-            console.warn("[GPSTracker] watcher appears dead — re-registering");
+          // Health test is independent of the probe: prolonged watcher
+          // silence alone is proof enough that the watcher is gone.
+          if (Date.now() - lastCallbackTsRef.current > WATCHDOG_MS) {
+            console.warn(
+              "[GPSTracker] no watcher callback for",
+              Math.round((Date.now() - lastCallbackTsRef.current) / 1000),
+              "s — re-registering watcher"
+            );
             try {
               if (watcherIdRef.current) {
                 await BackgroundGeolocation.removeWatcher({ id: watcherIdRef.current });
@@ -328,11 +359,13 @@ export function useGPSTracker(userId: string | null | undefined) {
               }
               await register();
               lastCallbackTsRef.current = Date.now();
+              console.info("[GPSTracker] watcher re-registered", watcherIdRef.current);
             } catch (e) {
               console.warn("[GPSTracker] watcher re-registration failed", e);
             }
           }
         }, WATCHDOG_TICK_MS);
+
 
 
 
