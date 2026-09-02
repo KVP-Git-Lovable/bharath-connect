@@ -89,7 +89,21 @@ export function useGPSTracker(userId: string | null | undefined) {
         .eq("user_id", userId!)
         .eq("date", today)
         .maybeSingle();
-      return !!att?.check_in_time && !att?.check_out_time;
+      if (!att?.check_in_time || att?.check_out_time) return false;
+      // Forgotten check-out guard: an attendance row that has been open longer
+      // than a plausible workday keeps the tracker (and the battery drain)
+      // running all night and pollutes the next day's totals. Treat it as
+      // closed for tracking purposes — the attendance record is untouched.
+      const openMs = Date.now() - new Date(att.check_in_time).getTime();
+      if (openMs > MAX_OPEN_DAY_MS) {
+        console.warn(
+          "[GPSTracker] attendance open for",
+          Math.round(openMs / 3_600_000),
+          "h with no check-out — stopping tracking"
+        );
+        return false;
+      }
+      return true;
     }
 
     async function bootstrapLastPoint() {
