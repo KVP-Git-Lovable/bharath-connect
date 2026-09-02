@@ -308,6 +308,7 @@ export function __resetGpsSyncQueueForTests(): void {
   consecutiveFailures = 0;
   droppedPoints = 0;
   lastFlushAt = Date.now();
+  lastError = null;
 
   if (retryTimer) clearTimeout(retryTimer);
   if (intervalTimer) clearInterval(intervalTimer);

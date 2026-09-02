@@ -30,6 +30,7 @@ import {
   type ProcessedTrajectory,
 } from "@/utils/gpsDistance";
 import { filterPointsByAttendance } from "@/utils/attendanceGate";
+import { getGpsQueueStats, flushPendingGpsPoints, type GpsQueueStats } from "@/services/gpsSyncQueue";
 
 
 const GoogleTrackMap = lazy(() =>
