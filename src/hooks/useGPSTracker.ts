@@ -72,6 +72,8 @@ export function useGPSTracker(userId: string | null | undefined) {
   const lastCallbackTsRef = useRef<number>(0);
   /** Diagnostics: has the plugin watcher ever delivered a fix this session? */
   const firstCallbackSeenRef = useRef(false);
+  /** Diagnostics: fixes too coarse to anchor on (fused/network provider). */
+  const coarseFixCountRef = useRef(0);
 
   useEffect(() => {
     if (!userId) return;
