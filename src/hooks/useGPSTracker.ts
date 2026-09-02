@@ -70,6 +70,8 @@ export function useGPSTracker(userId: string | null | undefined) {
   // gates reject — write recency no longer proxies callback receipt now that
   // writes are batched.
   const lastCallbackTsRef = useRef<number>(0);
+  /** Diagnostics: has the plugin watcher ever delivered a fix this session? */
+  const firstCallbackSeenRef = useRef(false);
 
   useEffect(() => {
     if (!userId) return;
