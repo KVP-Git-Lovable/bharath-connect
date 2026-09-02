@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { shouldAcceptMove } from "./gpsCaptureGate";
+import { shouldAcceptMove, isCoarseFix, GPS_CAPTURE_CONFIG } from "./gpsCaptureGate";
 
 describe("shouldAcceptMove", () => {
   it("accepts the very first fix (no last point yet)", () => {
@@ -7,13 +7,31 @@ describe("shouldAcceptMove", () => {
     expect(result.isRealMove).toBe(true);
   });
 
-  it("rejects a jitter-sized jump within the combined accuracy radius", () => {
-    // ~60m apart (roughly 0.00054 deg lat), both fixes with 70m accuracy —
-    // combined 140m radius comfortably covers a 60m hop.
+  it("rejects a jitter-sized jump inside the (clamped) accuracy radius", () => {
+    // ~20m apart, both fixes with 70m accuracy: the raw gate would be 140m,
+    // the clamp caps it at MOVEMENT_THRESHOLD_CAP_M — 20m still doesn't clear it.
     const last = { lat: 12.8777, lng: 74.8501, ts: 0, accuracy: 70 };
-    const candidate = { lat: 12.87824, lng: 74.8501, ts: 30_000, accuracy: 70 };
+    const candidate = { lat: 12.877718, lng: 74.8501, ts: 30_000, accuracy: 70 };
     const result = shouldAcceptMove(last, candidate);
+    expect(result.requiredMoveM).toBe(GPS_CAPTURE_CONFIG.MOVEMENT_THRESHOLD_CAP_M);
     expect(result.isRealMove).toBe(false);
+  });
+
+  it("never lets coarse fixes push the gate beyond the cap (0 km regression)", () => {
+    // Two 35m fused fixes ~60m apart: the old gate demanded 70m and counted
+    // the whole day as stationary. Clamped at 50m, this is real movement.
+    const last = { lat: 12.8777, lng: 74.8501, ts: 0, accuracy: 35 };
+    const candidate = { lat: 12.87824, lng: 74.8501, ts: 30_000, accuracy: 35 };
+    const result = shouldAcceptMove(last, candidate);
+    expect(result.requiredMoveM).toBe(50);
+    expect(result.isRealMove).toBe(true);
+  });
+
+  it("flags fused/network-grade fixes as coarse", () => {
+    expect(isCoarseFix(35)).toBe(false); // 35m is at GPS-grade edge? no: below 50m threshold
+    expect(isCoarseFix(80)).toBe(true);
+    expect(isCoarseFix(null)).toBe(true);
+    expect(isCoarseFix(12)).toBe(false);
   });
 
   it("accepts a real move once it clears the combined accuracy radius", () => {
@@ -36,7 +54,8 @@ describe("shouldAcceptMove", () => {
     const last = { lat: 12.8777, lng: 74.8501, ts: 0, accuracy: null };
     const candidate = { lat: 12.87824, lng: 74.8501, ts: 30_000, accuracy: null };
     const result = shouldAcceptMove(last, candidate);
-    expect(result.requiredMoveM).toBe(300); // 150 + 150
-    expect(result.isRealMove).toBe(false); // ~60m move doesn't clear 300m gate
+    // Worst-case accuracy still applies, but clamped to the cap.
+    expect(result.requiredMoveM).toBe(GPS_CAPTURE_CONFIG.MOVEMENT_THRESHOLD_CAP_M);
+    expect(result.isRealMove).toBe(true); // ~60m clears the 50m cap
   });
 });
