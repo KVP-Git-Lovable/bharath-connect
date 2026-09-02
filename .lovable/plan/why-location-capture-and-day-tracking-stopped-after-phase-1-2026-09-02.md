@@ -16,21 +16,18 @@ Read together: the high-accuracy background watcher has effectively stopped deli
 ## The causes, in order of confidence
 
 1. **The watchdog can no longer resurrect a dead watcher (Phase 1.5 regression).**
-   Re-registration now happens only when the probe *fails* AND silence exceeds 5 minutes. The probe is a low-power network fix, which almost always succeeds — so a watcher killed by Android is never detected and never re-registered. Before Phase 1.5, prolonged silence alone triggered a re-register.
-
+  Re-registration now happens only when the probe *fails* AND silence exceeds 5 minutes. The probe is a low-power network fix, which almost always succeeds — so a watcher killed by Android is never detected and never re-registered. Before Phase 1.5, prolonged silence alone triggered a re-register.
 2. **The probe uses low accuracy, and its fixes have become the whole trail.**
-   `getCurrentPosition({ enableHighAccuracy: false })` returns the coarse fused/network fix — exactly the 35 m rows filling the table. They carry no speed and don't reflect real motion.
-
+  `getCurrentPosition({ enableHighAccuracy: false })` returns the coarse fused/network fix — exactly the 35 m rows filling the table. They carry no speed and don't reflect real motion.
 3. **Those coarse fixes then suppress distance twice over.**
-   - Capture gate: required movement = sum of both fixes' accuracy = 35 + 35 = **70 m**, so nothing anchors.
-   - Display engine: stationary radius = max(30, 1.5 x 35) = **52 m**, so the whole day collapses into one stationary cluster → 0.0 km.
-
+  - Capture gate: required movement = sum of both fixes' accuracy = 35 + 35 = **70 m**, so nothing anchors.
+  - Display engine: stationary radius = max(30, 1.5 x 35) = **52 m**, so the whole day collapses into one stationary cluster → 0.0 km.
 4. **No timer-based acquisition survives backgrounding.**
-   Phase 1 removed the forced 15 s fix, so once the WebView is suspended/Dozed, the JS watchdog stops ticking too. That is the 3h15m hole today, and the reason overnight points appear roughly hourly rather than every 2 minutes.
-
+  Phase 1 removed the forced 15 s fix, so once the WebView is suspended/Dozed, the JS watchdog stops ticking too. That is the 3h15m hole today, and the reason overnight points appear roughly hourly rather than every 2 minutes.
 5. **Contributing:** never checking out keeps the day open indefinitely, so this coarse trail also accumulates overnight.
 
-## Proposed fix (Phase 1.6) — restore capture, keep the battery gains
+## Proposed fix (Phase 1.6) — restore capture, keep the battery gains  
+
 
 1. **Health test independent of the probe.** Treat prolonged watcher silence (> 5 min) as a dead watcher and re-register it, whether or not the probe succeeded — restore the pre-1.5 behaviour, while keeping the probe for trail density.
 2. **Make the probe high accuracy.** Use `enableHighAccuracy: true` for the stationary probe so trail-density samples are real GPS fixes (~10–20 m), not 35 m network guesses. One fix every 2 minutes of silence has negligible battery cost compared with the old 15 s polling.
