@@ -227,7 +227,13 @@ export function useGPSTracker(userId: string | null | undefined) {
         return true;
       }
       try {
-        await prepareNativeLocationSettings();
+        // Foreground-service prerequisites: fine location, background
+        // location and the battery-optimisation exemption. Logged so a
+        // workday's logs show whether Android is allowed to keep us alive.
+        const powerStatus = await prepareNativeLocationSettings();
+        console.info("[GPSTracker] native location power status", powerStatus);
+
+
 
         // Only register the watcher once the OS has actually granted location.
         // Requesting here too would race the startup permission request and
