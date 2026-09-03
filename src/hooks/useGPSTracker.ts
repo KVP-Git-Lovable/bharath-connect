@@ -413,6 +413,10 @@ export function useGPSTracker(userId: string | null | undefined) {
           id: watcherIdRef.current,
           config: GPS_CAPTURE_CONFIG.MOVING,
         });
+        void logTrackerEvent(userId, "watcher_registered", {
+          id: watcherIdRef.current,
+          ...GPS_CAPTURE_CONFIG.MOVING,
+        });
 
         // Watchdog + stationary probe.
         //  - Probe: after STATIONARY_PROBE_MS of watcher silence take ONE
@@ -439,6 +443,7 @@ export function useGPSTracker(userId: string | null | undefined) {
             const acc = pos.accuracy ?? null;
             if (acc != null && acc > PROBE_MAX_ACCURACY_M) {
               console.debug("[GPSTracker] discarded coarse probe fix", acc);
+              void logTrackerEvent(userId, "probe_discarded", { accuracy: acc });
             } else if (!cancelled && activeRef.current) {
               // Trail-density sample: insertPoint's gates decide whether this
               // counts as movement — distance maths is untouched.
@@ -450,30 +455,26 @@ export function useGPSTracker(userId: string | null | undefined) {
                 pos.heading ?? null
               );
             }
-          } catch (e) {
+          } catch (e: any) {
             console.warn("[GPSTracker] stationary probe failed", e);
+            void logTrackerEvent(userId, "probe_failed", { message: e?.message ?? String(e) });
           }
 
           // Health test is independent of the probe: prolonged watcher
           // silence alone is proof enough that the watcher is gone.
-          if (Date.now() - lastCallbackTsRef.current > WATCHDOG_MS) {
+          const silenceNow = Date.now() - lastCallbackTsRef.current;
+          if (silenceNow > WATCHDOG_MS) {
             console.warn(
               "[GPSTracker] no watcher callback for",
-              Math.round((Date.now() - lastCallbackTsRef.current) / 1000),
+              Math.round(silenceNow / 1000),
               "s — re-registering watcher"
             );
-            try {
-              if (watcherIdRef.current) {
-                await BackgroundGeolocation.removeWatcher({ id: watcherIdRef.current });
-                watcherIdRef.current = null;
-              }
-              await register();
-              lastCallbackTsRef.current = Date.now();
-              console.info("[GPSTracker] watcher re-registered", watcherIdRef.current);
-            } catch (e) {
-              console.warn("[GPSTracker] watcher re-registration failed", e);
-            }
+            void logTrackerEvent(userId, "watcher_silence", {
+              silence_seconds: Math.round(silenceNow / 1000),
+            });
+            await forceReregisterRef.current?.("watchdog_silence");
           }
+
         }, WATCHDOG_TICK_MS);
 
 
