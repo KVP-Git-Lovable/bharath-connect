@@ -566,16 +566,49 @@ export function useGPSTracker(userId: string | null | undefined) {
     async function evaluate() {
       const open = await isDayOpen();
       if (open === null) return; // unknown (offline) — keep the current state
+      const wasActive = activeRef.current;
       activeRef.current = open;
+      setTrackerStatus({ active: open, native: isNative() });
       if (!open) {
         // Day closed → stop background watcher if any, then drain the queue
         if (stopBackground) { await stopBackground(); stopBackground = null; }
         if (pollTimer) { window.clearInterval(pollTimer); pollTimer = null; }
         if (timerRef.current) { window.clearInterval(timerRef.current); timerRef.current = null; }
+        forceReregisterRef.current = null;
+        setTrackerStatus({ watcherAlive: false });
+        if (wasActive) void logTrackerEvent(userId, "tracking_stopped", {});
         void flushPendingGpsPoints();
       } else {
+        if (!wasActive) void logTrackerEvent(userId, "tracker_started", {});
         void ensureAcquisitionRunning();
       }
+    }
+
+    /**
+     * App-resume recovery. Android freezes WebView timers in the background,
+     * so the watchdog cannot notice — let alone repair — a watcher the OS
+     * killed while the phone was pocketed. The instant the app becomes
+     * visible again we therefore treat prolonged watcher silence as a dead
+     * watcher and rebuild it immediately, before anything else.
+     */
+    async function recoverOnResume() {
+      if (cancelled) return;
+      await evaluate();
+      if (!activeRef.current || cancelled) return;
+      const silenceMs = Date.now() - lastCallbackTsRef.current;
+      if (!isNative()) return;
+      if (watcherIdRef.current == null) {
+        void ensureAcquisitionRunning();
+        return;
+      }
+      if (silenceMs > RESUME_SILENCE_MS) {
+        void logTrackerEvent(userId, "resume_recovery", {
+          silence_seconds: Math.round(silenceMs / 1000),
+        });
+        setTrackerStatus({ watcherAlive: false });
+        await forceReregisterRef.current?.("app_resume");
+      }
+      void flushPendingGpsPoints();
     }
 
     (async () => {
@@ -596,11 +629,29 @@ export function useGPSTracker(userId: string | null | undefined) {
       }
     })();
 
-    // Re-evaluate day status when tab becomes visible (catches check-out)
+    // Re-evaluate day status AND repair a background-killed watcher whenever
+    // the app comes back to the foreground (catches check-out too).
     const onVisibility = () => {
-      if (document.visibilityState === "visible") evaluate();
+      if (document.visibilityState === "visible") void recoverOnResume();
     };
     document.addEventListener("visibilitychange", onVisibility);
+    // Capacitor's own resume signal: fires on native even when the WebView
+    // never reports a visibility change (screen-off / task-switch cases).
+    let removeAppListener: (() => void) | null = null;
+    if (isNative()) {
+      void (async () => {
+        try {
+          const { App } = await import("@capacitor/app");
+          const handle = await App.addListener("appStateChange", ({ isActive }) => {
+            if (isActive) void recoverOnResume();
+          });
+          if (cancelled) { handle.remove(); return; }
+          removeAppListener = () => handle.remove();
+        } catch (e) {
+          console.debug("[GPSTracker] app state listener unavailable", e);
+        }
+      })();
+    }
 
     // Re-evaluate immediately when useAttendance signals a successful
     // check-in/check-out, instead of waiting for the next visibility-change
@@ -615,9 +666,11 @@ export function useGPSTracker(userId: string | null | undefined) {
       activeRef.current = false;
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("attendance-changed", onAttendanceChanged);
+      removeAppListener?.();
       if (timerRef.current) window.clearInterval(timerRef.current);
       if (pollTimer) window.clearInterval(pollTimer);
       if (stopBackground) stopBackground();
     };
+
   }, [userId]);
 }
