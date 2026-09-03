@@ -20,6 +20,8 @@ import MyTeamAttendance from "@/components/attendance/MyTeamAttendance";
 import { useAttendance, isWeekOffDate } from "@/hooks/useAttendance";
 import { useFaceMatching } from "@/hooks/useFaceMatching";
 import { AttendanceCalendarView } from "@/components/attendance/AttendanceCalendarView";
+import TrackingHealthCard from "@/components/attendance/TrackingHealthCard";
+
 import LeaveBalanceCards from "@/components/LeaveBalanceCards";
 import MyLeaveApplications from "@/components/MyLeaveApplications";
 import HolidayManagement from "@/components/HolidayManagement";
