@@ -38,6 +38,11 @@ const MAX_JUMP_METERS = 10000;       // reject teleport jumps >10km between cons
 const MAX_OPEN_DAY_MS = 16 * 60 * 60_000;
 // How often the tracker re-checks attendance state while actively tracking.
 const DAY_RECHECK_MS = 15 * 60_000;
+// On app resume, watcher silence longer than this is treated as a dead
+// watcher and the watcher is rebuilt immediately (JS timers cannot run while
+// the WebView is frozen, so resume is our only repair opportunity).
+const RESUME_SILENCE_MS = 60_000;
+
 
 function haversineMeters(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
   return haversine(a.lat, a.lng, b.lat, b.lng);
