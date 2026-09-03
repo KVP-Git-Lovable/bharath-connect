@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, Suspense, lazy } from "react";
 import { motion } from "framer-motion";
-import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
+import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -41,7 +41,7 @@ const GoogleTrackMap = lazy(() =>
 );
 
 
-type DateRangeOption = "today" | "this_week" | "this_month" | "custom";
+type DateRangeOption = "today" | "yesterday" | "this_week" | "this_month" | "custom";
 
 interface GPSPoint {
   latitude: number;
@@ -242,6 +242,10 @@ export default function GPSTracking() {
     switch (dateRangeOption) {
       case "today":
         return { from: format(today, "yyyy-MM-dd"), to: format(today, "yyyy-MM-dd") };
+      case "yesterday": {
+        const yesterday = format(subDays(today, 1), "yyyy-MM-dd");
+        return { from: yesterday, to: yesterday };
+      }
       case "this_week":
         return {
           from: format(startOfWeek(today, { weekStartsOn: 1 }), "yyyy-MM-dd"),
@@ -580,6 +584,7 @@ export default function GPSTracking() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="today">Today</SelectItem>
+                  <SelectItem value="yesterday">Yesterday</SelectItem>
                   <SelectItem value="this_week">This Week</SelectItem>
                   <SelectItem value="this_month">This Month</SelectItem>
                   <SelectItem value="custom">Custom Date Range</SelectItem>
