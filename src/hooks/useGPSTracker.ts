@@ -11,7 +11,10 @@ import {
   setGpsQueueOwner,
 
 } from "@/services/gpsSyncQueue";
+import { logTrackerEvent } from "@/services/trackerHealth";
+import { setTrackerStatus } from "@/services/trackerStatus";
 import { format } from "date-fns";
+
 
 const MIN_FORCED_WRITE_MS = 15_000;  // min spacing for non-moving trail-density writes
 const FOREGROUND_POLL_MS = 15_000;   // web / non-native fallback (screen-on only)
@@ -81,6 +84,12 @@ export function useGPSTracker(userId: string | null | undefined) {
   const coarseFixCountRef = useRef(0);
   /** Throttle for the periodic attendance-state recheck while tracking. */
   const lastDayCheckRef = useRef<number>(Date.now());
+  /**
+   * Force a fresh native watcher (set once the watcher is registered).
+   * Called by the watchdog and by the app-resume recovery path.
+   */
+  const forceReregisterRef = useRef<((reason: string) => Promise<void>) | null>(null);
+
 
   useEffect(() => {
     if (!userId) return;
