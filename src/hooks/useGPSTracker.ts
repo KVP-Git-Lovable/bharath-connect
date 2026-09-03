@@ -298,6 +298,8 @@ export function useGPSTracker(userId: string | null | undefined) {
         // workday's logs show whether Android is allowed to keep us alive.
         const powerStatus = await prepareNativeLocationSettings();
         console.info("[GPSTracker] native location power status", powerStatus);
+        void logTrackerEvent(userId, "permission_status", { ...(powerStatus ?? {}) });
+
 
 
 
@@ -341,6 +343,10 @@ export function useGPSTracker(userId: string | null | undefined) {
             (location: any, error: any) => {
               if (error) {
                 console.warn("[GPSTracker] watcher error", error);
+                void logTrackerEvent(userId, "watcher_error", {
+                  code: error?.code ?? null,
+                  message: error?.message ?? String(error),
+                });
                 return;
               }
               if (!location) return;
@@ -362,13 +368,43 @@ export function useGPSTracker(userId: string | null | undefined) {
                   location.longitude,
                   location.accuracy ?? null,
                   location.speed ?? null,
-                  location.bearing ?? null
+                  location.bearing ?? null,
+                  // Batched / post-wake deliveries carry their own capture
+                  // time — keep the trail on the real clock.
+                  typeof location.time === "number" ? location.time : null
                 );
               } catch { /* ignore */ }
             }
           );
           watcherIdRef.current = id;
         };
+
+        /**
+         * Force a fresh watcher. Used both by the watchdog and — critically —
+         * on every app resume: while the WebView is frozen no JS timer runs,
+         * so a watcher Android killed in the background can only be noticed
+         * and replaced the moment the user brings the app back.
+         */
+        forceReregisterRef.current = async (reason: string) => {
+          if (cancelled || !activeRef.current) return;
+          try {
+            if (watcherIdRef.current) {
+              await BackgroundGeolocation.removeWatcher({ id: watcherIdRef.current });
+              watcherIdRef.current = null;
+            }
+            await register();
+            lastCallbackTsRef.current = Date.now();
+            console.info("[GPSTracker] watcher re-registered", { reason, id: watcherIdRef.current });
+            void logTrackerEvent(userId, "watcher_reregistered", { reason });
+          } catch (e: any) {
+            console.warn("[GPSTracker] watcher re-registration failed", e);
+            void logTrackerEvent(userId, "watcher_register_failed", {
+              reason,
+              message: e?.message ?? String(e),
+            });
+          }
+        };
+
 
         await register();
         lastWriteRef.current = Date.now();
