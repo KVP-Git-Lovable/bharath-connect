@@ -371,6 +371,8 @@ export function useGPSTracker(userId: string | null | undefined) {
                 });
               }
               lastCallbackTsRef.current = Date.now();
+              setTrackerStatus({ lastCallbackAt: lastCallbackTsRef.current, watcherAlive: true });
+
               if (!activeRef.current) return;
               if (cancelled) return;
               try {
