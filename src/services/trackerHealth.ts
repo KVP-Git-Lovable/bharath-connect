@@ -22,6 +22,7 @@ export type TrackerEvent =
   | "probe_discarded"
   | "probe_failed"
   | "resume_recovery"
+  | "native_buffer_drained"
   | "permission_status"
   | "tracking_stopped";
 
@@ -31,6 +32,7 @@ const MIN_GAP_MS: Partial<Record<TrackerEvent, number>> = {
   probe_failed: 10 * 60_000,
   watcher_error: 5 * 60_000,
   resume_recovery: 60_000,
+  native_buffer_drained: 60_000,
   permission_status: 30 * 60_000,
 };
 

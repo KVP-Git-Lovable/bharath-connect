@@ -94,6 +94,13 @@ export function useGPSTracker(userId: string | null | undefined) {
    * Called by the watchdog and by the app-resume recovery path.
    */
   const forceReregisterRef = useRef<((reason: string) => Promise<void>) | null>(null);
+  /** Single-flight guard: overlapping re-registrations must never create two watchers. */
+  const reRegisteringRef = useRef(false);
+  /** Drains the plugin's native observation buffer (set while native tracking runs). */
+  const drainNativeBufferRef = useRef<((reason: string) => Promise<void>) | null>(null);
+  /** Newest OS fix timestamp already processed — live callbacks and the native
+   *  buffer deliver the SAME real fixes; each is processed exactly once. */
+  const lastSeenFixTimeRef = useRef(0);
 
 
   useEffect(() => {
@@ -216,6 +223,12 @@ export function useGPSTracker(userId: string | null | undefined) {
        */
       fixTimeMs: number | null = null
     ) {
+      // Live-callback / native-buffer overlap guard: a fix carrying an OS
+      // timestamp is processed exactly once no matter which path delivered it.
+      if (fixTimeMs != null && Number.isFinite(fixTimeMs)) {
+        if (fixTimeMs <= lastSeenFixTimeRef.current) return;
+        lastSeenFixTimeRef.current = fixTimeMs;
+      }
       // Reject low-accuracy fixes (IP/Wi-Fi guesses can be 10s of km off)
       if (accuracy != null && accuracy > MAX_ACCURACY_M) {
         console.debug("[GPSTracker] rejected low-accuracy fix", accuracy);
@@ -325,6 +338,15 @@ export function useGPSTracker(userId: string | null | undefined) {
         try {
           const { Geolocation } = await import("@capacitor/geolocation");
           const perm = await Geolocation.checkPermissions();
+          if (perm.location !== "granted") {
+            // Approximate-only is NOT precise: fused ~35 m guesses flatten a
+            // day to 0 km. Surface it (health card + event log) instead of
+            // silently tracking coarse.
+            void logTrackerEvent(userId, "permission_status", {
+              precise: false,
+              approximateOnly: perm.coarseLocation === "granted",
+            });
+          }
           if (perm.location !== "granted" && perm.coarseLocation !== "granted") {
             console.warn("[GPSTracker] Location not granted yet — skipping background watcher");
             return false;
@@ -398,6 +420,47 @@ export function useGPSTracker(userId: string | null | undefined) {
         };
 
         /**
+         * Drain the native observation buffer: real fixes the service wrote
+         * to disk independently of the JS bridge (frozen-WebView windows,
+         * missed broadcasts, previous process). They flow through the exact
+         * same gates as live callbacks; the OS-timestamp guard in insertPoint
+         * makes double-processing impossible. Also imports the native health
+         * timestamps, so a frozen bridge is not mistaken for a dead watcher.
+         */
+        drainNativeBufferRef.current = async (reason: string) => {
+          if (!BackgroundGeolocation?.drainNativeLocationBuffer) return;
+          try {
+            const res = await BackgroundGeolocation.drainNativeLocationBuffer();
+            const nativeCallbackAt = Number(res?.lastNativeCallbackAt) || 0;
+            if (nativeCallbackAt > lastCallbackTsRef.current) {
+              lastCallbackTsRef.current = nativeCallbackAt;
+              setTrackerStatus({ lastCallbackAt: nativeCallbackAt, watcherAlive: true });
+            }
+            const rows: any[] = Array.isArray(res?.locations) ? res.locations : [];
+            if (rows.length === 0) return;
+            rows.sort((a, b) => (Number(a?.time) || 0) - (Number(b?.time) || 0));
+            let processed = 0;
+            for (const r of rows) {
+              if (cancelled || !activeRef.current) break;
+              if (typeof r?.latitude !== "number" || typeof r?.longitude !== "number") continue;
+              insertPoint(
+                r.latitude,
+                r.longitude,
+                typeof r.accuracy === "number" ? r.accuracy : null,
+                typeof r.speed === "number" ? r.speed : null,
+                typeof r.bearing === "number" ? r.bearing : null,
+                typeof r.time === "number" ? r.time : null
+              );
+              processed++;
+            }
+            if (processed > 0) {
+              void logTrackerEvent(userId, "native_buffer_drained", { count: processed, reason });
+              void flushPendingGpsPoints();
+            }
+          } catch { /* best-effort; never blocks acquisition */ }
+        };
+
+        /**
          * Force a fresh watcher. Used both by the watchdog and — critically —
          * on every app resume: while the WebView is frozen no JS timer runs,
          * so a watcher Android killed in the background can only be noticed
@@ -405,6 +468,8 @@ export function useGPSTracker(userId: string | null | undefined) {
          */
         forceReregisterRef.current = async (reason: string) => {
           if (cancelled || !activeRef.current) return;
+          if (reRegisteringRef.current) return; // single-flight: never two watchers
+          reRegisteringRef.current = true;
           try {
             if (watcherIdRef.current) {
               await BackgroundGeolocation.removeWatcher({ id: watcherIdRef.current });
@@ -422,8 +487,9 @@ export function useGPSTracker(userId: string | null | undefined) {
               reason,
               message: e?.message ?? String(e),
             });
+          } finally {
+            reRegisteringRef.current = false;
           }
-
         };
 
 
@@ -444,6 +510,9 @@ export function useGPSTracker(userId: string | null | undefined) {
           id: watcherIdRef.current,
           ...GPS_CAPTURE_CONFIG.MOVING,
         });
+        // Pick up fixes buffered natively before this session (or before a
+        // WebView reload) — real observations, never lost to a JS restart.
+        void drainNativeBufferRef.current?.("startup");
 
         // Watchdog + stationary probe.
         //  - Probe: after STATIONARY_PROBE_MS of watcher silence take ONE
@@ -462,6 +531,10 @@ export function useGPSTracker(userId: string | null | undefined) {
             await evaluate();
             if (!activeRef.current || cancelled) return;
           }
+          // Import natively-buffered fixes first — this also refreshes the
+          // callback clock from the service's own heartbeat, so a frozen JS
+          // bridge is never misdiagnosed as a dead watcher.
+          await drainNativeBufferRef.current?.("watchdog");
           const silenceMs = Date.now() - lastCallbackTsRef.current;
           if (silenceMs < STATIONARY_PROBE_MS) return;
 
@@ -579,6 +652,8 @@ export function useGPSTracker(userId: string | null | undefined) {
         if (stopBackground) { await stopBackground(); stopBackground = null; }
         if (pollTimer) { window.clearInterval(pollTimer); pollTimer = null; }
         if (timerRef.current) { window.clearInterval(timerRef.current); timerRef.current = null; }
+        await drainNativeBufferRef.current?.("tracking_stopped");
+        drainNativeBufferRef.current = null;
         forceReregisterRef.current = null;
         setTrackerStatus({ watcherAlive: false });
         if (wasActive) void logTrackerEvent(userId, "tracking_stopped", {});
@@ -600,6 +675,10 @@ export function useGPSTracker(userId: string | null | undefined) {
       if (cancelled) return;
       await evaluate();
       if (!activeRef.current || cancelled) return;
+      // Import fixes captured natively while the WebView was frozen, and let
+      // the service's own heartbeat correct the silence clock before deciding
+      // whether the watcher actually died.
+      await drainNativeBufferRef.current?.("app_resume");
       const silenceMs = Date.now() - lastCallbackTsRef.current;
       if (!isNative()) return;
       if (watcherIdRef.current == null) {

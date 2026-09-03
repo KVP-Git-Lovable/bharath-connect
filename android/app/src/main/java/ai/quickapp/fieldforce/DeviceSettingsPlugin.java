@@ -4,11 +4,14 @@ import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.location.LocationManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.PowerManager;
 import android.provider.Settings;
 
+import androidx.core.app.ActivityCompat;
+import androidx.core.app.NotificationManagerCompat;
 import androidx.core.content.ContextCompat;
 
 import com.getcapacitor.JSObject;
@@ -52,11 +55,61 @@ public class DeviceSettingsPlugin extends Plugin {
             ? permissionState(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
             : (foregroundGranted ? "granted" : "denied");
 
+        // Precise vs approximate must never be conflated: tracking requires FINE.
+        boolean preciseGranted =
+            ContextCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+
+        boolean locationServicesEnabled = false;
+        try {
+            LocationManager lm = (LocationManager) getContext().getSystemService(Context.LOCATION_SERVICE);
+            if (lm != null) {
+                locationServicesEnabled = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P
+                    ? lm.isLocationEnabled()
+                    : (lm.isProviderEnabled(LocationManager.GPS_PROVIDER)
+                        || lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER));
+            }
+        } catch (Exception ignored) { }
+
         result.put("foregroundLocation", foregroundGranted ? "granted" : "denied");
+        result.put("preciseLocation", preciseGranted);
+        result.put("locationServicesEnabled", locationServicesEnabled);
+        result.put("notificationsEnabled", NotificationManagerCompat.from(getContext()).areNotificationsEnabled());
         result.put("backgroundLocation", backgroundState);
         result.put("ignoringBatteryOptimizations", isIgnoringBatteryOptimizations());
         result.put("sdkInt", Build.VERSION.SDK_INT);
         return result;
+    }
+
+    /**
+     * Android 13+ requires the POST_NOTIFICATIONS runtime permission for the
+     * tracking foreground-service notification to be VISIBLE. The service
+     * runs either way, but an invisible notification hides "tracking active"
+     * from the user and makes OEM battery managers more kill-happy.
+     */
+    @PluginMethod
+    public void requestPostNotifications(PluginCall call) {
+        if (Build.VERSION.SDK_INT >= 33 &&
+            ContextCompat.checkSelfPermission(getContext(), Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            try {
+                ActivityCompat.requestPermissions(
+                    getActivity(),
+                    new String[] { Manifest.permission.POST_NOTIFICATIONS },
+                    9377
+                );
+            } catch (Exception ignored) { }
+        }
+        call.resolve(currentStatus());
+    }
+
+    /** Open the system Location Services screen (device location on/off). */
+    @PluginMethod
+    public void openLocationSettings(PluginCall call) {
+        try {
+            Intent intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            getActivity().startActivity(intent);
+        } catch (Exception ignored) { }
+        call.resolve(currentStatus());
     }
 
     @PluginMethod

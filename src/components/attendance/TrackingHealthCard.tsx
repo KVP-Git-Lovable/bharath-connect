@@ -12,6 +12,8 @@ import {
   getNativeLocationPowerStatus,
   prepareNativeLocationSettings,
   openAutoStartSettings,
+  openLocationSettings,
+  openAppSettings,
   type NativeLocationPowerStatus,
 } from "@/utils/nativePermissions";
 
@@ -59,6 +61,10 @@ export default function TrackingHealthCard() {
   const stale = status.lastFixAt != null && Date.now() - status.lastFixAt > 15 * 60_000;
   const needsBackground = isNative() && power?.backgroundLocation === 'denied';
   const needsBattery = isNative() && power?.ignoringBatteryOptimizations === false;
+  // Approximate-only location produces coarse fused fixes and 0 km days —
+  // never treated as equivalent to Precise.
+  const needsPrecise = isNative() && power?.preciseLocation === false;
+  const locationOff = isNative() && power?.locationServicesEnabled === false;
 
   return (
     <Card>
@@ -76,6 +82,36 @@ export default function TrackingHealthCard() {
             </div>
           </div>
         </div>
+
+        {locationOff && (
+          <div className="rounded-md border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/40 p-3 space-y-2">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="h-4 w-4 text-red-600 mt-0.5 shrink-0" />
+              <p className="text-xs text-red-800 dark:text-red-200">
+                Device Location is turned OFF — tracking cannot record your
+                route until it is switched on.
+              </p>
+            </div>
+            <Button size="sm" variant="outline" onClick={() => void openLocationSettings()}>
+              Turn on Location
+            </Button>
+          </div>
+        )}
+
+        {needsPrecise && !locationOff && (
+          <div className="rounded-md border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/40 p-3 space-y-2">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="h-4 w-4 text-red-600 mt-0.5 shrink-0" />
+              <p className="text-xs text-red-800 dark:text-red-200">
+                Only “Approximate” location is allowed for this app. Route
+                tracking needs “Precise” — enable it in Location permission.
+              </p>
+            </div>
+            <Button size="sm" variant="outline" onClick={() => void openAppSettings()}>
+              Enable Precise location
+            </Button>
+          </div>
+        )}
 
         {(needsBackground || needsBattery) && (
           <div className="rounded-md border border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-950/40 p-3 space-y-2">

@@ -49,6 +49,12 @@ async function nativeGetPosition(opts: { enableHighAccuracy: boolean; timeout: n
 export type NativeLocationPowerStatus = {
   foregroundLocation?: 'granted' | 'denied' | string;
   backgroundLocation?: 'granted' | 'denied' | string;
+  /** ACCESS_FINE_LOCATION specifically — approximate-only reads false. */
+  preciseLocation?: boolean;
+  /** Android device Location Services master toggle. */
+  locationServicesEnabled?: boolean;
+  /** POST_NOTIFICATIONS state — controls tracking-notification visibility (13+). */
+  notificationsEnabled?: boolean;
   ignoringBatteryOptimizations?: boolean;
   sdkInt?: number;
   opened?: boolean;
@@ -81,6 +87,18 @@ export async function requestBatteryOptimizationExemption(): Promise<NativeLocat
   }
 }
 
+/** Open the system Location Services screen (device location on/off). */
+export async function openLocationSettings(): Promise<NativeLocationPowerStatus | null> {
+  if (!isNative()) return null;
+  try {
+    const DeviceSettings = await getDeviceSettingsPlugin();
+    return await DeviceSettings.openLocationSettings();
+  } catch (e) {
+    console.warn('Could not open location settings:', e);
+    return null;
+  }
+}
+
 export async function requestBackgroundLocationAccess(): Promise<NativeLocationPowerStatus | null> {
   if (!isNative()) return null;
   try {
@@ -108,6 +126,16 @@ export async function prepareNativeLocationSettings(): Promise<NativeLocationPow
   }
 
   const status = await getNativeLocationPowerStatus();
+  // Android 13+: the tracking foreground-service notification is invisible
+  // until POST_NOTIFICATIONS is granted — request it in the same flow.
+  if (status?.notificationsEnabled === false) {
+    try {
+      const DeviceSettings = await getDeviceSettingsPlugin();
+      await DeviceSettings.requestPostNotifications();
+    } catch (e) {
+      console.warn('Could not request notification permission:', e);
+    }
+  }
   if (status?.ignoringBatteryOptimizations === false) {
     await requestBatteryOptimizationExemption();
   }
