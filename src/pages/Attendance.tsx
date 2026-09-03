@@ -634,8 +634,12 @@ export default function Attendance() {
         </DialogContent>
       </Dialog>
 
+      {/* Background tracking health (visible only while the day is open) */}
+      <TrackingHealthCard />
+
       {/* Market Hours */}
       <Card>
+
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><Clock className="h-5 w-5" />Today's Market Hours</CardTitle>
         </CardHeader>
