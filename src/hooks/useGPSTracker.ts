@@ -190,23 +190,38 @@ export function useGPSTracker(userId: string | null | undefined) {
       lng: number,
       accuracy: number | null,
       speed: number | null = null,
-      heading: number | null = null
+      heading: number | null = null,
+      /**
+       * The OS timestamp of the fix itself. Batched fused-location delivery
+       * (and a WebView that was frozen while backgrounded) can hand several
+       * fixes to JS at once, long after they were taken — stamping them with
+       * "now" collapses a real trail into one instant. Only trusted when it
+       * is recent and not in the future; otherwise we fall back to wall time.
+       */
+      fixTimeMs: number | null = null
     ) {
       // Reject low-accuracy fixes (IP/Wi-Fi guesses can be 10s of km off)
       if (accuracy != null && accuracy > MAX_ACCURACY_M) {
         console.debug("[GPSTracker] rejected low-accuracy fix", accuracy);
         return;
       }
-      const now = Date.now();
+      const wall = Date.now();
+      const fixUsable =
+        fixTimeMs != null &&
+        Number.isFinite(fixTimeMs) &&
+        fixTimeMs <= wall + 60_000 &&
+        wall - fixTimeMs < 30 * 60_000;
+      const now = fixUsable ? (fixTimeMs as number) : wall;
       const last = lastPointRef.current;
       if (last) {
         const dist = haversineMeters(last, { lat, lng });
-        const elapsed = now - last.ts;
+        const elapsed = Math.max(0, now - last.ts);
         // Reject unrealistic teleport jumps (e.g. sudden 50km hop while stationary)
         if (dist > MAX_JUMP_METERS && elapsed < 5 * 60_000) {
           console.debug("[GPSTracker] rejected teleport jump", dist, "m in", elapsed, "ms");
           return;
         }
+
         // Ping-pong guard: on native, the background watcher and the heartbeat
         // poll use different location providers — one can return a stale cached
         // fix, producing alternating A→B→A jumps (seen as ~1.4km hops every
