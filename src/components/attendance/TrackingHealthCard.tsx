@@ -57,7 +57,7 @@ export default function TrackingHealthCard() {
   if (!status.active) return null;
 
   const stale = status.lastFixAt != null && Date.now() - status.lastFixAt > 15 * 60_000;
-  const needsBackground = isNative() && power?.backgroundLocationGranted === false;
+  const needsBackground = isNative() && power?.backgroundLocation === 'denied';
   const needsBattery = isNative() && power?.ignoringBatteryOptimizations === false;
 
   return (

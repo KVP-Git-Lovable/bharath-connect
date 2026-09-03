@@ -46,7 +46,7 @@ async function nativeGetPosition(opts: { enableHighAccuracy: boolean; timeout: n
   };
 }
 
-type NativeLocationPowerStatus = {
+export type NativeLocationPowerStatus = {
   foregroundLocation?: 'granted' | 'denied' | string;
   backgroundLocation?: 'granted' | 'denied' | string;
   ignoringBatteryOptimizations?: boolean;
