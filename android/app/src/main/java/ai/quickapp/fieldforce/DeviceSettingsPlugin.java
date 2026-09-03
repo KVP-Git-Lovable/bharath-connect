@@ -140,4 +140,52 @@ public class DeviceSettingsPlugin extends Plugin {
             call.reject("Could not open app settings", error);
         }
     }
+
+    /**
+     * OEM "autostart" / "protected apps" screens. Xiaomi, Oppo, Vivo, Realme
+     * and friends kill background foreground-services unless the app is
+     * whitelisted here, which is what silently stops day tracking. Android
+     * exposes no API for it, so the known component names are tried in turn
+     * and we fall back to the app details screen.
+     */
+    @PluginMethod
+    public void openAutoStartSettings(PluginCall call) {
+        String[][] targets = new String[][] {
+            { "com.miui.securitycenter", "com.miui.permcenter.autostart.AutoStartManagementActivity" },
+            { "com.letv.android.letvsafe", "com.letv.android.letvsafe.AutobootManageActivity" },
+            { "com.coloros.safecenter", "com.coloros.safecenter.permission.startup.StartupAppListActivity" },
+            { "com.coloros.safecenter", "com.coloros.safecenter.startupapp.StartupAppListActivity" },
+            { "com.oppo.safe", "com.oppo.safe.permission.startup.StartupAppListActivity" },
+            { "com.iqoo.secure", "com.iqoo.secure.ui.phoneoptimize.AddWhiteListActivity" },
+            { "com.iqoo.secure", "com.iqoo.secure.ui.phoneoptimize.BgStartUpManager" },
+            { "com.vivo.permissionmanager", "com.vivo.permissionmanager.activity.BgStartUpManagerActivity" },
+            { "com.asus.mobilemanager", "com.asus.mobilemanager.entry.FunctionActivity" },
+            { "com.htc.pitroad", "com.htc.pitroad.landingpage.activity.LandingPageActivity" },
+            { "com.samsung.android.lool", "com.samsung.android.sm.ui.battery.BatteryActivity" },
+            { "com.transsion.phonemanager", "com.itel.autobootmanager.activity.AutoBootMgrActivity" }
+        };
+
+        PackageManager pm = getContext().getPackageManager();
+        for (String[] target : targets) {
+            try {
+                Intent intent = new Intent();
+                intent.setComponent(new android.content.ComponentName(target[0], target[1]));
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                if (pm.resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY) == null) continue;
+                getActivity().startActivity(intent);
+
+                JSObject result = currentStatus();
+                result.put("opened", true);
+                result.put("target", target[0]);
+                call.resolve(result);
+                return;
+            } catch (Exception ignored) {
+                // try the next OEM component
+            }
+        }
+
+        // No OEM screen on this device (stock Android) — app details is the
+        // closest useful destination.
+        openAppSettings(call);
+    }
 }
