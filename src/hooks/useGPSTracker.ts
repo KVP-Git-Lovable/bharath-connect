@@ -407,15 +407,18 @@ export function useGPSTracker(userId: string | null | undefined) {
             }
             await register();
             lastCallbackTsRef.current = Date.now();
+            setTrackerStatus({ watcherAlive: true, lastCallbackAt: lastCallbackTsRef.current });
             console.info("[GPSTracker] watcher re-registered", { reason, id: watcherIdRef.current });
             void logTrackerEvent(userId, "watcher_reregistered", { reason });
           } catch (e: any) {
             console.warn("[GPSTracker] watcher re-registration failed", e);
+            setTrackerStatus({ watcherAlive: false });
             void logTrackerEvent(userId, "watcher_register_failed", {
               reason,
               message: e?.message ?? String(e),
             });
           }
+
         };
 
 
