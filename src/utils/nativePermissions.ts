@@ -46,7 +46,7 @@ async function nativeGetPosition(opts: { enableHighAccuracy: boolean; timeout: n
   };
 }
 
-type NativeLocationPowerStatus = {
+export type NativeLocationPowerStatus = {
   foregroundLocation?: 'granted' | 'denied' | string;
   backgroundLocation?: 'granted' | 'denied' | string;
   ignoringBatteryOptimizations?: boolean;
@@ -306,6 +306,26 @@ export async function openAppSettings(): Promise<boolean> {
     return true;
   } catch (e) {
     console.warn('Could not open app settings:', e);
+    return false;
+  }
+}
+
+/**
+ * Open the OEM "autostart" / "protected apps" screen (Xiaomi, Oppo, Vivo,
+ * Realme, Transsion…). These vendors kill the background location foreground
+ * service unless the app is whitelisted there, which is the single most
+ * common cause of a day's tracking stopping mid-trip. Falls back to the app
+ * details screen on stock Android. No-ops on web (returns false).
+ */
+export async function openAutoStartSettings(): Promise<boolean> {
+  if (!isNative()) return false;
+  try {
+    const DeviceSettings = await getDeviceSettingsPlugin();
+    if (!DeviceSettings?.openAutoStartSettings) return await openAppSettings();
+    await DeviceSettings.openAutoStartSettings();
+    return true;
+  } catch (e) {
+    console.warn('Could not open autostart settings:', e);
     return false;
   }
 }

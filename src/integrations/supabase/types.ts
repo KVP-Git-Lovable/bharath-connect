@@ -1471,6 +1471,36 @@ export type Database = {
         }
         Relationships: []
       }
+      gps_tracker_events: {
+        Row: {
+          created_at: string
+          details: Json
+          event: string
+          id: string
+          occurred_at: string
+          platform: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          details?: Json
+          event: string
+          id?: string
+          occurred_at?: string
+          platform?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          details?: Json
+          event?: string
+          id?: string
+          occurred_at?: string
+          platform?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       gps_tracking: {
         Row: {
           accuracy: number | null

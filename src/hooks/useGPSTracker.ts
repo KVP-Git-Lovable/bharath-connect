@@ -11,7 +11,10 @@ import {
   setGpsQueueOwner,
 
 } from "@/services/gpsSyncQueue";
+import { logTrackerEvent } from "@/services/trackerHealth";
+import { setTrackerStatus } from "@/services/trackerStatus";
 import { format } from "date-fns";
+
 
 const MIN_FORCED_WRITE_MS = 15_000;  // min spacing for non-moving trail-density writes
 const FOREGROUND_POLL_MS = 15_000;   // web / non-native fallback (screen-on only)
@@ -35,6 +38,11 @@ const MAX_JUMP_METERS = 10000;       // reject teleport jumps >10km between cons
 const MAX_OPEN_DAY_MS = 16 * 60 * 60_000;
 // How often the tracker re-checks attendance state while actively tracking.
 const DAY_RECHECK_MS = 15 * 60_000;
+// On app resume, watcher silence longer than this is treated as a dead
+// watcher and the watcher is rebuilt immediately (JS timers cannot run while
+// the WebView is frozen, so resume is our only repair opportunity).
+const RESUME_SILENCE_MS = 60_000;
+
 
 function haversineMeters(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
   return haversine(a.lat, a.lng, b.lat, b.lng);
@@ -81,6 +89,12 @@ export function useGPSTracker(userId: string | null | undefined) {
   const coarseFixCountRef = useRef(0);
   /** Throttle for the periodic attendance-state recheck while tracking. */
   const lastDayCheckRef = useRef<number>(Date.now());
+  /**
+   * Force a fresh native watcher (set once the watcher is registered).
+   * Called by the watchdog and by the app-resume recovery path.
+   */
+  const forceReregisterRef = useRef<((reason: string) => Promise<void>) | null>(null);
+
 
   useEffect(() => {
     if (!userId) return;
@@ -171,6 +185,8 @@ export function useGPSTracker(userId: string | null | undefined) {
     ) {
       if (advanceAnchor) lastPointRef.current = { lat, lng, ts, accuracy };
       lastWriteRef.current = Date.now();
+      setTrackerStatus({ lastFixAt: ts });
+
       enqueueGpsPoint({
         user_id: userId!,
         latitude: lat,
@@ -190,23 +206,38 @@ export function useGPSTracker(userId: string | null | undefined) {
       lng: number,
       accuracy: number | null,
       speed: number | null = null,
-      heading: number | null = null
+      heading: number | null = null,
+      /**
+       * The OS timestamp of the fix itself. Batched fused-location delivery
+       * (and a WebView that was frozen while backgrounded) can hand several
+       * fixes to JS at once, long after they were taken — stamping them with
+       * "now" collapses a real trail into one instant. Only trusted when it
+       * is recent and not in the future; otherwise we fall back to wall time.
+       */
+      fixTimeMs: number | null = null
     ) {
       // Reject low-accuracy fixes (IP/Wi-Fi guesses can be 10s of km off)
       if (accuracy != null && accuracy > MAX_ACCURACY_M) {
         console.debug("[GPSTracker] rejected low-accuracy fix", accuracy);
         return;
       }
-      const now = Date.now();
+      const wall = Date.now();
+      const fixUsable =
+        fixTimeMs != null &&
+        Number.isFinite(fixTimeMs) &&
+        fixTimeMs <= wall + 60_000 &&
+        wall - fixTimeMs < 30 * 60_000;
+      const now = fixUsable ? (fixTimeMs as number) : wall;
       const last = lastPointRef.current;
       if (last) {
         const dist = haversineMeters(last, { lat, lng });
-        const elapsed = now - last.ts;
+        const elapsed = Math.max(0, now - last.ts);
         // Reject unrealistic teleport jumps (e.g. sudden 50km hop while stationary)
         if (dist > MAX_JUMP_METERS && elapsed < 5 * 60_000) {
           console.debug("[GPSTracker] rejected teleport jump", dist, "m in", elapsed, "ms");
           return;
         }
+
         // Ping-pong guard: on native, the background watcher and the heartbeat
         // poll use different location providers — one can return a stale cached
         // fix, producing alternating A→B→A jumps (seen as ~1.4km hops every
@@ -283,6 +314,8 @@ export function useGPSTracker(userId: string | null | undefined) {
         // workday's logs show whether Android is allowed to keep us alive.
         const powerStatus = await prepareNativeLocationSettings();
         console.info("[GPSTracker] native location power status", powerStatus);
+        void logTrackerEvent(userId, "permission_status", { ...(powerStatus ?? {}) });
+
 
 
 
@@ -326,6 +359,10 @@ export function useGPSTracker(userId: string | null | undefined) {
             (location: any, error: any) => {
               if (error) {
                 console.warn("[GPSTracker] watcher error", error);
+                void logTrackerEvent(userId, "watcher_error", {
+                  code: error?.code ?? null,
+                  message: error?.message ?? String(error),
+                });
                 return;
               }
               if (!location) return;
@@ -339,6 +376,8 @@ export function useGPSTracker(userId: string | null | undefined) {
                 });
               }
               lastCallbackTsRef.current = Date.now();
+              setTrackerStatus({ lastCallbackAt: lastCallbackTsRef.current, watcherAlive: true });
+
               if (!activeRef.current) return;
               if (cancelled) return;
               try {
@@ -347,7 +386,10 @@ export function useGPSTracker(userId: string | null | undefined) {
                   location.longitude,
                   location.accuracy ?? null,
                   location.speed ?? null,
-                  location.bearing ?? null
+                  location.bearing ?? null,
+                  // Batched / post-wake deliveries carry their own capture
+                  // time — keep the trail on the real clock.
+                  typeof location.time === "number" ? location.time : null
                 );
               } catch { /* ignore */ }
             }
@@ -355,12 +397,52 @@ export function useGPSTracker(userId: string | null | undefined) {
           watcherIdRef.current = id;
         };
 
+        /**
+         * Force a fresh watcher. Used both by the watchdog and — critically —
+         * on every app resume: while the WebView is frozen no JS timer runs,
+         * so a watcher Android killed in the background can only be noticed
+         * and replaced the moment the user brings the app back.
+         */
+        forceReregisterRef.current = async (reason: string) => {
+          if (cancelled || !activeRef.current) return;
+          try {
+            if (watcherIdRef.current) {
+              await BackgroundGeolocation.removeWatcher({ id: watcherIdRef.current });
+              watcherIdRef.current = null;
+            }
+            await register();
+            lastCallbackTsRef.current = Date.now();
+            setTrackerStatus({ watcherAlive: true, lastCallbackAt: lastCallbackTsRef.current });
+            console.info("[GPSTracker] watcher re-registered", { reason, id: watcherIdRef.current });
+            void logTrackerEvent(userId, "watcher_reregistered", { reason });
+          } catch (e: any) {
+            console.warn("[GPSTracker] watcher re-registration failed", e);
+            setTrackerStatus({ watcherAlive: false });
+            void logTrackerEvent(userId, "watcher_register_failed", {
+              reason,
+              message: e?.message ?? String(e),
+            });
+          }
+
+        };
+
+
         await register();
         lastWriteRef.current = Date.now();
         lastCallbackTsRef.current = Date.now();
+        setTrackerStatus({
+          native: true,
+          watcherAlive: true,
+          lastCallbackAt: lastCallbackTsRef.current,
+        });
+
         console.info("[GPSTracker] watcher registered", {
           id: watcherIdRef.current,
           config: GPS_CAPTURE_CONFIG.MOVING,
+        });
+        void logTrackerEvent(userId, "watcher_registered", {
+          id: watcherIdRef.current,
+          ...GPS_CAPTURE_CONFIG.MOVING,
         });
 
         // Watchdog + stationary probe.
@@ -388,6 +470,7 @@ export function useGPSTracker(userId: string | null | undefined) {
             const acc = pos.accuracy ?? null;
             if (acc != null && acc > PROBE_MAX_ACCURACY_M) {
               console.debug("[GPSTracker] discarded coarse probe fix", acc);
+              void logTrackerEvent(userId, "probe_discarded", { accuracy: acc });
             } else if (!cancelled && activeRef.current) {
               // Trail-density sample: insertPoint's gates decide whether this
               // counts as movement — distance maths is untouched.
@@ -399,30 +482,26 @@ export function useGPSTracker(userId: string | null | undefined) {
                 pos.heading ?? null
               );
             }
-          } catch (e) {
+          } catch (e: any) {
             console.warn("[GPSTracker] stationary probe failed", e);
+            void logTrackerEvent(userId, "probe_failed", { message: e?.message ?? String(e) });
           }
 
           // Health test is independent of the probe: prolonged watcher
           // silence alone is proof enough that the watcher is gone.
-          if (Date.now() - lastCallbackTsRef.current > WATCHDOG_MS) {
+          const silenceNow = Date.now() - lastCallbackTsRef.current;
+          if (silenceNow > WATCHDOG_MS) {
             console.warn(
               "[GPSTracker] no watcher callback for",
-              Math.round((Date.now() - lastCallbackTsRef.current) / 1000),
+              Math.round(silenceNow / 1000),
               "s — re-registering watcher"
             );
-            try {
-              if (watcherIdRef.current) {
-                await BackgroundGeolocation.removeWatcher({ id: watcherIdRef.current });
-                watcherIdRef.current = null;
-              }
-              await register();
-              lastCallbackTsRef.current = Date.now();
-              console.info("[GPSTracker] watcher re-registered", watcherIdRef.current);
-            } catch (e) {
-              console.warn("[GPSTracker] watcher re-registration failed", e);
-            }
+            void logTrackerEvent(userId, "watcher_silence", {
+              silence_seconds: Math.round(silenceNow / 1000),
+            });
+            await forceReregisterRef.current?.("watchdog_silence");
           }
+
         }, WATCHDOG_TICK_MS);
 
 
@@ -492,16 +571,49 @@ export function useGPSTracker(userId: string | null | undefined) {
     async function evaluate() {
       const open = await isDayOpen();
       if (open === null) return; // unknown (offline) — keep the current state
+      const wasActive = activeRef.current;
       activeRef.current = open;
+      setTrackerStatus({ active: open, native: isNative() });
       if (!open) {
         // Day closed → stop background watcher if any, then drain the queue
         if (stopBackground) { await stopBackground(); stopBackground = null; }
         if (pollTimer) { window.clearInterval(pollTimer); pollTimer = null; }
         if (timerRef.current) { window.clearInterval(timerRef.current); timerRef.current = null; }
+        forceReregisterRef.current = null;
+        setTrackerStatus({ watcherAlive: false });
+        if (wasActive) void logTrackerEvent(userId, "tracking_stopped", {});
         void flushPendingGpsPoints();
       } else {
+        if (!wasActive) void logTrackerEvent(userId, "tracker_started", {});
         void ensureAcquisitionRunning();
       }
+    }
+
+    /**
+     * App-resume recovery. Android freezes WebView timers in the background,
+     * so the watchdog cannot notice — let alone repair — a watcher the OS
+     * killed while the phone was pocketed. The instant the app becomes
+     * visible again we therefore treat prolonged watcher silence as a dead
+     * watcher and rebuild it immediately, before anything else.
+     */
+    async function recoverOnResume() {
+      if (cancelled) return;
+      await evaluate();
+      if (!activeRef.current || cancelled) return;
+      const silenceMs = Date.now() - lastCallbackTsRef.current;
+      if (!isNative()) return;
+      if (watcherIdRef.current == null) {
+        void ensureAcquisitionRunning();
+        return;
+      }
+      if (silenceMs > RESUME_SILENCE_MS) {
+        void logTrackerEvent(userId, "resume_recovery", {
+          silence_seconds: Math.round(silenceMs / 1000),
+        });
+        setTrackerStatus({ watcherAlive: false });
+        await forceReregisterRef.current?.("app_resume");
+      }
+      void flushPendingGpsPoints();
     }
 
     (async () => {
@@ -522,11 +634,29 @@ export function useGPSTracker(userId: string | null | undefined) {
       }
     })();
 
-    // Re-evaluate day status when tab becomes visible (catches check-out)
+    // Re-evaluate day status AND repair a background-killed watcher whenever
+    // the app comes back to the foreground (catches check-out too).
     const onVisibility = () => {
-      if (document.visibilityState === "visible") evaluate();
+      if (document.visibilityState === "visible") void recoverOnResume();
     };
     document.addEventListener("visibilitychange", onVisibility);
+    // Capacitor's own resume signal: fires on native even when the WebView
+    // never reports a visibility change (screen-off / task-switch cases).
+    let removeAppListener: (() => void) | null = null;
+    if (isNative()) {
+      void (async () => {
+        try {
+          const { App } = await import("@capacitor/app");
+          const handle = await App.addListener("appStateChange", ({ isActive }) => {
+            if (isActive) void recoverOnResume();
+          });
+          if (cancelled) { handle.remove(); return; }
+          removeAppListener = () => handle.remove();
+        } catch (e) {
+          console.debug("[GPSTracker] app state listener unavailable", e);
+        }
+      })();
+    }
 
     // Re-evaluate immediately when useAttendance signals a successful
     // check-in/check-out, instead of waiting for the next visibility-change
@@ -541,9 +671,11 @@ export function useGPSTracker(userId: string | null | undefined) {
       activeRef.current = false;
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("attendance-changed", onAttendanceChanged);
+      removeAppListener?.();
       if (timerRef.current) window.clearInterval(timerRef.current);
       if (pollTimer) window.clearInterval(pollTimer);
       if (stopBackground) stopBackground();
     };
+
   }, [userId]);
 }

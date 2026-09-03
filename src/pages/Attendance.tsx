@@ -20,6 +20,8 @@ import MyTeamAttendance from "@/components/attendance/MyTeamAttendance";
 import { useAttendance, isWeekOffDate } from "@/hooks/useAttendance";
 import { useFaceMatching } from "@/hooks/useFaceMatching";
 import { AttendanceCalendarView } from "@/components/attendance/AttendanceCalendarView";
+import TrackingHealthCard from "@/components/attendance/TrackingHealthCard";
+
 import LeaveBalanceCards from "@/components/LeaveBalanceCards";
 import MyLeaveApplications from "@/components/MyLeaveApplications";
 import HolidayManagement from "@/components/HolidayManagement";
@@ -634,8 +636,12 @@ export default function Attendance() {
         </DialogContent>
       </Dialog>
 
+      {/* Background tracking health (visible only while the day is open) */}
+      <TrackingHealthCard />
+
       {/* Market Hours */}
       <Card>
+
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><Clock className="h-5 w-5" />Today's Market Hours</CardTitle>
         </CardHeader>
