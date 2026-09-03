@@ -180,6 +180,8 @@ export function useGPSTracker(userId: string | null | undefined) {
     ) {
       if (advanceAnchor) lastPointRef.current = { lat, lng, ts, accuracy };
       lastWriteRef.current = Date.now();
+      setTrackerStatus({ lastFixAt: ts });
+
       enqueueGpsPoint({
         user_id: userId!,
         latitude: lat,
