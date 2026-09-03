@@ -425,6 +425,12 @@ export function useGPSTracker(userId: string | null | undefined) {
         await register();
         lastWriteRef.current = Date.now();
         lastCallbackTsRef.current = Date.now();
+        setTrackerStatus({
+          native: true,
+          watcherAlive: true,
+          lastCallbackAt: lastCallbackTsRef.current,
+        });
+
         console.info("[GPSTracker] watcher registered", {
           id: watcherIdRef.current,
           config: GPS_CAPTURE_CONFIG.MOVING,
