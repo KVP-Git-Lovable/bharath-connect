@@ -1952,6 +1952,14 @@ function ActivityCard({ a, isAdmin, onEdit, onDelete, onOpenDetails, onReceiveGo
         updates.start_time = now;
       } else if (newStatus === "completed") {
         updates.end_time = now;
+        // Completing without a check-in leaves no start time, which renders as
+        // "—" on the card. Back-fill it from the last in-progress transition.
+        if (!a.start_time) {
+          const startedAt = [...(a.status_history || [])]
+            .reverse()
+            .find((h: any) => h?.status === "in_progress")?.at;
+          if (startedAt) updates.start_time = startedAt;
+        }
       }
 
       updates.status_history = [...(a.status_history || []), historyEntry];
@@ -2026,8 +2034,15 @@ function ActivityCard({ a, isAdmin, onEdit, onDelete, onOpenDetails, onReceiveGo
   };
   const outcomeStyle = outcome ? outcomeStyles[outcome] : undefined;
 
-  const spentMins = a.start_time && a.end_time
-    ? Math.max(0, Math.round((new Date(a.end_time).getTime() - new Date(a.start_time).getTime()) / 60000))
+  // Older records completed without a check-in have no start_time — fall back
+  // to the status history so the card shows a real range instead of "—".
+  const historyStart =
+    [...((a.status_history as any[]) || [])].reverse().find((h: any) => h?.status === "in_progress")?.at ||
+    ((a.status_history as any[]) || [])[0]?.at ||
+    null;
+  const effectiveStart = a.start_time || (a.end_time ? historyStart : null);
+  const spentMins = effectiveStart && a.end_time
+    ? Math.max(0, Math.round((new Date(a.end_time).getTime() - new Date(effectiveStart).getTime()) / 60000))
     : null;
 
   const Row = ({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) => (
@@ -2092,9 +2107,11 @@ function ActivityCard({ a, isAdmin, onEdit, onDelete, onOpenDetails, onReceiveGo
 
             <div className="ml-9 space-y-1">
               <Row icon={<Clock className="h-3 w-3 text-sky-500" />}>
-                {a.start_time
-                  ? `${format(parseISO(a.start_time), "h:mm a")}${a.end_time ? ` - ${format(parseISO(a.end_time), "h:mm a")}` : ""}${a.total_hours ? ` (${a.total_hours}h)` : ""}`
-                  : "—"}
+                {effectiveStart
+                  ? `${format(parseISO(effectiveStart), "h:mm a")}${a.end_time ? ` - ${format(parseISO(a.end_time), "h:mm a")}` : ""}${a.total_hours ? ` (${a.total_hours}h)` : ""}`
+                  : a.end_time
+                    ? `Completed ${format(parseISO(a.end_time), "h:mm a")}`
+                    : "—"}
               </Row>
 
               {followUpDate && (

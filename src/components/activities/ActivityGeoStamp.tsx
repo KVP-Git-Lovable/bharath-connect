@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { MapPin, CheckCircle2, AlertTriangle, XCircle, Loader2, RefreshCw, Route, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import type { Activity as ActivityType } from "@/hooks/useActivities";
 
 type Coords = { lat: number; lng: number };
@@ -64,6 +65,10 @@ interface Props {
 
 export default function ActivityGeoStamp({ activity, className, onUpdated, compact }: Props) {
   const leadAddress = (activity as any).lead_address as string | undefined;
+  const { userId } = useCurrentUser();
+  // Only the field member who owns the activity may stamp a location — a
+  // manager viewing the record must never overwrite it with their own position.
+  const isOwner = !!userId && userId === (activity as any).user_id;
   const [override, setOverride] = useState<{ lat: number; lng: number; address: string | null } | null>(null);
   const lat = override?.lat ?? activity.location_lat ?? activity.status_change_lat;
   const lng = override?.lng ?? activity.location_lng ?? activity.status_change_lng;
@@ -132,7 +137,7 @@ export default function ActivityGeoStamp({ activity, className, onUpdated, compa
   // card shows a geo stamp without needing the manual re-submit button.
   const status = (activity as any).status as string | undefined;
   useEffect(() => {
-    if (hasVisited || autoTried) return;
+    if (!isOwner || hasVisited || autoTried) return;
     if (status !== "in_progress" && status !== "completed") return;
     setAutoTried(true);
     setRecapturing(true);
@@ -140,7 +145,7 @@ export default function ActivityGeoStamp({ activity, className, onUpdated, compa
       .catch(() => { /* silent: user can still use the re-submit button */ })
       .finally(() => setRecapturing(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasVisited, autoTried, status, activity.id]);
+  }, [isOwner, hasVisited, autoTried, status, activity.id]);
 
   if (!leadAddress && !hasVisited) return null;
 
@@ -236,7 +241,7 @@ export default function ActivityGeoStamp({ activity, className, onUpdated, compa
         </div>
       )}
 
-      {(distanceKm === null || distanceKm > 0.5) && (
+      {isOwner && (distanceKm === null || distanceKm > 0.5) && (
 
         <button
           type="button"
