@@ -261,12 +261,14 @@ export default function Attendance() {
     setCameraOpen(false);
 
     try {
-      // Step 1: Get location
-      setProcessingStep("location");
+      // Step 1: Get location (only when GPS verification is required by policy)
       let location: any = null;
-      try {
-        location = await getCurrentPosition();
-      } catch {}
+      if (gpsRequired) {
+        setProcessingStep("location");
+        try {
+          location = await getCurrentPosition();
+        } catch {}
+      }
 
       // Step 2: Upload photo
       setProcessingStep("photo");
