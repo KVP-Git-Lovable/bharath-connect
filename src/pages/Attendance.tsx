@@ -169,7 +169,45 @@ export default function Attendance() {
   }, [regularizationRequests]);
 
   // --- Camera + Face Verification Flow ---
+  // Policy-driven: when Face Verification is off the camera never opens, and
+  // when GPS Verification is off no location is requested.
+  const submitWithoutFace = async (mode: "checkin" | "checkout") => {
+    if (!userId) return;
+    setActionLoading(true);
+    try {
+      let location: any = null;
+      if (gpsRequired) {
+        setProcessingStep("location");
+        try {
+          location = await getCurrentPosition();
+        } catch {}
+      }
+
+      setProcessingStep("saving");
+      const payload: any = { location, skipLocation: !gpsRequired };
+      if (mode === "checkin") {
+        await checkIn(payload);
+      } else {
+        await checkOut(payload);
+      }
+
+      setProcessingStep("done");
+      toast.success(mode === "checkin" ? "Day started successfully!" : "Day ended successfully!");
+      await new Promise((r) => setTimeout(r, 1000));
+    } catch (err: any) {
+      console.error("Attendance error:", err);
+      toast.error(err.message || "Failed to record attendance");
+    } finally {
+      setActionLoading(false);
+      setProcessingStep(null);
+    }
+  };
+
   const handleStartDay = () => {
+    if (!faceRequired) {
+      submitWithoutFace("checkin");
+      return;
+    }
     // Force face registration if no profile picture
     if (!profilePictureUrl) {
       setPendingAction("checkin");
@@ -182,6 +220,10 @@ export default function Attendance() {
   };
 
   const handleEndDay = () => {
+    if (!faceRequired) {
+      submitWithoutFace("checkout");
+      return;
+    }
     // Force face registration if no profile picture
     if (!profilePictureUrl) {
       setPendingAction("checkout");
