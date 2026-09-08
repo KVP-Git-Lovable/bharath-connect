@@ -73,6 +73,8 @@ interface CheckInData {
   location?: any;
   faceVerificationStatus?: string;
   faceMatchConfidence?: number;
+  /** When true, no location is requested (GPS verification disabled by policy). */
+  skipLocation?: boolean;
 }
 
 interface CheckOutData {
@@ -80,6 +82,8 @@ interface CheckOutData {
   location?: any;
   faceVerificationStatus?: string;
   faceMatchConfidence?: number;
+  /** When true, no location is requested (GPS verification disabled by policy). */
+  skipLocation?: boolean;
 }
 
 export function useAttendance(userId: string | undefined) {

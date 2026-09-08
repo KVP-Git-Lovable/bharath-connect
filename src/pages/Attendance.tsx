@@ -19,6 +19,7 @@ import { getCurrentPosition } from "@/utils/nativePermissions";
 import MyTeamAttendance from "@/components/attendance/MyTeamAttendance";
 import { useAttendance, isWeekOffDate } from "@/hooks/useAttendance";
 import { useFaceMatching } from "@/hooks/useFaceMatching";
+import { useAttendanceVerificationPolicy } from "@/hooks/useAttendanceVerificationPolicy";
 import { AttendanceCalendarView } from "@/components/attendance/AttendanceCalendarView";
 import TrackingHealthCard from "@/components/attendance/TrackingHealthCard";
 
@@ -70,6 +71,9 @@ export default function Attendance() {
   const [pendingAction, setPendingAction] = useState<"checkin" | "checkout" | null>(null);
 
   const { compareImages, matching } = useFaceMatching();
+  const { data: verificationPolicy } = useAttendanceVerificationPolicy();
+  const faceRequired = verificationPolicy?.faceVerificationRequired ?? true;
+  const gpsRequired = verificationPolicy?.gpsVerificationRequired ?? true;
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
