@@ -100,7 +100,10 @@ const RegularizationPolicyConfig = () => {
         if (error) throw error;
       }
 
+      await saveAttendanceVerificationPolicy(verificationForm);
+
       queryClient.invalidateQueries({ queryKey: ['regularization-policy'] });
+      queryClient.invalidateQueries({ queryKey: ['attendance-verification-policy'] });
       toast.success('Regularization policy saved successfully');
     } catch (error) {
       console.error('Error saving policy:', error);
