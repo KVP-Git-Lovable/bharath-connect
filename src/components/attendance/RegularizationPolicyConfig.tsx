@@ -294,6 +294,32 @@ const RegularizationPolicyConfig = () => {
                   {form.approval_mode === 'multi_level' && 'Request goes through the full management hierarchy.'}
                 </p>
               </div>
+              <div className="space-y-3 mt-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label>Face Verification</Label>
+                    <p className="text-xs text-muted-foreground">Require face verification before attendance check-in.</p>
+                  </div>
+                  <Switch
+                    checked={verificationForm.faceVerificationRequired}
+                    onCheckedChange={(checked) =>
+                      setVerificationForm({ ...verificationForm, faceVerificationRequired: checked })
+                    }
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label>GPS / Location Verification</Label>
+                    <p className="text-xs text-muted-foreground">Require location verification before attendance check-in.</p>
+                  </div>
+                  <Switch
+                    checked={verificationForm.gpsVerificationRequired}
+                    onCheckedChange={(checked) =>
+                      setVerificationForm({ ...verificationForm, gpsVerificationRequired: checked })
+                    }
+                  />
+                </div>
+              </div>
             </div>
 
             <Separator />
