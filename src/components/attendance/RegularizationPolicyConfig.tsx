@@ -12,6 +12,10 @@ import { toast } from 'sonner';
 import { Save, Shield, Clock, CheckCircle, Loader2, AlertCircle, Info } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRegularizationPolicy } from '@/hooks/useRegularizationPolicy';
+import {
+  useAttendanceVerificationPolicy,
+  saveAttendanceVerificationPolicy,
+} from '@/hooks/useAttendanceVerificationPolicy';
 
 const RegularizationPolicyConfig = () => {
   const { data: policyResult, isLoading } = useRegularizationPolicy();
