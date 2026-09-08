@@ -26,6 +26,15 @@ const RegularizationPolicyConfig = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [unlimitedMonthly, setUnlimitedMonthly] = useState(true);
   const errorToastShown = useRef(false);
+  const { data: verificationPolicy } = useAttendanceVerificationPolicy();
+  const [verificationForm, setVerificationForm] = useState({
+    faceVerificationRequired: true,
+    gpsVerificationRequired: true,
+  });
+
+  useEffect(() => {
+    if (verificationPolicy) setVerificationForm(verificationPolicy);
+  }, [verificationPolicy]);
 
   useEffect(() => {
     if (policyError && !policy && !errorToastShown.current) {
