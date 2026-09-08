@@ -12,6 +12,10 @@ import { toast } from 'sonner';
 import { Save, Shield, Clock, CheckCircle, Loader2, AlertCircle, Info } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRegularizationPolicy } from '@/hooks/useRegularizationPolicy';
+import {
+  useAttendanceVerificationPolicy,
+  saveAttendanceVerificationPolicy,
+} from '@/hooks/useAttendanceVerificationPolicy';
 
 const RegularizationPolicyConfig = () => {
   const { data: policyResult, isLoading } = useRegularizationPolicy();
@@ -22,6 +26,15 @@ const RegularizationPolicyConfig = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [unlimitedMonthly, setUnlimitedMonthly] = useState(true);
   const errorToastShown = useRef(false);
+  const { data: verificationPolicy } = useAttendanceVerificationPolicy();
+  const [verificationForm, setVerificationForm] = useState({
+    faceVerificationRequired: true,
+    gpsVerificationRequired: true,
+  });
+
+  useEffect(() => {
+    if (verificationPolicy) setVerificationForm(verificationPolicy);
+  }, [verificationPolicy]);
 
   useEffect(() => {
     if (policyError && !policy && !errorToastShown.current) {
@@ -87,7 +100,10 @@ const RegularizationPolicyConfig = () => {
         if (error) throw error;
       }
 
+      await saveAttendanceVerificationPolicy(verificationForm);
+
       queryClient.invalidateQueries({ queryKey: ['regularization-policy'] });
+      queryClient.invalidateQueries({ queryKey: ['attendance-verification-policy'] });
       toast.success('Regularization policy saved successfully');
     } catch (error) {
       console.error('Error saving policy:', error);
@@ -293,6 +309,32 @@ const RegularizationPolicyConfig = () => {
                   {form.approval_mode === 'manager' && 'Reporting manager must approve each request.'}
                   {form.approval_mode === 'multi_level' && 'Request goes through the full management hierarchy.'}
                 </p>
+              </div>
+              <div className="space-y-3 mt-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label>Face Verification</Label>
+                    <p className="text-xs text-muted-foreground">Require face verification before attendance check-in.</p>
+                  </div>
+                  <Switch
+                    checked={verificationForm.faceVerificationRequired}
+                    onCheckedChange={(checked) =>
+                      setVerificationForm({ ...verificationForm, faceVerificationRequired: checked })
+                    }
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label>GPS / Location Verification</Label>
+                    <p className="text-xs text-muted-foreground">Require location verification before attendance check-in.</p>
+                  </div>
+                  <Switch
+                    checked={verificationForm.gpsVerificationRequired}
+                    onCheckedChange={(checked) =>
+                      setVerificationForm({ ...verificationForm, gpsVerificationRequired: checked })
+                    }
+                  />
+                </div>
               </div>
             </div>
 

@@ -19,6 +19,7 @@ import { getCurrentPosition } from "@/utils/nativePermissions";
 import MyTeamAttendance from "@/components/attendance/MyTeamAttendance";
 import { useAttendance, isWeekOffDate } from "@/hooks/useAttendance";
 import { useFaceMatching } from "@/hooks/useFaceMatching";
+import { useAttendanceVerificationPolicy } from "@/hooks/useAttendanceVerificationPolicy";
 import { AttendanceCalendarView } from "@/components/attendance/AttendanceCalendarView";
 import TrackingHealthCard from "@/components/attendance/TrackingHealthCard";
 
@@ -70,6 +71,9 @@ export default function Attendance() {
   const [pendingAction, setPendingAction] = useState<"checkin" | "checkout" | null>(null);
 
   const { compareImages, matching } = useFaceMatching();
+  const { data: verificationPolicy } = useAttendanceVerificationPolicy();
+  const faceRequired = verificationPolicy?.faceVerificationRequired ?? true;
+  const gpsRequired = verificationPolicy?.gpsVerificationRequired ?? true;
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -169,7 +173,45 @@ export default function Attendance() {
   }, [regularizationRequests]);
 
   // --- Camera + Face Verification Flow ---
+  // Policy-driven: when Face Verification is off the camera never opens, and
+  // when GPS Verification is off no location is requested.
+  const submitWithoutFace = async (mode: "checkin" | "checkout") => {
+    if (!userId) return;
+    setActionLoading(true);
+    try {
+      let location: any = null;
+      if (gpsRequired) {
+        setProcessingStep("location");
+        try {
+          location = await getCurrentPosition();
+        } catch {}
+      }
+
+      setProcessingStep("saving");
+      const payload: any = { location, skipLocation: !gpsRequired };
+      if (mode === "checkin") {
+        await checkIn(payload);
+      } else {
+        await checkOut(payload);
+      }
+
+      setProcessingStep("done");
+      toast.success(mode === "checkin" ? "Day started successfully!" : "Day ended successfully!");
+      await new Promise((r) => setTimeout(r, 1000));
+    } catch (err: any) {
+      console.error("Attendance error:", err);
+      toast.error(err.message || "Failed to record attendance");
+    } finally {
+      setActionLoading(false);
+      setProcessingStep(null);
+    }
+  };
+
   const handleStartDay = () => {
+    if (!faceRequired) {
+      submitWithoutFace("checkin");
+      return;
+    }
     // Force face registration if no profile picture
     if (!profilePictureUrl) {
       setPendingAction("checkin");
@@ -182,6 +224,10 @@ export default function Attendance() {
   };
 
   const handleEndDay = () => {
+    if (!faceRequired) {
+      submitWithoutFace("checkout");
+      return;
+    }
     // Force face registration if no profile picture
     if (!profilePictureUrl) {
       setPendingAction("checkout");
@@ -219,12 +265,14 @@ export default function Attendance() {
     setCameraOpen(false);
 
     try {
-      // Step 1: Get location
-      setProcessingStep("location");
+      // Step 1: Get location (only when GPS verification is required by policy)
       let location: any = null;
-      try {
-        location = await getCurrentPosition();
-      } catch {}
+      if (gpsRequired) {
+        setProcessingStep("location");
+        try {
+          location = await getCurrentPosition();
+        } catch {}
+      }
 
       // Step 2: Upload photo
       setProcessingStep("photo");
@@ -283,9 +331,9 @@ export default function Attendance() {
       // Step 4: Save attendance
       setProcessingStep("saving");
       if (cameraMode === "checkin") {
-        await checkIn({ photoUrl, location, faceVerificationStatus, faceMatchConfidence });
+        await checkIn({ photoUrl, location, faceVerificationStatus, faceMatchConfidence, skipLocation: !gpsRequired });
       } else {
-        await checkOut({ photoUrl, location, faceVerificationStatus, faceMatchConfidence });
+        await checkOut({ photoUrl, location, faceVerificationStatus, faceMatchConfidence, skipLocation: !gpsRequired });
       }
 
       // Step 5: Done

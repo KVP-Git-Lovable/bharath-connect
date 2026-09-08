@@ -73,6 +73,8 @@ interface CheckInData {
   location?: any;
   faceVerificationStatus?: string;
   faceMatchConfidence?: number;
+  /** When true, no location is requested (GPS verification disabled by policy). */
+  skipLocation?: boolean;
 }
 
 interface CheckOutData {
@@ -80,6 +82,8 @@ interface CheckOutData {
   location?: any;
   faceVerificationStatus?: string;
   faceMatchConfidence?: number;
+  /** When true, no location is requested (GPS verification disabled by policy). */
+  skipLocation?: boolean;
 }
 
 export function useAttendance(userId: string | undefined) {
@@ -142,7 +146,7 @@ export function useAttendance(userId: string | undefined) {
     if (!userId) return;
     
     let location = data?.location || null;
-    if (!location) {
+    if (!location && !data?.skipLocation) {
       try {
         location = await getCurrentPosition();
       } catch {}
@@ -194,7 +198,7 @@ export function useAttendance(userId: string | undefined) {
     if (!userId || !todayRecord) return;
     
     let location = data?.location || null;
-    if (!location) {
+    if (!location && !data?.skipLocation) {
       try {
         location = await getCurrentPosition();
       } catch {}
