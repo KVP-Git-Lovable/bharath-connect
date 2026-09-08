@@ -1,51 +1,75 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
+import {
+  type PolicyResult,
+  logPolicyError,
+  REGULARIZATION_POLICY_DEFAULTS,
+} from '@/utils/policyDefaults';
 
 export interface RegularizationPolicy {
   id: string;
-  monthly_limit: number;
+  is_enabled: boolean;
+  monthly_limit: number | null;
   daily_limit: number;
+  allow_checkin_edit: boolean;
+  allow_checkout_edit: boolean;
+  allow_status_edit: boolean;
+  reason_mandatory: boolean;
   max_backdate_days: number;
+  allow_previous_month: boolean;
+  restrict_after_payroll_lock: boolean;
   approval_mode: string;
-  auto_approve_within_hours: number | null;
-  post_approval_status: string;
-  require_reason: boolean;
+  update_attendance_on_approval: boolean;
+  recalculate_hours: boolean;
+  adjust_leave_balance: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
-export function useRegularizationPolicy() {
-  const [policy, setPolicy] = useState<RegularizationPolicy | null>(null);
-  const [loading, setLoading] = useState(true);
+export const useRegularizationPolicy = () => {
+  return useQuery<PolicyResult<RegularizationPolicy>>({
+    queryKey: ['regularization-policy'],
+    queryFn: async (): Promise<PolicyResult<RegularizationPolicy>> => {
+      const { data, error } = await supabase
+        .from('regularization_policy')
+        .select('*')
+        .limit(1)
+        .maybeSingle();
 
-  const fetchPolicy = useCallback(async () => {
-    setLoading(true);
-    try {
-      const { data } = await supabase.from('regularization_policy' as any).select('*').limit(1).maybeSingle();
-      setPolicy(data as any as RegularizationPolicy | null);
-    } catch (err) {
-      console.error('Error fetching regularization policy:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { fetchPolicy(); }, [fetchPolicy]);
-
-  const savePolicy = async (data: Partial<RegularizationPolicy>) => {
-    try {
-      if (policy?.id) {
-        const { error } = await supabase.from('regularization_policy' as any).update(data as any).eq('id', policy.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from('regularization_policy' as any).insert(data as any);
-        if (error) throw error;
+      if (error) {
+        logPolicyError('regularization_policy fetch', error);
+        return { data: null, error, isFallback: false };
       }
-      toast.success('Regularization policy saved');
-      await fetchPolicy();
-    } catch {
-      toast.error('Failed to save regularization policy');
-    }
-  };
 
-  return { policy, loading, savePolicy, refetch: fetchPolicy };
-}
+      if (data) {
+        return { data: data as RegularizationPolicy, error: null, isFallback: false };
+      }
+
+      // Auto-seed
+      const { data: newRow, error: insertError } = await supabase
+        .from('regularization_policy')
+        .insert(REGULARIZATION_POLICY_DEFAULTS)
+        .select()
+        .single();
+
+      if (insertError) {
+        logPolicyError('regularization_policy auto-seed', insertError);
+
+        const { data: retryData } = await supabase
+          .from('regularization_policy')
+          .select('*')
+          .limit(1)
+          .maybeSingle();
+
+        return {
+          data: (retryData as RegularizationPolicy) || null,
+          error: insertError,
+          isFallback: true,
+        };
+      }
+
+      return { data: newRow as RegularizationPolicy, error: null, isFallback: false };
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+};
