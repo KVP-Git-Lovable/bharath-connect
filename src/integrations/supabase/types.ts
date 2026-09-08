@@ -21,6 +21,7 @@ export type Database = {
           divisor: number
           frequency: string
           id: string
+          leave_type_id: string | null
           prorate_joining: boolean
           round_mode: string
           updated_at: string
@@ -31,6 +32,7 @@ export type Database = {
           divisor?: number
           frequency?: string
           id?: string
+          leave_type_id?: string | null
           prorate_joining?: boolean
           round_mode?: string
           updated_at?: string
@@ -41,11 +43,20 @@ export type Database = {
           divisor?: number
           frequency?: string
           id?: string
+          leave_type_id?: string | null
           prorate_joining?: boolean
           round_mode?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "accrual_config_leave_type_id_fkey"
+            columns: ["leave_type_id"]
+            isOneToOne: false
+            referencedRelation: "leave_types"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       activity_events: {
         Row: {
@@ -1984,6 +1995,7 @@ export type Database = {
           created_at: string
           id: string
           is_active: boolean
+          last_update_mode: string | null
           leave_type_id: string
           max_carry_forward: number
           monthly_accrual: number | null
@@ -1996,6 +2008,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean
+          last_update_mode?: string | null
           leave_type_id: string
           max_carry_forward?: number
           monthly_accrual?: number | null
@@ -2008,6 +2021,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean
+          last_update_mode?: string | null
           leave_type_id?: string
           max_carry_forward?: number
           monthly_accrual?: number | null
