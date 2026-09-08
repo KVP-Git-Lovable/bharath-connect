@@ -327,9 +327,9 @@ export default function Attendance() {
       // Step 4: Save attendance
       setProcessingStep("saving");
       if (cameraMode === "checkin") {
-        await checkIn({ photoUrl, location, faceVerificationStatus, faceMatchConfidence });
+        await checkIn({ photoUrl, location, faceVerificationStatus, faceMatchConfidence, skipLocation: !gpsRequired });
       } else {
-        await checkOut({ photoUrl, location, faceVerificationStatus, faceMatchConfidence });
+        await checkOut({ photoUrl, location, faceVerificationStatus, faceMatchConfidence, skipLocation: !gpsRequired });
       }
 
       // Step 5: Done
