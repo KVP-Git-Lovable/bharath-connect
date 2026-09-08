@@ -62,9 +62,15 @@ export default function ActivityEffortSection({
   const [saving, setSaving] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  // Older records completed without a check-in have no start_time — fall back
+  // to the recorded in-progress transition so the value is never wrong.
+  const historyStart =
+    [...((activity.status_history as any[]) || [])].reverse().find((h: any) => h?.status === "in_progress")?.at ||
+    null;
+  const meetingStart = activity.start_time || (activity.end_time ? historyStart : null);
   const meetingMins =
-    activity.start_time && activity.end_time
-      ? Math.max(0, Math.round((new Date(activity.end_time).getTime() - new Date(activity.start_time).getTime()) / 60000))
+    meetingStart && activity.end_time
+      ? Math.max(0, Math.round((new Date(activity.end_time).getTime() - new Date(meetingStart).getTime()) / 60000))
       : null;
 
   const prevLabel =

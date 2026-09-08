@@ -54,7 +54,8 @@ import { useAudioRecorder } from "@/hooks/useAudioRecorder";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import CameraCapture from "@/components/CameraCapture";
-import { isNative, takeNativePhoto } from "@/utils/nativePermissions";
+import { isNative, takeNativePhoto, getCurrentPosition } from "@/utils/nativePermissions";
+import { computeTravelForCheckIn } from "@/utils/activityTravel";
 import OpenGRNPicker from "@/components/procurement/OpenGRNPicker";
 import { receiptDrivenStatus } from "@/lib/procurement";
 import { ACTIVITY_OUTCOMES } from "@/hooks/useLeadActivities";
@@ -860,13 +861,63 @@ export default function CreativeActivityForm({
     setChangingStatus(true);
     try {
       const now = new Date().toISOString();
-      const history = [
-        ...(editActivity.status_history || []),
-        { status: newStatus, at: now } as ActivityStatusEntry,
-      ];
-      const updates: any = { status: newStatus, status_history: history };
+      const historyEntry: ActivityStatusEntry = { status: newStatus, at: now };
+      const updates: any = { status: newStatus, status_changed_at: now };
+
+      // Capture the location for this transition (same helper as the list card)
+      try {
+        const pos = await getCurrentPosition({ timeout: 20000, enableHighAccuracy: true });
+        updates.status_change_lat = pos.latitude;
+        updates.status_change_lng = pos.longitude;
+        updates.location_lat = pos.latitude;
+        updates.location_lng = pos.longitude;
+        historyEntry.lat = pos.latitude;
+        historyEntry.lng = pos.longitude;
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?lat=${pos.latitude}&lon=${pos.longitude}&format=json`
+          );
+          const geo = await res.json();
+          if (geo?.display_name) {
+            updates.location_address = geo.display_name;
+            historyEntry.address = geo.display_name;
+          }
+        } catch { /* address is optional */ }
+      } catch (geoErr) {
+        console.warn("Geolocation failed:", geoErr);
+      }
+
+      updates.status_history = [...(editActivity.status_history || []), historyEntry];
+
       if (newStatus === "in_progress" && !editActivity.start_time) updates.start_time = now;
-      if (newStatus === "completed") updates.end_time = now;
+      if (newStatus === "completed") {
+        updates.end_time = now;
+        if (!editActivity.start_time) {
+          const startedAt = [...((editActivity.status_history as any[]) || [])]
+            .reverse()
+            .find((h: any) => h?.status === "in_progress")?.at;
+          if (startedAt) updates.start_time = startedAt;
+        }
+      }
+
+      // Travel effort measured at check-in: from the previous activity's
+      // check-out, or the day's attendance check-in for the first activity.
+      if (newStatus === "in_progress" && updates.status_change_lat != null) {
+        try {
+          const travel = await computeTravelForCheckIn({
+            userId: (editActivity as any).user_id,
+            activityId: editActivity.id,
+            activityDate: editActivity.activity_date,
+            checkInAt: now,
+            lat: updates.status_change_lat,
+            lng: updates.status_change_lng,
+          });
+          if (travel) Object.assign(updates, travel);
+        } catch (e) {
+          console.warn("travel effort calculation failed", e);
+        }
+      }
+
       await updateActivity(editActivity.id, updates);
       setStatus(newStatus);
       toast.success(`Marked as ${STATUS_LABELS[newStatus] || newStatus}`);
