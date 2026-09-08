@@ -190,7 +190,7 @@ export const useEffectiveLeavePolicy = (leaveTypeId: string) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return null;
 
-      const { data, error } = await supabase.rpc('get_leave_date_constraints', {
+      const { data, error } = await supabase.rpc('get_leave_date_constraints' as any, {
         p_user_id: user.id,
         p_leave_type_id: leaveTypeId,
       });
@@ -244,7 +244,7 @@ export const validateLeaveRequestRPC = async (
   endDate: string,
   isHalfDay: boolean = false
 ): Promise<ValidationResult> => {
-  const { data, error } = await supabase.rpc('validate_leave_request', {
+  const { data, error } = await supabase.rpc('validate_leave_request' as any, {
     p_user_id: userId,
     p_leave_type_id: leaveTypeId,
     p_start_date: startDate,
