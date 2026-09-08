@@ -146,7 +146,7 @@ export function useAttendance(userId: string | undefined) {
     if (!userId) return;
     
     let location = data?.location || null;
-    if (!location) {
+    if (!location && !data?.skipLocation) {
       try {
         location = await getCurrentPosition();
       } catch {}
@@ -198,7 +198,7 @@ export function useAttendance(userId: string | undefined) {
     if (!userId || !todayRecord) return;
     
     let location = data?.location || null;
-    if (!location) {
+    if (!location && !data?.skipLocation) {
       try {
         location = await getCurrentPosition();
       } catch {}
