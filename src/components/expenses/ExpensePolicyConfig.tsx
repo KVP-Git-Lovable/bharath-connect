@@ -295,7 +295,7 @@ export default function ExpensePolicyConfig() {
             <Select value={config.ta_type} onValueChange={(v: any) => setConfig({ ...config, ta_type: v })}>
               <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="from_gps">From GPS Tracking</SelectItem>
+                <SelectItem value="from_gps">Variable Amount</SelectItem>
                 <SelectItem value="fixed">Fixed Amount</SelectItem>
               </SelectContent>
             </Select>

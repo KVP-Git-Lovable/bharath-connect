@@ -194,7 +194,7 @@ export default function ExpenseGroupsInline({ field, groups, reload }: Props) {
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="fixed">Fixed Amount</SelectItem>
-                      <SelectItem value="from_gps">From GPS Tracking</SelectItem>
+                      <SelectItem value="from_gps">Variable Amount</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
