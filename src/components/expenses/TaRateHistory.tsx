@@ -74,12 +74,12 @@ export default function TaRateHistory({ onCurrentRateChange }: { onCurrentRateCh
   const today = format(new Date(), "yyyy-MM-dd");
 
   return (
-    <div className="space-y-3 rounded-md border p-3">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 rounded-md border border-border/70 bg-card p-4 shadow-card sm:p-5">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <p className="flex items-center gap-1.5 text-xs font-semibold">
           <History className="h-3.5 w-3.5" /> Per KM Rate History
         </p>
-        <Badge variant="secondary" className="text-[11px]">Current: ₹{currentRate}/km</Badge>
+        <Badge variant="secondary" className="w-fit text-[11px]">Current: ₹{currentRate}/km</Badge>
       </div>
       <p className="text-[11px] text-muted-foreground">
         Each activity and expense is costed with the rate that was effective on its own date, so changing the rate never
@@ -89,7 +89,7 @@ export default function TaRateHistory({ onCurrentRateChange }: { onCurrentRateCh
       {loading ? (
         <div className="flex justify-center py-4"><Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /></div>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto rounded-md border border-border/60">
           <Table>
             <TableHeader>
               <TableRow>
@@ -127,7 +127,7 @@ export default function TaRateHistory({ onCurrentRateChange }: { onCurrentRateCh
         </div>
       )}
 
-      <div className="grid gap-2 sm:grid-cols-[140px_170px_1fr_auto] sm:items-end">
+      <div className="grid gap-3 border-t border-border/60 pt-4 sm:grid-cols-2 lg:grid-cols-[minmax(140px,0.7fr)_minmax(170px,0.8fr)_minmax(240px,1.5fr)_auto] lg:items-end">
         <div className="space-y-1">
           <Label className="text-xs">New Rate (₹/km)</Label>
           <Input type="number" min="0" step="0.5" value={rate} onChange={(e) => setRate(e.target.value)} placeholder="e.g. 9" />
@@ -140,7 +140,7 @@ export default function TaRateHistory({ onCurrentRateChange }: { onCurrentRateCh
           <Label className="text-xs">Note (optional)</Label>
           <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Reason for revision" />
         </div>
-        <Button onClick={addRate} disabled={saving} className="h-10">
+        <Button onClick={addRate} disabled={saving} className="h-10 w-full lg:w-auto">
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Plus className="h-4 w-4 mr-1" />Add Rate</>}
         </Button>
       </div>

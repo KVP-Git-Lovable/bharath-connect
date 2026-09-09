@@ -28,13 +28,13 @@ const OverrideTable = React.memo<Props>(({ field, overrides, defaultAmount, unit
   const excludeIds = overrides.map((o) => o.ref_id);
   const label = field === "ta" ? "TA" : "DA";
   return (
-    <div className="space-y-3 mt-3">
+    <div className="mt-4 space-y-4 rounded-md border border-border/70 bg-muted/20 p-4">
       <p className="text-xs text-muted-foreground">
         Default: <span className="font-semibold text-foreground">₹{defaultAmount}{unitLabel ? ` ${unitLabel}` : ""}</span> for users not listed below
       </p>
 
       {overrides.length > 0 && (
-        <div className="rounded-md border overflow-auto">
+        <div className="overflow-auto rounded-md border border-border/70 bg-card">
           <Table>
             <TableHeader>
               <TableRow>
@@ -69,7 +69,7 @@ const OverrideTable = React.memo<Props>(({ field, overrides, defaultAmount, unit
         </div>
       )}
 
-      <div className="flex items-center gap-2 flex-wrap">
+      <div className="flex flex-wrap items-center gap-2 border-t border-border/60 pt-3">
         <MultiProfileSelector excludeIds={excludeIds}
           onAdd={(s) => s.forEach((x) => onAdd("user", x.id, x.name))} label="Add Users" />
         <MultiProfileSelector excludeIds={excludeIds}
@@ -77,7 +77,7 @@ const OverrideTable = React.memo<Props>(({ field, overrides, defaultAmount, unit
       </div>
 
       {overrides.length === 0 && (
-        <p className="text-xs text-muted-foreground text-center py-2">
+        <p className="py-3 text-center text-xs text-muted-foreground">
           No custom {label} overrides yet. Add users or teams above.
         </p>
       )}
