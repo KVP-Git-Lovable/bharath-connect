@@ -4,4 +4,4 @@
 - [x] Fix all typecheck build errors
   - [x] Added missing backend schema: `list_views` table + `activity_events` travel/manual-distance columns
   - [x] Edge function TS errors (unknown catch types, client generics, PDF buffer, magic-link API)
-- [ ] Modernize `/admin/expenses` UI only, remove duplicate navigation, and preserve all expense behavior
+- [x] Modernize `/admin/expenses` UI only, remove duplicate navigation, and preserve all expense behavior

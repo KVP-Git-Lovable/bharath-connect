@@ -239,9 +239,9 @@ export default function TeamExpenseSummary() {
 
   const statusBadge = (status: string) => {
     switch (status) {
-      case 'approved': return <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"><CheckCircle2 className="h-3 w-3 mr-1" />Approved</Badge>;
+      case 'approved': return <Badge className="bg-success/10 text-success hover:bg-success/15"><CheckCircle2 className="h-3 w-3 mr-1" />Approved</Badge>;
       case 'rejected': return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Rejected</Badge>;
-      default: return <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"><Clock className="h-3 w-3 mr-1" />Pending</Badge>;
+      default: return <Badge className="bg-warning/10 text-warning hover:bg-warning/15"><Clock className="h-3 w-3 mr-1" />Pending</Badge>;
     }
   };
 
@@ -376,7 +376,7 @@ export default function TeamExpenseSummary() {
 
       {/* Rejection Reason View */}
       {rejectionView && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setRejectionView(null)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/50" onClick={() => setRejectionView(null)}>
           <Card className="max-w-sm mx-4" onClick={e => e.stopPropagation()}>
             <CardContent className="p-4">
               <p className="font-semibold text-destructive mb-2">Rejection Reason</p>
