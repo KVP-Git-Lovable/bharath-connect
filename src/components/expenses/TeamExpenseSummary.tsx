@@ -2,8 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Check, X, Clock, Loader2, IndianRupee, CheckCircle2, XCircle, Eye, ChevronLeft, ChevronRight, Users, Car, Utensils, Receipt } from 'lucide-react';
+import { Check, X, Clock, Loader2, IndianRupee, CheckCircle2, XCircle, Eye, ChevronLeft, ChevronRight, Users, Car, Utensils, Receipt, ChartNoAxesColumnIncreasing, CircleDollarSign } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useDaApplicable } from '@/hooks/useDaApplicable';
 import { format, subMonths, addMonths, parse, endOfMonth } from 'date-fns';
@@ -219,6 +218,8 @@ export default function TeamExpenseSummary() {
   const pendingExpenses = expenses.filter(e => e.status === 'submitted' || e.status === 'pending');
   const totalPending = pendingExpenses.reduce((s, e) => s + Number(e.amount), 0);
   const totalRejected = expenses.filter(e => e.status === 'rejected').reduce((s, e) => s + Number(e.amount), 0);
+  const approvedExpenses = expenses.filter(e => e.status === 'approved');
+  const rejectedExpenses = expenses.filter(e => e.status === 'rejected');
 
   // Group by user for overview
   const expensesByUser = useMemo(() => {
@@ -245,217 +246,127 @@ export default function TeamExpenseSummary() {
   };
 
   return (
-    <div className="space-y-4">
-      {/* Shared Month Navigation */}
-      <div className="flex items-center justify-center gap-3">
-        <Button variant="outline" size="icon" className="h-8 w-8" onClick={goToPrevMonth}>
-          <ChevronLeft className="h-4 w-4" />
-        </Button>
-        <span className="text-sm font-semibold min-w-[140px] text-center">{monthLabel}</span>
-        <Button
-          variant="outline"
-          size="icon"
-          className="h-8 w-8"
-          onClick={goToNextMonth}
-          disabled={addMonths(currentMonthDate, 1) > new Date()}
-        >
-          <ChevronRight className="h-4 w-4" />
-        </Button>
+    <div className="space-y-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase text-info">Finance overview</p>
+          <h2 className="text-lg font-bold sm:text-xl">Team expenses</h2>
+        </div>
+        <div className="flex items-center justify-between gap-2 rounded-sm border bg-card p-1 shadow-card sm:justify-center">
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={goToPrevMonth} aria-label="Previous month">
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <span className="min-w-[132px] text-center text-sm font-semibold">{monthLabel}</span>
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={goToNextMonth} disabled={addMonths(currentMonthDate, 1) > new Date()} aria-label="Next month">
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
-      <Tabs defaultValue="approvals" className="w-full">
-        <TabsList className="w-full">
-          <TabsTrigger value="approvals" className="flex-1">Approvals</TabsTrigger>
-          <TabsTrigger value="overview" className="flex-1">Overview</TabsTrigger>
-        </TabsList>
-
-        {/* ═══ APPROVALS TAB ═══ */}
-        <TabsContent value="approvals">
-          {loading ? (
-            <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
-          ) : pendingExpenses.length === 0 && expenses.length === 0 ? (
-            <Card><CardContent className="py-8 text-center text-muted-foreground">No team expenses for this month.</CardContent></Card>
-          ) : (
-            <div className="space-y-3 mt-2">
-              {pendingExpenses.length > 0 && (
-                <Card className="border-yellow-200 bg-yellow-50 dark:border-yellow-900 dark:bg-yellow-950/30">
-                  <CardContent className="p-3 text-center">
-                    <p className="text-sm font-medium text-yellow-800 dark:text-yellow-400">
-                      {pendingExpenses.length} expense{pendingExpenses.length !== 1 ? 's' : ''} awaiting your approval
-                    </p>
-                  </CardContent>
-                </Card>
-              )}
-
-              {expenses.map(exp => (
-                <Card key={exp.id}>
-                  <CardContent className="p-4 space-y-3">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <p className="font-semibold">{exp.employee_name}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          {exp.category === 'Other' ? exp.custom_category : exp.category} • {format(new Date(exp.expense_date), 'dd MMM yyyy')}
-                        </p>
-                      </div>
-                      <div className="flex flex-col items-end gap-1">
-                        <span className="font-bold flex items-center"><IndianRupee className="h-3 w-3" />{Number(exp.amount).toFixed(0)}</span>
-                        {statusBadge(exp.status)}
-                      </div>
-                    </div>
-
-                    {exp.description && <p className="text-sm text-muted-foreground">{exp.description}</p>}
-
-                    {(exp.status === 'pending' || exp.status === 'submitted') && (
-                      <div className="flex gap-2 pt-1">
-                        <Button size="sm" className="flex-1 bg-green-600 hover:bg-green-700" disabled={actionLoading === exp.id}
-                          onClick={() => handleApprove(exp.id)}>
-                          {actionLoading === exp.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4 mr-1" />}Approve
-                        </Button>
-                        <Button size="sm" variant="destructive" className="flex-1" disabled={actionLoading === exp.id}
-                          onClick={() => handleRejectClick(exp.id)}>
-                          <X className="h-4 w-4 mr-1" />Reject
-                        </Button>
-                      </div>
-                    )}
-
-                    <div className="flex gap-2">
-                      {exp.status === 'rejected' && exp.rejection_reason && (
-                        <Button variant="ghost" size="sm" onClick={() => setRejectionView(exp.rejection_reason)}>
-                          <Eye className="h-3 w-3 mr-1" />View Reason
-                        </Button>
-                      )}
-                      {exp.bill_url && (
-                        <Button variant="ghost" size="sm" onClick={() => window.open(exp.bill_url!, '_blank')}>
-                          <Eye className="h-3 w-3 mr-1" />Receipt
-                        </Button>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </TabsContent>
-
-        {/* ═══ OVERVIEW TAB ═══ */}
-        <TabsContent value="overview">
-          {loading ? (
-            <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
-          ) : (
-            <div className="space-y-4 mt-2">
-              {/* Team-wide TA/DA/Additional Totals */}
-              {(() => {
-                const teamTA = memberSummaries.reduce((s, m) => s + m.ta, 0);
-                const teamDA = daApplicable ? memberSummaries.reduce((s, m) => s + m.da, 0) : 0;
-                const teamAdd = memberSummaries.reduce((s, m) => s + m.additional, 0);
-                const teamTotal = teamTA + teamDA + teamAdd;
-                return (
-                  <div className="grid grid-cols-2 gap-3">
-                    <Card>
-                      <CardContent className="p-4 text-center">
-                        <p className="text-xs text-blue-600 dark:text-blue-400 flex items-center justify-center gap-1"><Car className="h-3 w-3" />Travel (TA)</p>
-                        <p className="text-lg font-bold text-blue-600 dark:text-blue-400">₹{teamTA.toFixed(0)}</p>
-                        <p className="text-xs text-muted-foreground">Team total</p>
-                      </CardContent>
-                    </Card>
-                    {daApplicable && (
-                      <Card>
-                        <CardContent className="p-4 text-center">
-                          <p className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center justify-center gap-1"><Utensils className="h-3 w-3" />Daily (DA)</p>
-                          <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">₹{teamDA.toFixed(0)}</p>
-                          <p className="text-xs text-muted-foreground">Team total</p>
-                        </CardContent>
-                      </Card>
-                    )}
-                    <Card>
-                      <CardContent className="p-4 text-center">
-                        <p className="text-xs text-purple-600 dark:text-purple-400 flex items-center justify-center gap-1"><Receipt className="h-3 w-3" />Additional</p>
-                        <p className="text-lg font-bold text-purple-600 dark:text-purple-400">₹{teamAdd.toFixed(0)}</p>
-                        <p className="text-xs text-muted-foreground">{expenses.length} claims</p>
-                      </CardContent>
-                    </Card>
-                    <Card>
-                      <CardContent className="p-4 text-center">
-                        <p className="text-xs text-muted-foreground">Grand Total</p>
-                        <p className="text-lg font-bold">₹{teamTotal.toFixed(0)}</p>
-                        <p className="text-xs text-muted-foreground">{daApplicable ? "TA + DA + Add" : "TA + Add"}</p>
-                      </CardContent>
-                    </Card>
-                  </div>
-                );
-              })()}
-
-              {/* Approval Status Cards (additional expenses) */}
-              <div className="grid grid-cols-3 gap-3">
-                <Card>
-                  <CardContent className="p-3 text-center">
-                    <p className="text-xs text-green-600 dark:text-green-400">Approved</p>
-                    <p className="text-base font-bold text-green-600 dark:text-green-400">₹{totalApproved.toFixed(0)}</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="p-3 text-center">
-                    <p className="text-xs text-yellow-600 dark:text-yellow-400">Pending</p>
-                    <p className="text-base font-bold text-yellow-600 dark:text-yellow-400">₹{totalPending.toFixed(0)}</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="p-3 text-center">
-                    <p className="text-xs text-destructive">Rejected</p>
-                    <p className="text-base font-bold text-destructive">₹{totalRejected.toFixed(0)}</p>
-                  </CardContent>
-                </Card>
+      {loading ? (
+        <div className="flex justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
+      ) : (() => {
+        const teamTA = memberSummaries.reduce((s, m) => s + m.ta, 0);
+        const teamDA = daApplicable ? memberSummaries.reduce((s, m) => s + m.da, 0) : 0;
+        const teamAdd = memberSummaries.reduce((s, m) => s + m.additional, 0);
+        const teamTotal = teamTA + teamDA + teamAdd;
+        const expenseShares = [
+          { label: 'Travel (TA)', value: teamTA, color: 'bg-info' },
+          ...(daApplicable ? [{ label: 'Daily (DA)', value: teamDA, color: 'bg-success' }] : []),
+          { label: 'Additional', value: teamAdd, color: 'bg-accent' },
+        ];
+        const approvalShares = [
+          { label: 'Approved', value: totalApproved, count: approvedExpenses.length, color: 'bg-success' },
+          { label: 'Pending', value: totalPending, count: pendingExpenses.length, color: 'bg-warning' },
+          { label: 'Rejected', value: totalRejected, count: rejectedExpenses.length, color: 'bg-destructive' },
+        ];
+        const percent = (value: number, total: number) => total > 0 ? Math.round((value / total) * 100) : 0;
+        const renderExpense = (exp: TeamExpense) => (
+          <Card key={exp.id} className="rounded-sm shadow-card transition-shadow hover:shadow-elevated">
+            <CardContent className="space-y-3 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate font-semibold">{exp.employee_name}</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {exp.category === 'Other' ? exp.custom_category : exp.category} • {format(new Date(exp.expense_date), 'dd MMM yyyy')}
+                  </p>
+                </div>
+                <div className="flex shrink-0 flex-col items-end gap-1">
+                  <span className="flex items-center font-bold"><IndianRupee className="h-3 w-3" />{Number(exp.amount).toFixed(0)}</span>
+                  {statusBadge(exp.status)}
+                </div>
               </div>
-
-              {/* Report Generator */}
-              <ExpenseReportGenerator isAdmin={isAdmin} />
-
-              {/* Per-member TA/DA/Additional breakdown */}
-              <div>
-                <h3 className="text-sm font-semibold mb-2 flex items-center gap-1"><Users className="h-4 w-4" />Expenses by Team Member</h3>
-                {summariesLoading ? (
-                  <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
-                ) : memberSummaries.length === 0 ? (
-                  <Card><CardContent className="py-6 text-center text-muted-foreground text-sm">No team members found.</CardContent></Card>
-                ) : (
-                  <div className="space-y-2">
-                    {memberSummaries.map((u) => (
-                      <Card key={u.user_id}>
-                        <CardContent className="p-3">
-                          <div className="flex items-center justify-between mb-2">
-                            <div>
-                              <p className="font-semibold text-sm">{u.name}</p>
-                              <p className="text-[11px] text-muted-foreground">{u.present_days} present · {u.total_km.toFixed(1)} km</p>
-                            </div>
-                            <span className="font-bold text-sm">₹{(daApplicable ? u.total : u.total - u.da).toFixed(0)}</span>
-                          </div>
-                          <div className={`grid ${daApplicable ? 'grid-cols-3' : 'grid-cols-2'} gap-2 text-xs`}>
-                            <div className="rounded bg-blue-50 dark:bg-blue-950/30 p-1.5 text-center">
-                              <p className="text-[10px] text-blue-600 dark:text-blue-400">TA</p>
-                              <p className="font-semibold text-blue-700 dark:text-blue-300">₹{u.ta.toFixed(0)}</p>
-                            </div>
-                            {daApplicable && (
-                              <div className="rounded bg-emerald-50 dark:bg-emerald-950/30 p-1.5 text-center">
-                                <p className="text-[10px] text-emerald-600 dark:text-emerald-400">DA</p>
-                                <p className="font-semibold text-emerald-700 dark:text-emerald-300">₹{u.da.toFixed(0)}</p>
-                              </div>
-                            )}
-                            <div className="rounded bg-purple-50 dark:bg-purple-950/30 p-1.5 text-center">
-                              <p className="text-[10px] text-purple-600 dark:text-purple-400">Add</p>
-                              <p className="font-semibold text-purple-700 dark:text-purple-300">₹{u.additional.toFixed(0)}</p>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
+              {exp.description && <p className="text-sm text-muted-foreground">{exp.description}</p>}
+              {(exp.status === 'pending' || exp.status === 'submitted') && (
+                <div className="flex gap-2 pt-1">
+                  <Button size="sm" className="flex-1 bg-success text-success-foreground hover:bg-success/90" disabled={actionLoading === exp.id} onClick={() => handleApprove(exp.id)}>
+                    {actionLoading === exp.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="mr-1 h-4 w-4" />}Approve
+                  </Button>
+                  <Button size="sm" variant="destructive" className="flex-1" disabled={actionLoading === exp.id} onClick={() => handleRejectClick(exp.id)}>
+                    <X className="mr-1 h-4 w-4" />Reject
+                  </Button>
+                </div>
+              )}
+              <div className="flex flex-wrap gap-2">
+                {exp.status === 'rejected' && exp.rejection_reason && (
+                  <Button variant="ghost" size="sm" onClick={() => setRejectionView(exp.rejection_reason)}><Eye className="mr-1 h-3 w-3" />View Reason</Button>
+                )}
+                {exp.bill_url && (
+                  <Button variant="ghost" size="sm" onClick={() => exp.bill_url && window.open(exp.bill_url, '_blank')}><Eye className="mr-1 h-3 w-3" />Receipt</Button>
                 )}
               </div>
-            </div>
+            </CardContent>
+          </Card>
+        );
 
-          )}
-        </TabsContent>
-      </Tabs>
+        return (
+          <div className="space-y-6">
+            <section aria-labelledby="expense-summary-heading">
+              <h3 id="expense-summary-heading" className="sr-only">Expense summary</h3>
+              <div className={`grid grid-cols-2 gap-3 ${daApplicable ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
+                <Card className="col-span-2 rounded-sm border-primary/15 bg-primary/5 shadow-card lg:col-span-1">
+                  <CardContent className="flex h-full min-h-[116px] flex-col justify-between p-4">
+                    <div className="flex items-center justify-between"><p className="text-xs font-semibold uppercase text-primary">Grand Total</p><CircleDollarSign className="h-5 w-5 text-primary" /></div>
+                    <p className="text-2xl font-bold">₹{teamTotal.toFixed(0)}</p>
+                    <p className="text-xs text-muted-foreground">{daApplicable ? 'TA + DA + Additional' : 'TA + Additional'}</p>
+                  </CardContent>
+                </Card>
+                <Card className="rounded-sm border-info/20 bg-info/10 shadow-card"><CardContent className="flex min-h-[116px] flex-col justify-between p-4"><div className="flex items-center justify-between"><p className="text-xs font-semibold text-info">Travel (TA)</p><Car className="h-5 w-5 text-info" /></div><p className="text-xl font-bold text-info">₹{teamTA.toFixed(0)}</p><p className="text-xs text-muted-foreground">Team total</p></CardContent></Card>
+                {daApplicable && <Card className="rounded-sm border-success/20 bg-success/10 shadow-card"><CardContent className="flex min-h-[116px] flex-col justify-between p-4"><div className="flex items-center justify-between"><p className="text-xs font-semibold text-success">Daily (DA)</p><Utensils className="h-5 w-5 text-success" /></div><p className="text-xl font-bold text-success">₹{teamDA.toFixed(0)}</p><p className="text-xs text-muted-foreground">Team total</p></CardContent></Card>}
+                <Card className="rounded-sm border-accent/25 bg-accent/10 shadow-card"><CardContent className="flex min-h-[116px] flex-col justify-between p-4"><div className="flex items-center justify-between"><p className="text-xs font-semibold text-accent">Additional</p><Receipt className="h-5 w-5 text-accent" /></div><p className="text-xl font-bold text-accent">₹{teamAdd.toFixed(0)}</p><p className="text-xs text-muted-foreground">{expenses.length} claims</p></CardContent></Card>
+              </div>
+            </section>
+
+            <section aria-labelledby="approval-status-heading">
+              <div className="mb-3 flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-success" /><h3 id="approval-status-heading" className="text-sm font-semibold">Approval Status</h3></div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                {approvalShares.map((item) => (
+                  <Card key={item.label} className="rounded-sm shadow-card"><CardContent className="p-4"><div className="flex items-center justify-between"><div><p className="text-xs text-muted-foreground">{item.label}</p><p className="mt-1 text-lg font-bold">₹{item.value.toFixed(0)}</p><p className="text-xs text-muted-foreground">{item.count} claim{item.count === 1 ? '' : 's'}</p></div><span className={`h-9 w-1 rounded-full ${item.color}`} /></div></CardContent></Card>
+                ))}
+              </div>
+            </section>
+
+            <section className="grid gap-4 lg:grid-cols-2" aria-label="Expense insights">
+              <Card className="rounded-sm shadow-card"><CardContent className="p-4 sm:p-5"><div className="mb-4 flex items-center gap-2"><ChartNoAxesColumnIncreasing className="h-4 w-4 text-info" /><h3 className="text-sm font-semibold">Expense Breakdown</h3></div><div className="space-y-4">{expenseShares.map((item) => { const share = percent(item.value, teamTotal); return <div key={item.label}><div className="mb-1.5 flex justify-between text-xs"><span>{item.label}</span><span className="font-semibold">{share}%</span></div><div className="h-2 overflow-hidden rounded-full bg-muted"><div className={`h-full rounded-full transition-[width] duration-300 motion-reduce:transition-none ${item.color}`} style={{ width: `${share}%` }} /></div></div>; })}</div></CardContent></Card>
+              <Card className="rounded-sm shadow-card"><CardContent className="p-4 sm:p-5"><div className="mb-4 flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-success" /><h3 className="text-sm font-semibold">Approval Progress</h3></div><div className="space-y-4">{approvalShares.map((item) => { const share = percent(item.value, totalSubmitted); return <div key={item.label}><div className="mb-1.5 flex justify-between text-xs"><span>{item.label}</span><span className="font-semibold">{share}%</span></div><div className="h-2 overflow-hidden rounded-full bg-muted"><div className={`h-full rounded-full transition-[width] duration-300 motion-reduce:transition-none ${item.color}`} style={{ width: `${share}%` }} /></div></div>; })}</div></CardContent></Card>
+            </section>
+
+            <section className="rounded-sm border bg-card p-4 shadow-card sm:p-5"><ExpenseReportGenerator isAdmin={isAdmin} /></section>
+
+            <section aria-labelledby="pending-approvals-heading">
+              <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs font-semibold uppercase text-warning">Action required</p><h3 id="pending-approvals-heading" className="text-base font-bold">Pending Approvals</h3></div><p className="text-xs text-muted-foreground">{pendingExpenses.length} expense{pendingExpenses.length === 1 ? '' : 's'} awaiting review</p></div>
+              {pendingExpenses.length === 0 ? <Card className="rounded-sm border-dashed shadow-none"><CardContent className="py-8 text-center text-sm text-muted-foreground">No pending approvals for this month.</CardContent></Card> : <div className="grid gap-3 lg:grid-cols-2">{pendingExpenses.map(renderExpense)}</div>}
+            </section>
+
+            {(approvedExpenses.length > 0 || rejectedExpenses.length > 0) && <section aria-labelledby="recent-activity-heading"><h3 id="recent-activity-heading" className="mb-3 text-sm font-semibold">Recent Expense Activity</h3><div className="grid gap-3 lg:grid-cols-2">{[...approvedExpenses, ...rejectedExpenses].map(renderExpense)}</div></section>}
+
+            <section aria-labelledby="team-expenses-heading">
+              <div className="mb-3 flex items-center gap-2"><Users className="h-4 w-4 text-info" /><h3 id="team-expenses-heading" className="text-sm font-semibold">Expenses by Team Member</h3></div>
+              {summariesLoading ? <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div> : memberSummaries.length === 0 ? <Card className="rounded-sm border-dashed shadow-none"><CardContent className="py-8 text-center text-sm text-muted-foreground">No team members found.</CardContent></Card> : <div className="grid gap-3 lg:grid-cols-2">{memberSummaries.map((u) => <Card key={u.user_id} className="rounded-sm shadow-card"><CardContent className="p-4"><div className="mb-3 flex items-center justify-between gap-3"><div><p className="text-sm font-semibold">{u.name}</p><p className="text-xs text-muted-foreground">{u.present_days} present · {u.total_km.toFixed(1)} km</p></div><span className="text-sm font-bold">₹{(daApplicable ? u.total : u.total - u.da).toFixed(0)}</span></div><div className={`grid ${daApplicable ? 'grid-cols-3' : 'grid-cols-2'} gap-2 text-xs`}><div className="rounded-sm bg-info/10 p-2 text-center text-info"><p className="text-[10px]">TA</p><p className="font-semibold">₹{u.ta.toFixed(0)}</p></div>{daApplicable && <div className="rounded-sm bg-success/10 p-2 text-center text-success"><p className="text-[10px]">DA</p><p className="font-semibold">₹{u.da.toFixed(0)}</p></div>}<div className="rounded-sm bg-accent/10 p-2 text-center text-accent"><p className="text-[10px]">Add</p><p className="font-semibold">₹{u.additional.toFixed(0)}</p></div></div></CardContent></Card>)}</div>}
+            </section>
+          </div>
+        );
+      })()}
 
       <RejectionReasonDialog
         isOpen={showRejectionDialog}
