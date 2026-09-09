@@ -120,13 +120,13 @@ export default function ExpenseGroupsInline({ field, groups, reload }: Props) {
     : allUsers;
 
   return (
-    <div className="mt-4 pt-4 border-t space-y-2">
-      <div className="flex items-center justify-between">
+    <div className="mt-4 space-y-3 border-t border-border/70 pt-4">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
           <Users className="h-3.5 w-3.5" />
           {field === "ta" ? "TA" : "DA"} Group Overrides
         </p>
-        <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={openCreate}>
+        <Button variant="outline" size="sm" className="h-8 w-full gap-1 text-xs sm:w-auto" onClick={openCreate}>
           <Plus className="h-3 w-3" />Create {field === "ta" ? "TA" : "DA"} Group
         </Button>
       </div>
@@ -134,7 +134,7 @@ export default function ExpenseGroupsInline({ field, groups, reload }: Props) {
       {filtered.length === 0 ? (
         <p className="text-xs text-muted-foreground text-center py-2">No {field === "ta" ? "TA" : "DA"} groups yet.</p>
       ) : (
-        <div className="rounded-md border overflow-auto">
+        <div className="overflow-auto rounded-md border border-border/70 bg-card">
           <Table>
             <TableHeader>
               <TableRow>
@@ -175,7 +175,7 @@ export default function ExpenseGroupsInline({ field, groups, reload }: Props) {
         </div>
       )}
 
-      <p className="text-[10px] text-muted-foreground">Priority: User Override → Group → Team → Global Default</p>
+      <p className="rounded-md bg-muted/40 px-3 py-2 text-[10px] text-muted-foreground">Priority: User Override → Group → Team → Global Default</p>
 
       {/* Group create/edit dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
