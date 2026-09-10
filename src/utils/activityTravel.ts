@@ -96,6 +96,47 @@ async function roadDistanceKm(a: { lat: number; lng: number }, b: { lat: number;
 }
 
 /**
+ * Distance actually travelled along the recorded GPS trail between two moments.
+ * Uses the same trajectory engine as Day Tracking so both surfaces agree.
+ * Returns null when the trail is too sparse to trust.
+ */
+async function gpsRouteDistanceKm(
+  userId: string,
+  dateStr: string,
+  fromIso: string,
+  toIso: string
+): Promise<number | null> {
+  try {
+    const { data, error } = await supabase
+      .from("gps_tracking")
+      .select("latitude, longitude, timestamp, accuracy, speed, heading")
+      .eq("user_id", userId)
+      .eq("date", dateStr)
+      .gte("timestamp", fromIso)
+      .lte("timestamp", toIso)
+      .order("timestamp", { ascending: true });
+    if (error) throw error;
+
+    const points: TrackPoint[] = (data || []).map((r: any) => ({
+      latitude: Number(r.latitude),
+      longitude: Number(r.longitude),
+      timestamp: r.timestamp as string,
+      accuracy: r.accuracy != null ? Number(r.accuracy) : null,
+      speed: r.speed != null ? Number(r.speed) : null,
+      heading: r.heading != null ? Number(r.heading) : null,
+    }));
+    if (points.length < 3) return null;
+
+    const result = processTrajectory(points);
+    if (result.points.length < 3) return null;
+    const km = Math.round(result.trackedDistanceKm * 100) / 100;
+    return km > 0 ? km : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Distance + time travelled to reach this activity's customer, measured from the
  * previous activity's check-out (or the day's attendance check-in for the first one).
  */
