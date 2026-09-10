@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { haversineMeters } from "@/utils/gpsDistance";
+import { haversineMeters, processTrajectory, type TrackPoint } from "@/utils/gpsDistance";
 
 export interface TravelComputation {
   travel_distance_km: number | null;
