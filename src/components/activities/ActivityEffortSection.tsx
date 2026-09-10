@@ -67,12 +67,15 @@ export default function ActivityEffortSection({
   const historyStart =
     [...((activity.status_history as any[]) || [])].reverse().find((h: any) => h?.status === "in_progress")?.at ||
     null;
-  // No check-in ever happened → there is no meeting duration to show.
-  const meetingStart = activity.start_time || (activity.end_time ? historyStart : null);
-  const meetingMins =
+  // A real check-in is required: prefer the recorded in-progress transition,
+  // otherwise the stamped start time. Never show 0 min for an activity that was
+  // completed straight away without ever being checked in.
+  const meetingStart = historyStart || activity.start_time || null;
+  const rawMins =
     meetingStart && activity.end_time
-      ? Math.max(0, Math.round((new Date(activity.end_time).getTime() - new Date(meetingStart).getTime()) / 60000))
+      ? Math.round((new Date(activity.end_time).getTime() - new Date(meetingStart).getTime()) / 60000)
       : null;
+  const meetingMins = rawMins != null && rawMins > 0 ? rawMins : historyStart && rawMins === 0 ? 0 : null;
 
   const prevLabel =
     activity.travel_from_type === "attendance"
