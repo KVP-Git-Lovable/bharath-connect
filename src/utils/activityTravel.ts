@@ -154,7 +154,12 @@ export async function computeTravelForCheckIn(params: {
   const origin = await findOrigin(userId, activityDate, activityId, checkInAt);
   if (!origin) return null;
 
-  const km = await roadDistanceKm({ lat: origin.lat, lng: origin.lng }, { lat: Number(lat), lng: Number(lng) });
+  // Prefer the route actually driven (recorded GPS trail); fall back to the
+  // point-to-point road distance when the trail is missing or too sparse.
+  const routeKm = await gpsRouteDistanceKm(userId, activityDate, origin.at, checkInAt);
+  const km =
+    routeKm ??
+    (await roadDistanceKm({ lat: origin.lat, lng: origin.lng }, { lat: Number(lat), lng: Number(lng) }));
   const mins = Math.max(
     0,
     Math.round((new Date(checkInAt).getTime() - new Date(origin.at).getTime()) / 60000)
