@@ -67,6 +67,7 @@ export default function ActivityEffortSection({
   const historyStart =
     [...((activity.status_history as any[]) || [])].reverse().find((h: any) => h?.status === "in_progress")?.at ||
     null;
+  // No check-in ever happened → there is no meeting duration to show.
   const meetingStart = activity.start_time || (activity.end_time ? historyStart : null);
   const meetingMins =
     meetingStart && activity.end_time
