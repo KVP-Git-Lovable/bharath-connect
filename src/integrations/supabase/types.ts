@@ -2679,7 +2679,6 @@ export type Database = {
           app_already_notifies: boolean
           description: string | null
           event_code: string
-          extra_receivers: string[]
           id: string
           is_active: boolean
           label: string
@@ -2692,7 +2691,6 @@ export type Database = {
           app_already_notifies?: boolean
           description?: string | null
           event_code: string
-          extra_receivers?: string[]
           id?: string
           is_active?: boolean
           label: string
@@ -2705,7 +2703,6 @@ export type Database = {
           app_already_notifies?: boolean
           description?: string | null
           event_code?: string
-          extra_receivers?: string[]
           id?: string
           is_active?: boolean
           label?: string
