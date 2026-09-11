@@ -6,10 +6,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
-import { Gauge, HelpCircle, IndianRupee, Loader2, Paperclip, Route, Timer, X } from "lucide-react";
+import { Gauge, HelpCircle, IndianRupee, Loader2, Paperclip, RefreshCw, Route, Timer, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   computeTravelForCheckIn,
+  explainMissingTravel,
   uploadTravelProof,
   TRAVEL_PROOF_BUCKET,
   type TravelProofEntry,
@@ -82,41 +83,80 @@ export default function ActivityEffortSection({
       : null;
   const meetingMins = rawMins != null && rawMins > 0 ? rawMins : historyStart && rawMins === 0 ? 0 : null;
 
-  // Self-heal: activities checked in before the travel fix have no travel
-  // values stored. Recompute once from the recorded check-in moment and save.
+  // Travel values shown here. Kept in local state so a recalculation shows
+  // immediately, even where the parent doesn't refetch (e.g. the edit form).
+  const [travel, setTravel] = useState({
+    km: activity.travel_distance_km != null ? Number(activity.travel_distance_km) : null,
+    mins: activity.travel_time_mins != null ? Number(activity.travel_time_mins) : null,
+    fromType: (activity.travel_from_type as string | null) ?? null,
+    fromActivityId: (activity.travel_from_activity_id as string | null) ?? null,
+  });
+  const [travelReason, setTravelReason] = useState<string | null>(null);
+  const [recalculating, setRecalculating] = useState(false);
+
+  const checkInEntry = [...((activity.status_history as any[]) || [])]
+    .reverse()
+    .find((h: any) => h?.status === "in_progress");
+  const checkInAt: string | null = checkInEntry?.at || activity.start_time || null;
+  const ownerId: string | undefined = (activity as any).user_id;
+
+  const recalculate = async () => {
+    if (!ownerId) return;
+    setRecalculating(true);
+    setTravelReason(null);
+    try {
+      const result = checkInAt
+        ? await computeTravelForCheckIn({
+            userId: ownerId,
+            activityId: activity.id,
+            activityDate: activity.activity_date,
+            checkInAt,
+            lat: checkInEntry?.lat ?? activity.status_change_lat ?? null,
+            lng: checkInEntry?.lng ?? activity.status_change_lng ?? null,
+          })
+        : null;
+      if (!result) {
+        setTravelReason(await explainMissingTravel({ userId: ownerId, activityDate: activity.activity_date, checkInAt }));
+        return;
+      }
+      setTravel({
+        km: result.travel_distance_km,
+        mins: result.travel_time_mins,
+        fromType: result.travel_from_type,
+        fromActivityId: result.travel_from_activity_id,
+      });
+      if (result.travel_distance_km == null) {
+        setTravelReason("Travel time is from the check-in times. Distance needs GPS points or check-in locations, and none were recorded for this trip.");
+      }
+      const { error } = await supabase.from("activity_events").update(result).eq("id", activity.id);
+      if (!error) onSaved?.();
+    } catch (e) {
+      console.warn("[ActivityEffortSection] travel recompute failed", e);
+      setTravelReason("Travel could not be calculated. Tap Recalculate to try again.");
+    } finally {
+      setRecalculating(false);
+    }
+  };
+
+  // Self-heal once: activities checked in before the travel fix have no
+  // travel values stored.
   const healedRef = useRef(false);
   useEffect(() => {
     if (healedRef.current) return;
-    if (activity.travel_time_mins != null || activity.travel_from_type != null) return;
-    const checkInEntry = [...((activity.status_history as any[]) || [])]
-      .reverse()
-      .find((h: any) => h?.status === "in_progress");
-    const checkInAt = checkInEntry?.at || activity.start_time;
-    if (!checkInAt || !(activity as any).user_id) return;
     healedRef.current = true;
-    (async () => {
-      try {
-        const travel = await computeTravelForCheckIn({
-          userId: (activity as any).user_id,
-          activityId: activity.id,
-          activityDate: activity.activity_date,
-          checkInAt,
-          lat: checkInEntry?.lat ?? activity.status_change_lat ?? null,
-          lng: checkInEntry?.lng ?? activity.status_change_lng ?? null,
-        });
-        if (!travel) return;
-        const { error } = await supabase.from("activity_events").update(travel).eq("id", activity.id);
-        if (!error) onSaved?.();
-      } catch (e) {
-        console.warn("[ActivityEffortSection] travel recompute failed", e);
-      }
-    })();
+    if (activity.travel_time_mins != null || activity.travel_from_type != null) return;
+    if (!ownerId) return;
+    if (!checkInAt) {
+      setTravelReason("Travel is measured when the activity is checked in.");
+      return;
+    }
+    void recalculate();
   }, [activity.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const prevLabel =
-    activity.travel_from_type === "attendance"
+    travel.fromType === "attendance"
       ? "Attendance (day check-in)"
-      : activity.travel_from_activity_id
+      : travel.fromActivityId
         ? "Previous activity"
         : "Not available";
 
@@ -172,11 +212,7 @@ export default function ActivityEffortSection({
   };
 
   const effectiveKm =
-    activity.manual_distance_km != null
-      ? Number(activity.manual_distance_km)
-      : activity.travel_distance_km != null
-        ? Number(activity.travel_distance_km)
-        : null;
+    activity.manual_distance_km != null ? Number(activity.manual_distance_km) : travel.km;
   const perKmRate = rateFor(activity.activity_date);
   const travelCost = effectiveKm != null ? effectiveKm * perKmRate : null;
 
@@ -189,13 +225,13 @@ export default function ActivityEffortSection({
           icon={<Route className="h-3 w-3" />}
           label="Distance travelled"
           help="From the previous activity, in KM"
-          value={activity.travel_distance_km != null ? `${activity.travel_distance_km} km` : "—"}
+          value={recalculating ? "…" : travel.km != null ? `${travel.km} km` : "—"}
         />
         <Field
           icon={<Timer className="h-3 w-3" />}
           label="Travel time"
           help="From the previous activity"
-          value={activity.travel_time_mins != null ? `${activity.travel_time_mins} min` : "—"}
+          value={recalculating ? "…" : travel.mins != null ? `${travel.mins} min` : "—"}
         />
         <Field
           icon={<Timer className="h-3 w-3" />}
@@ -214,19 +250,33 @@ export default function ActivityEffortSection({
             Previous activity considered
             <Help text="The record used as the starting point for the travel calculation" />
           </p>
-          {activity.travel_from_activity_id ? (
+          {travel.fromActivityId ? (
             <button
               type="button"
               className="mt-0.5 block text-left text-sm font-semibold text-primary underline underline-offset-2"
               onClick={() => {
                 onNavigateAway?.();
-                navigate(`/activities?id=${activity.travel_from_activity_id}`);
+                navigate(`/activities?id=${travel.fromActivityId}`);
               }}
             >
               {prevLabel}
             </button>
           ) : (
             <p className="mt-0.5 text-sm font-semibold">{prevLabel}</p>
+          )}
+          {travelReason && <p className="mt-1 text-xs text-muted-foreground">{travelReason}</p>}
+          {checkInAt && ownerId && (travel.km == null || travel.mins == null) && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="mt-2 h-7 text-xs"
+              onClick={recalculate}
+              disabled={recalculating}
+            >
+              {recalculating ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <RefreshCw className="h-3 w-3 mr-1" />}
+              Recalculate
+            </Button>
           )}
         </div>
       </div>

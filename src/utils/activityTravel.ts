@@ -224,6 +224,35 @@ export async function computeTravelForCheckIn(params: {
   };
 }
 
+/**
+ * Plain-language reason why travel could not be measured for an activity,
+ * shown in the Effort section instead of a silent blank.
+ */
+export async function explainMissingTravel(params: {
+  userId: string;
+  activityDate: string;
+  checkInAt: string | null;
+}): Promise<string> {
+  const { userId, activityDate, checkInAt } = params;
+  if (!checkInAt) return "Travel is measured when the activity is checked in.";
+  const fmt = (iso: string) =>
+    new Date(iso).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true });
+  const { data: att, error } = await supabase
+    .from("attendance")
+    .select("check_in_time")
+    .eq("user_id", userId)
+    .eq("date", activityDate)
+    .maybeSingle();
+  if (error) return "Could not read the day check-in for this activity's owner.";
+  if (!att?.check_in_time) {
+    return "No day check-in was recorded on this date, so there is no starting point. Start the day before checking in to an activity.";
+  }
+  if (new Date(att.check_in_time).getTime() > new Date(checkInAt).getTime()) {
+    return `The day check-in (${fmt(att.check_in_time)}) happened after this activity check-in (${fmt(checkInAt)}), so there is no starting point.`;
+  }
+  return "Travel could not be calculated. Tap Recalculate to try again.";
+}
+
 const PROOF_BUCKET = "activity-photos";
 
 export interface TravelProofEntry {
