@@ -10,15 +10,27 @@ export interface TravelComputation {
 }
 
 interface Origin {
-  lat: number;
-  lng: number;
+  /** Coordinates are optional: travel time and the GPS-trail distance only need the time. */
+  lat: number | null;
+  lng: number | null;
   at: string;
   type: "attendance" | "activity";
   activityId: string | null;
 }
 
+type LatLng = { lat: number; lng: number };
+
+/** Accept both stored shapes: {latitude, longitude} (Attendance page) and {lat, lng} (day check-in from Activities). */
+function readLatLng(loc: any): LatLng | null {
+  if (!loc || typeof loc !== "object") return null;
+  const lat = Number(loc.latitude ?? loc.lat);
+  const lng = Number(loc.longitude ?? loc.lng);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng) || (lat === 0 && lng === 0)) return null;
+  return { lat, lng };
+}
+
 /** Pull the check-out coordinates recorded for an activity (status history first). */
-function checkOutPoint(row: any): { lat: number; lng: number } | null {
+function checkOutPoint(row: any): LatLng | null {
   const history = Array.isArray(row?.status_history) ? row.status_history : [];
   const completed = [...history].reverse().find((h: any) => h?.status === "completed" && h?.lat && h?.lng);
   if (completed) return { lat: Number(completed.lat), lng: Number(completed.lng) };
@@ -35,6 +47,7 @@ function checkOutPoint(row: any): { lat: number; lng: number } | null {
  * Find where this journey started:
  *  - the most recent activity of the same user/day that was checked out before now
  *  - otherwise the day's attendance check-in (i.e. the first activity of the day)
+ * Only the start TIME is required. Coordinates are attached when available.
  */
 async function findOrigin(
   userId: string,
@@ -51,13 +64,18 @@ async function findOrigin(
     .not("end_time", "is", null)
     .lt("end_time", checkInAt)
     .order("end_time", { ascending: false })
-    .limit(5);
+    .limit(1);
 
-  for (const row of prev || []) {
-    const pt = checkOutPoint(row);
-    if (pt) {
-      return { lat: pt.lat, lng: pt.lng, at: row.end_time as string, type: "activity", activityId: row.id as string };
-    }
+  const last = prev?.[0];
+  if (last?.end_time) {
+    const pt = checkOutPoint(last);
+    return {
+      lat: pt?.lat ?? null,
+      lng: pt?.lng ?? null,
+      at: last.end_time as string,
+      type: "activity",
+      activityId: last.id as string,
+    };
   }
 
   const { data: att } = await supabase
@@ -67,11 +85,11 @@ async function findOrigin(
     .eq("date", dateStr)
     .maybeSingle();
 
-  const loc = att?.check_in_location as any;
-  if (att?.check_in_time && loc?.latitude && loc?.longitude) {
+  if (att?.check_in_time && new Date(att.check_in_time as string).getTime() <= new Date(checkInAt).getTime()) {
+    const pt = readLatLng(att.check_in_location);
     return {
-      lat: Number(loc.latitude),
-      lng: Number(loc.longitude),
+      lat: pt?.lat ?? null,
+      lng: pt?.lng ?? null,
       at: att.check_in_time as string,
       type: "attendance",
       activityId: null,
@@ -81,7 +99,7 @@ async function findOrigin(
 }
 
 /** Road distance in km via the existing Routes bridge; falls back to straight line. */
-async function roadDistanceKm(a: { lat: number; lng: number }, b: { lat: number; lng: number }): Promise<number> {
+async function roadDistanceKm(a: LatLng, b: LatLng): Promise<number> {
   const straightKm = haversineMeters(a.lat, a.lng, b.lat, b.lng) / 1000;
   if (straightKm < 0.05) return Math.round(straightKm * 100) / 100;
   try {
@@ -95,50 +113,50 @@ async function roadDistanceKm(a: { lat: number; lng: number }, b: { lat: number;
   return Math.round(straightKm * 100) / 100;
 }
 
+/** Recorded GPS points for the user between two moments (by timestamp only). */
+async function loadTrail(userId: string, fromIso: string, toIso: string): Promise<TrackPoint[]> {
+  // No filter on the `date` column: some trackers stamp it in UTC and others in
+  // local time, so early-morning IST points can carry the previous date. The
+  // timestamp window is the reliable key.
+  const { data, error } = await supabase
+    .from("gps_tracking")
+    .select("latitude, longitude, timestamp, accuracy, speed, heading")
+    .eq("user_id", userId)
+    .gte("timestamp", fromIso)
+    .lte("timestamp", toIso)
+    .order("timestamp", { ascending: true })
+    .limit(5000);
+  if (error) throw error;
+  return (data || []).map((r: any) => ({
+    latitude: Number(r.latitude),
+    longitude: Number(r.longitude),
+    timestamp: r.timestamp as string,
+    accuracy: r.accuracy != null ? Number(r.accuracy) : null,
+    speed: r.speed != null ? Number(r.speed) : null,
+    heading: r.heading != null ? Number(r.heading) : null,
+  }));
+}
+
 /**
- * Distance actually travelled along the recorded GPS trail between two moments.
+ * Distance actually travelled along the recorded GPS trail.
  * Uses the same trajectory engine as Day Tracking so both surfaces agree.
  * Returns null when the trail is too sparse to trust.
  */
-async function gpsRouteDistanceKm(
-  userId: string,
-  dateStr: string,
-  fromIso: string,
-  toIso: string
-): Promise<number | null> {
-  try {
-    const { data, error } = await supabase
-      .from("gps_tracking")
-      .select("latitude, longitude, timestamp, accuracy, speed, heading")
-      .eq("user_id", userId)
-      .eq("date", dateStr)
-      .gte("timestamp", fromIso)
-      .lte("timestamp", toIso)
-      .order("timestamp", { ascending: true });
-    if (error) throw error;
-
-    const points: TrackPoint[] = (data || []).map((r: any) => ({
-      latitude: Number(r.latitude),
-      longitude: Number(r.longitude),
-      timestamp: r.timestamp as string,
-      accuracy: r.accuracy != null ? Number(r.accuracy) : null,
-      speed: r.speed != null ? Number(r.speed) : null,
-      heading: r.heading != null ? Number(r.heading) : null,
-    }));
-    if (points.length < 3) return null;
-
-    const result = processTrajectory(points);
-    if (result.points.length < 3) return null;
-    const km = Math.round(result.trackedDistanceKm * 100) / 100;
-    return km > 0 ? km : null;
-  } catch {
-    return null;
-  }
+function trailDistanceKm(points: TrackPoint[]): number | null {
+  if (points.length < 3) return null;
+  const result = processTrajectory(points);
+  if (result.points.length < 3) return null;
+  const km = Math.round(result.trackedDistanceKm * 100) / 100;
+  return km > 0 ? km : null;
 }
 
 /**
  * Distance + time travelled to reach this activity's customer, measured from the
  * previous activity's check-out (or the day's attendance check-in for the first one).
+ *
+ * Travel time needs only the two timestamps, so it is always returned when a
+ * journey start exists. Distance prefers the GPS trail; falls back to the road
+ * distance between the two check-in points; stays null only when neither exists.
  */
 export async function computeTravelForCheckIn(params: {
   userId: string;
@@ -149,21 +167,53 @@ export async function computeTravelForCheckIn(params: {
   lng?: number | null;
 }): Promise<TravelComputation | null> {
   const { userId, activityId, activityDate, checkInAt, lat, lng } = params;
-  if (lat == null || lng == null) return null;
+  if (!userId || !activityDate || !checkInAt) return null;
 
   const origin = await findOrigin(userId, activityDate, activityId, checkInAt);
   if (!origin) return null;
 
-  // Prefer the route actually driven (recorded GPS trail); fall back to the
-  // point-to-point road distance when the trail is missing or too sparse.
-  const routeKm = await gpsRouteDistanceKm(userId, activityDate, origin.at, checkInAt);
-  const km =
-    routeKm ??
-    (await roadDistanceKm({ lat: origin.lat, lng: origin.lng }, { lat: Number(lat), lng: Number(lng) }));
   const mins = Math.max(
     0,
     Math.round((new Date(checkInAt).getTime() - new Date(origin.at).getTime()) / 60000)
   );
+
+  let trail: TrackPoint[] = [];
+  try {
+    trail = await loadTrail(userId, origin.at, checkInAt);
+  } catch (e) {
+    console.warn("[activityTravel] could not load GPS trail", e);
+  }
+
+  let km: number | null = trailDistanceKm(trail);
+
+  if (km == null) {
+    // Fallback: road distance between the journey start and this check-in.
+    // Missing ends are filled from the first/last recorded GPS point.
+    const first = trail[0];
+    const lastPt = trail[trail.length - 1];
+    const from: LatLng | null =
+      origin.lat != null && origin.lng != null
+        ? { lat: origin.lat, lng: origin.lng }
+        : first
+          ? { lat: first.latitude, lng: first.longitude }
+          : null;
+    const to: LatLng | null =
+      lat != null && lng != null
+        ? { lat: Number(lat), lng: Number(lng) }
+        : lastPt
+          ? { lat: lastPt.latitude, lng: lastPt.longitude }
+          : null;
+    if (from && to) km = await roadDistanceKm(from, to);
+  }
+
+  if (km == null) {
+    console.warn("[activityTravel] no coordinates or GPS trail for distance", {
+      origin: origin.type,
+      from: origin.at,
+      to: checkInAt,
+      trailPoints: trail.length,
+    });
+  }
 
   return {
     travel_distance_km: km,

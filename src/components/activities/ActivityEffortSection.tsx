@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,12 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { toast } from "sonner";
 import { Gauge, HelpCircle, IndianRupee, Loader2, Paperclip, Route, Timer, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { uploadTravelProof, TRAVEL_PROOF_BUCKET, type TravelProofEntry } from "@/utils/activityTravel";
+import {
+  computeTravelForCheckIn,
+  uploadTravelProof,
+  TRAVEL_PROOF_BUCKET,
+  type TravelProofEntry,
+} from "@/utils/activityTravel";
 import { resolveSignedUrl } from "@/utils/signedStorage";
 import { useTaRates } from "@/hooks/useTaRates";
 import type { Activity } from "@/hooks/useActivities";
@@ -76,6 +81,37 @@ export default function ActivityEffortSection({
       ? Math.round((new Date(activity.end_time).getTime() - new Date(meetingStart).getTime()) / 60000)
       : null;
   const meetingMins = rawMins != null && rawMins > 0 ? rawMins : historyStart && rawMins === 0 ? 0 : null;
+
+  // Self-heal: activities checked in before the travel fix have no travel
+  // values stored. Recompute once from the recorded check-in moment and save.
+  const healedRef = useRef(false);
+  useEffect(() => {
+    if (healedRef.current) return;
+    if (activity.travel_time_mins != null || activity.travel_from_type != null) return;
+    const checkInEntry = [...((activity.status_history as any[]) || [])]
+      .reverse()
+      .find((h: any) => h?.status === "in_progress");
+    const checkInAt = checkInEntry?.at || activity.start_time;
+    if (!checkInAt || !(activity as any).user_id) return;
+    healedRef.current = true;
+    (async () => {
+      try {
+        const travel = await computeTravelForCheckIn({
+          userId: (activity as any).user_id,
+          activityId: activity.id,
+          activityDate: activity.activity_date,
+          checkInAt,
+          lat: checkInEntry?.lat ?? activity.status_change_lat ?? null,
+          lng: checkInEntry?.lng ?? activity.status_change_lng ?? null,
+        });
+        if (!travel) return;
+        const { error } = await supabase.from("activity_events").update(travel).eq("id", activity.id);
+        if (!error) onSaved?.();
+      } catch (e) {
+        console.warn("[ActivityEffortSection] travel recompute failed", e);
+      }
+    })();
+  }, [activity.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const prevLabel =
     activity.travel_from_type === "attendance"

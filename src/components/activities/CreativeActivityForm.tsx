@@ -902,15 +902,15 @@ export default function CreativeActivityForm({
 
       // Travel effort measured at check-in: from the previous activity's
       // check-out, or the day's attendance check-in for the first activity.
-      if (newStatus === "in_progress" && updates.status_change_lat != null) {
+      if (newStatus === "in_progress") {
         try {
           const travel = await computeTravelForCheckIn({
             userId: (editActivity as any).user_id,
             activityId: editActivity.id,
             activityDate: editActivity.activity_date,
             checkInAt: now,
-            lat: updates.status_change_lat,
-            lng: updates.status_change_lng,
+            lat: updates.status_change_lat ?? null,
+            lng: updates.status_change_lng ?? null,
           });
           if (travel) Object.assign(updates, travel);
         } catch (e) {

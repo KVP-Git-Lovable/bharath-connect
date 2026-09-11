@@ -1968,15 +1968,15 @@ function ActivityCard({ a, isAdmin, onEdit, onDelete, onOpenDetails, onReceiveGo
 
       // Travel effort: measured on check-in, from the previous activity's
       // check-out (or the day's attendance check-in for the first activity).
-      if (newStatus === "in_progress" && updates.status_change_lat != null) {
+      if (newStatus === "in_progress") {
         try {
           const travel = await computeTravelForCheckIn({
             userId: a.user_id,
             activityId: targetId,
             activityDate: a.activity_date,
             checkInAt: now,
-            lat: updates.status_change_lat,
-            lng: updates.status_change_lng,
+            lat: updates.status_change_lat ?? null,
+            lng: updates.status_change_lng ?? null,
           });
           if (travel) Object.assign(updates, travel);
         } catch (e) {
