@@ -6071,21 +6071,6 @@ export type Database = {
       }
     }
     Functions: {
-      notif_preview_recipients: {
-        Args: {
-          p_include_secondary?: boolean
-          p_receiver_role?: string
-          p_receiver_type: string
-          p_receiver_user_id?: string
-          p_sample_actor?: string
-        }
-        Returns: {
-          email: string
-          id: string
-          name: string
-        }[]
-      }
-      notify_send_test: { Args: { p_rule_id: string }; Returns: Json }
       can_access_crm_record: {
         Args: { _creator: string; _owner: string }
         Returns: boolean
@@ -6102,6 +6087,16 @@ export type Database = {
       convert_lead: {
         Args: { _lead_id: string; _payload: Json }
         Returns: string
+      }
+      emit_notification_event: {
+        Args: {
+          p_actor_user_id: string
+          p_event_code: string
+          p_metadata?: Json
+          p_record_id: string
+          p_source_table: string
+        }
+        Returns: undefined
       }
       ensure_current_user: {
         Args: { _email: string; _full_name?: string; _username?: string }
@@ -6171,6 +6166,43 @@ export type Database = {
         Args: { _permission: string; _user_id: string }
         Returns: boolean
       }
+      notif_can_manage: { Args: { p_user: string }; Returns: boolean }
+      notif_fill: {
+        Args: { p_ctx: Json; p_template: string; p_tz?: string }
+        Returns: string
+      }
+      notif_fmt_date: { Args: { p: string }; Returns: string }
+      notif_fmt_time: { Args: { p: string }; Returns: string }
+      notif_managers_up_chain: {
+        Args: { p_include_secondary?: boolean; p_user: string }
+        Returns: string[]
+      }
+      notif_preview_recipients: {
+        Args: {
+          p_include_secondary?: boolean
+          p_receiver_role?: string
+          p_receiver_type: string
+          p_receiver_user_id?: string
+          p_sample_actor?: string
+        }
+        Returns: {
+          email: string
+          id: string
+          name: string
+        }[]
+      }
+      notif_resolve_recipients: {
+        Args: {
+          p_actor: string
+          p_include_secondary?: boolean
+          p_receiver_role: string
+          p_receiver_type: string
+          p_receiver_user_id: string
+        }
+        Returns: string[]
+      }
+      notif_user_name: { Args: { p: string }; Returns: string }
+      notify_send_test: { Args: { p_rule_id: string }; Returns: Json }
       recalculate_monthly_leave_accruals: {
         Args: { _target_user_id?: string }
         Returns: undefined
