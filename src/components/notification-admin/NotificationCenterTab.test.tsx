@@ -16,6 +16,8 @@ const eventTypes = [
     description: "Employee submits an expense", tokens: ["user_name", "amount"], app_already_notifies: false, sort_order: 1, is_active: true },
   { id: "e2", source_table: "leave_applications", event_code: "RECORD_CREATED", module_label: "Leave", label: "Leave applied",
     description: "Employee applies for leave", tokens: ["user_name", "leave_type"], app_already_notifies: true, sort_order: 2, is_active: true },
+  { id: "e3", source_table: "site_milestones", event_code: "MILESTONE_AT_RISK", module_label: "Site milestones", label: "Milestone at risk",
+    description: "", tokens: ["milestone_name"], app_already_notifies: false, sort_order: 3, is_active: true, extra_receivers: ["site_team"] },
 ];
 const mutate = { mutateAsync: vi.fn().mockResolvedValue(undefined), isPending: false };
 const preview = vi.fn().mockResolvedValue([{ id: "u1", name: "Meena Manager", email: "m@x" }]);
@@ -99,6 +101,16 @@ describe("Notification Center smoke", () => {
     expect((screen.getByLabelText("Message") as HTMLTextAreaElement).value).toBe(
       "{user_name} submitted a {category} expense of {amount} for {expense_date}."
     );
+  });
+
+  it("offers only record-appropriate recipients for site milestones", async () => {
+    const { receiverOptions } = await import("@/hooks/useNotificationRules");
+    const values = receiverOptions("site_milestones", ["site_team"]).map((r) => r.value);
+    expect(values).toContain("site_team");
+    expect(values).not.toContain("employee");
+    expect(values).not.toContain("project_members");
+    const leave = receiverOptions("leave_applications", []).map((r) => r.value);
+    expect(leave).toEqual(["employee", "manager", "hierarchy", "admin", "role", "specific_user"]);
   });
 });
 

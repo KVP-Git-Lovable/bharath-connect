@@ -11,8 +11,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import {
+  CONTEXT_RECEIVERS,
   RECEIVER_TYPES,
   SAMPLE_VALUES,
+  receiverOptions,
   SUGGESTED_TEXT,
   TOKEN_LABELS,
   fillSample,
@@ -119,6 +121,7 @@ export default function RuleEditorDialog({
     (e) => e.source_table === form.source_table && e.event_code === form.event_code
   );
   const tokens = selectedEvent?.tokens?.length ? selectedEvent.tokens : ["user_name", "date", "time"];
+  const receivers = receiverOptions(form.source_table, selectedEvent?.extra_receivers);
 
   const rememberCaret = (field: "title" | "message", el: HTMLInputElement | HTMLTextAreaElement) => {
     caret.current[field] = el.selectionStart ?? el.value.length;
@@ -173,13 +176,21 @@ export default function RuleEditorDialog({
   const onEventChange = (code: string) => {
     const ev = eventTypes.find((e) => e.source_table === form.source_table && e.event_code === code);
     const sug = SUGGESTED_TEXT[`${form.source_table}:${code}`];
-    setForm((f) => ({
-      ...f,
-      event_code: code,
-      name: f.name || (ev ? `${ev.label} → ${RECEIVER_TYPES.find((r) => r.value === f.receiver_type)?.label ?? ""}` : ""),
-      title_template: f.title_template || sug?.title || (ev ? `${ev.label}: {user_name}` : ""),
-      message_template: f.message_template || sug?.message || "",
-    }));
+    const allowed = receiverOptions(form.source_table, ev?.extra_receivers).map((r) => r.value);
+    setForm((f) => {
+      const receiver = allowed.includes(f.receiver_type)
+        ? f.receiver_type
+        : allowed.find((r) => CONTEXT_RECEIVERS.includes(r)) ?? "admin";
+      const receiverName = RECEIVER_TYPES.find((r) => r.value === receiver)?.label ?? "";
+      return {
+        ...f,
+        event_code: code,
+        receiver_type: receiver,
+        name: f.name || (ev ? `${ev.label} → ${receiverName}` : ""),
+        title_template: f.title_template || sug?.title || (ev ? `${ev.label}: {user_name}` : ""),
+        message_template: f.message_template || sug?.message || "",
+      };
+    });
     setRecipients(null);
   };
 
@@ -204,6 +215,7 @@ export default function RuleEditorDialog({
   const validation = (() => {
     if (!form.name.trim()) return "Give the rule a name";
     if (!form.source_table || !form.event_code) return "Choose a module and event";
+    if (!receivers.some((r) => r.value === form.receiver_type)) return "Choose who to notify for this event";
     if (form.receiver_type === "role" && !form.receiver_role) return "Choose a security profile";
     if (form.receiver_type === "specific_user" && !form.receiver_user_id) return "Choose a person";
     if (!form.title_template.trim()) return "Add a title";
@@ -329,7 +341,7 @@ export default function RuleEditorDialog({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {RECEIVER_TYPES.map((r) => (
+                    {receivers.map((r) => (
                       <SelectItem key={r.value} value={r.value}>
                         {r.label}
                       </SelectItem>
@@ -391,6 +403,12 @@ export default function RuleEditorDialog({
               )}
             </div>
 
+            {CONTEXT_RECEIVERS.includes(form.receiver_type) ? (
+              <p className="rounded-lg border bg-muted/30 p-3 text-xs text-muted-foreground">
+                Recipients depend on each record: everyone on its{" "}
+                {form.receiver_type === "project_members" ? "project" : "site"} at the time of the event.
+              </p>
+            ) : (
             <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
               <div className="flex flex-wrap items-end gap-2">
                 {needsActorPreview && (
@@ -429,6 +447,7 @@ export default function RuleEditorDialog({
                 )
               )}
             </div>
+            )}
           </section>
 
           {/* What */}

@@ -24,7 +24,7 @@ export const MODULE_LABELS: Record<string, string> = {
   leads: "Leads",
   customer_opportunities: "Opportunities",
   pm_tasks: "Tasks",
-  site_milestones: "Milestones",
+  site_milestones: "Site milestones",
   procurement_orders: "Procurement",
 };
 
