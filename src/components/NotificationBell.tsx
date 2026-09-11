@@ -5,6 +5,7 @@ import { useNotifications } from '@/hooks/useNotifications';
 import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import { useState } from 'react';
+import { notificationRoute } from '@/utils/notificationRoute';
 
 export function NotificationBell() {
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
@@ -15,25 +16,8 @@ export function NotificationBell() {
     markAsRead(n.id);
     setOpen(false);
 
-    // Navigate to pending approvals for actionable notification types
-    if (
-      n.type === 'leave_request' ||
-      n.type === 'regularization_request'
-    ) {
-      const params = new URLSearchParams();
-      if (n.related_id) params.set('id', n.related_id);
-      if (n.type) params.set('type', n.type);
-      navigate(`/pending-approvals?${params.toString()}`);
-    } else if (
-      n.type === 'leave_decision' ||
-      n.type === 'regularization_decision'
-    ) {
-      navigate('/attendance');
-    } else {
-      // Rules-engine / report notifications carry their own destination.
-      const route = (n.metadata as { route?: unknown } | null)?.route;
-      if (typeof route === 'string' && route.startsWith('/')) navigate(route);
-    }
+    const route = notificationRoute(n);
+    if (route) navigate(route);
   };
 
   return (
@@ -77,6 +61,15 @@ export function NotificationBell() {
             ))
           )}
         </div>
+        <button
+          onClick={() => {
+            setOpen(false);
+            navigate('/notifications');
+          }}
+          className="w-full border-t px-4 py-2.5 text-xs font-medium text-primary hover:bg-muted/50 transition-colors"
+        >
+          View all notifications
+        </button>
       </PopoverContent>
     </Popover>
   );

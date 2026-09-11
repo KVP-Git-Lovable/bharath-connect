@@ -51,6 +51,7 @@ const OpportunityTypesMaster = lazy(() => import("./pages/master/OpportunityType
 const UomMaster = lazy(() => import("./pages/master/UomMaster"));
 const ConfigurationWorkflow = lazy(() => import("./pages/ConfigurationWorkflow"));
 const NotificationRules = lazy(() => import("./pages/NotificationRules"));
+const MyNotifications = lazy(() => import("./pages/MyNotifications"));
 const Leads = lazy(() => import("./pages/Leads"));
 const Events = lazy(() => import("./pages/Events"));
 const LeadDetail = lazy(() => import("./pages/LeadDetail"));
@@ -119,6 +120,7 @@ const App = () => {
             <Route path="/admin/company" element={<Suspense fallback={<PageFallback />}><CompanyProfile /></Suspense>} />
             <Route path="/admin/configuration" element={<Suspense fallback={<PageFallback />}><ConfigurationWorkflow /></Suspense>} />
             <Route path="/admin/notification-rules" element={<Suspense fallback={<PageFallback />}><NotificationRules /></Suspense>} />
+            <Route path="/notifications" element={<Suspense fallback={<PageFallback />}><MyNotifications /></Suspense>} />
             <Route path="/admin/sites" element={<Navigate to="/sites" replace />} />
             <Route path="/sites" element={<Suspense fallback={<PageFallback />}><SiteMasterPage /></Suspense>} />
             <Route path="/activity-types" element={<Suspense fallback={<PageFallback />}><ActivityTypeMasterPage /></Suspense>} />
