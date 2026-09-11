@@ -5436,7 +5436,15 @@ export type Database = {
           status?: string
           subscription_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "report_delivery_log_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "report_subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       report_subscriptions: {
         Row: {
@@ -6185,21 +6193,6 @@ export type Database = {
       }
     }
     Functions: {
-      report_run_now: { Args: { p_sub_id: string }; Returns: number }
-      report_subscription_preview: {
-        Args: {
-          p_cadence: string
-          p_fire_time: string
-          p_mode: string
-          p_monthday: number
-          p_period: string
-          p_role: string
-          p_tz?: string
-          p_user_ids: string[]
-          p_weekday: number
-        }
-        Returns: Json
-      }
       can_access_crm_record: {
         Args: { _creator: string; _owner: string }
         Returns: boolean
@@ -6386,6 +6379,15 @@ export type Database = {
         Args: { _target_user_id?: string }
         Returns: undefined
       }
+      report_deliver: {
+        Args: {
+          p_manual: boolean
+          p_run_at: string
+          p_run_key: string
+          p_sub_id: string
+        }
+        Returns: number
+      }
       report_device_status: {
         Args: {
           _battery: number
@@ -6394,6 +6396,58 @@ export type Database = {
           _platform: string
         }
         Returns: undefined
+      }
+      report_dispatch_due: { Args: never; Returns: number }
+      report_next_run: {
+        Args: {
+          p_after: string
+          p_cadence: string
+          p_fire_time: string
+          p_monthday: number
+          p_tz: string
+          p_weekday: number
+        }
+        Returns: string
+      }
+      report_period: {
+        Args: { p_period: string; p_run_at: string; p_tz: string }
+        Returns: {
+          period_from: string
+          period_to: string
+        }[]
+      }
+      report_period_label: {
+        Args: { p_from: string; p_to: string }
+        Returns: string
+      }
+      report_recipients: {
+        Args: { p_mode: string; p_role: string; p_user_ids: string[] }
+        Returns: string[]
+      }
+      report_run_now: { Args: { p_sub_id: string }; Returns: number }
+      report_scope_users: { Args: { p_viewer: string }; Returns: string[] }
+      report_subscription_preview: {
+        Args: {
+          p_cadence: string
+          p_fire_time: string
+          p_mode: string
+          p_monthday: number
+          p_period: string
+          p_role: string
+          p_tz?: string
+          p_user_ids: string[]
+          p_weekday: number
+        }
+        Returns: Json
+      }
+      report_summary_text: {
+        Args: {
+          p_from: string
+          p_module: string
+          p_to: string
+          p_viewer: string
+        }
+        Returns: string
       }
       send_notification: {
         Args: {
