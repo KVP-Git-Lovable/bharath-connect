@@ -69,4 +69,23 @@ describe("Notification Center smoke", () => {
     fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Hi {user_name}, {amount}" } });
     expect(screen.getByText("Hi Ravi Kumar, ₹1,250.00")).toBeInTheDocument();
   });
+
+  it("inserts details into the field whose chip was tapped, spaced and at the end", async () => {
+    render(<NotificationCenterTab />);
+    fireEvent.click(screen.getAllByText("Expense submitted → manager")[0]);
+    await waitFor(() => expect(screen.getByText("Edit notification rule")).toBeInTheDocument());
+    const title = screen.getByLabelText("Title") as HTMLInputElement;
+    const message = screen.getByLabelText("Message") as HTMLTextAreaElement;
+    fireEvent.focus(title); // title touched last, but the message chip must still target the message
+
+    const amountChips = screen.getAllByText("Amount");
+    expect(amountChips).toHaveLength(2); // one row per field
+    fireEvent.click(amountChips[1]);
+    expect(message.value).toBe("{user_name} submitted {amount} {amount}");
+    expect(title.value).toBe("Expense submitted: {amount}");
+
+    fireEvent.click(screen.getAllByText("Employee name")[0]);
+    expect(title.value).toBe("Expense submitted: {amount} {user_name}");
+  });
 });
+

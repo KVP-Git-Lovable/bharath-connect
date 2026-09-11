@@ -83,15 +83,19 @@ export default function RuleEditorDialog({
   const [sampleActor, setSampleActor] = useState<string>("");
   const [recipients, setRecipients] = useState<{ id: string; name: string }[] | null>(null);
   const [previewing, setPreviewing] = useState(false);
-  const lastField = useRef<"title" | "message">("message");
   const titleRef = useRef<HTMLInputElement>(null);
   const messageRef = useRef<HTMLTextAreaElement>(null);
+  // Last caret position per field. null = the user never placed a caret there,
+  // so a tapped detail is appended at the end (mobile browsers report stale
+  // selection values once the field loses focus).
+  const caret = useRef<{ title: number | null; message: number | null }>({ title: null, message: null });
 
   useEffect(() => {
     if (!open) return;
     setForm(rule ? fromRule(rule) : EMPTY);
     setRecipients(null);
     setSampleActor("");
+    caret.current = { title: null, message: null };
   }, [open, rule]);
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) => {
@@ -115,21 +119,48 @@ export default function RuleEditorDialog({
   );
   const tokens = selectedEvent?.tokens?.length ? selectedEvent.tokens : ["user_name", "date", "time"];
 
-  const insertToken = (token: string) => {
-    const text = `{${token}}`;
-    const isTitle = lastField.current === "title";
-    const el = isTitle ? titleRef.current : messageRef.current;
-    const key = isTitle ? "title_template" : "message_template";
+  const rememberCaret = (field: "title" | "message", el: HTMLInputElement | HTMLTextAreaElement) => {
+    caret.current[field] = el.selectionStart ?? el.value.length;
+  };
+
+  const insertToken = (field: "title" | "message", token: string) => {
+    const key = field === "title" ? "title_template" : "message_template";
+    const el = field === "title" ? titleRef.current : messageRef.current;
     const current = form[key];
-    const start = el?.selectionStart ?? current.length;
-    const end = el?.selectionEnd ?? current.length;
-    const next = current.slice(0, start) + text + current.slice(end);
+    const pos = Math.min(caret.current[field] ?? current.length, current.length);
+    const before = current.slice(0, pos);
+    const after = current.slice(pos);
+    // Keep details readable: separate from neighbouring words with a space.
+    const lead = before && !/\s$/.test(before) ? " " : "";
+    const trail = after && !/^[\s.,:;!?)]/.test(after) ? " " : "";
+    const text = `${lead}{${token}}${trail}`;
+    const next = before + text + after;
+    const nextPos = before.length + text.length;
+    caret.current[field] = nextPos;
     setForm((f) => ({ ...f, [key]: next }));
     requestAnimationFrame(() => {
       el?.focus();
-      el?.setSelectionRange(start + text.length, start + text.length);
+      el?.setSelectionRange(nextPos, nextPos);
     });
   };
+
+  const TokenChips = ({ field }: { field: "title" | "message" }) => (
+    <div className="flex flex-wrap items-center gap-1.5 pt-1">
+      <span className="text-[11px] text-muted-foreground mr-0.5">Insert:</span>
+      {tokens.map((t) => (
+        <button
+          key={t}
+          type="button"
+          // Keep focus (and the caret) in the field on desktop.
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => insertToken(field, t)}
+          className="rounded-full border bg-background px-2.5 py-0.5 text-xs hover:bg-primary/10 hover:border-primary/40 transition-colors"
+        >
+          {TOKEN_LABELS[t] ?? t}
+        </button>
+      ))}
+    </div>
+  );
 
   const onEventChange = (code: string) => {
     const ev = eventTypes.find((e) => e.source_table === form.source_table && e.event_code === code);
@@ -399,10 +430,17 @@ export default function RuleEditorDialog({
                 id="rule-title"
                 ref={titleRef}
                 value={form.title_template}
-                onFocus={() => (lastField.current = "title")}
-                onChange={(e) => set("title_template", e.target.value)}
+                onSelect={(e) => rememberCaret("title", e.currentTarget)}
+                onChange={(e) => {
+                  set("title_template", e.target.value);
+                  rememberCaret("title", e.currentTarget);
+                }}
                 placeholder="e.g. Leave applied: {user_name}"
               />
+              <TokenChips field="title" />
+              {form.title_template.length > 90 && (
+                <p className="text-xs text-amber-700">Long titles get cut off on phones — keep it short and put details in the message.</p>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="rule-message">Message</Label>
@@ -411,27 +449,15 @@ export default function RuleEditorDialog({
                 ref={messageRef}
                 rows={3}
                 value={form.message_template}
-                onFocus={() => (lastField.current = "message")}
-                onChange={(e) => set("message_template", e.target.value)}
+                onSelect={(e) => rememberCaret("message", e.currentTarget)}
+                onChange={(e) => {
+                  set("message_template", e.target.value);
+                  rememberCaret("message", e.currentTarget);
+                }}
                 placeholder="e.g. {user_name} applied for {leave_type} from {from_date} to {to_date}."
               />
+              <TokenChips field="message" />
             </div>
-            <div className="space-y-1.5">
-              <p className="text-xs text-muted-foreground">Tap to insert:</p>
-              <div className="flex flex-wrap gap-1.5">
-                {tokens.map((t) => (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => insertToken(t)}
-                    className="rounded-full border bg-background px-2.5 py-0.5 text-xs hover:bg-primary/10 hover:border-primary/40 transition-colors"
-                  >
-                    {TOKEN_LABELS[t] ?? t}
-                  </button>
-                ))}
-              </div>
-            </div>
-
             <div className="rounded-lg border p-3 bg-background">
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1.5">
                 <Eye className="h-3.5 w-3.5" /> Preview with sample data
