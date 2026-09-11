@@ -87,5 +87,18 @@ describe("Notification Center smoke", () => {
     fireEvent.click(screen.getAllByText("Employee name")[0]);
     expect(title.value).toBe("Expense submitted: {amount} {user_name}");
   });
+
+  it("replaces broken wording with the suggested text in one tap", async () => {
+    render(<NotificationCenterTab />);
+    fireEvent.click(screen.getAllByText("Expense submitted → manager")[0]);
+    await waitFor(() => expect(screen.getByText("Edit notification rule")).toBeInTheDocument());
+    const title = screen.getByLabelText("Title") as HTMLInputElement;
+    fireEvent.change(title, { target: { value: "Expense sub{user_name}mitted" } });
+    fireEvent.click(screen.getByText("Use suggested text"));
+    expect(title.value).toBe("Expense submitted: {amount}");
+    expect((screen.getByLabelText("Message") as HTMLTextAreaElement).value).toBe(
+      "{user_name} submitted a {category} expense of {amount} for {expense_date}."
+    );
+  });
 });
 

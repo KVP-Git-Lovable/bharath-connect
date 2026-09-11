@@ -236,3 +236,67 @@ export const TOKEN_LABELS: Record<string, string> = {
   date: "Today",
   time: "Now",
 };
+
+/** Ready-made wording per event, used by "Use suggested text" in the editor. */
+export const SUGGESTED_TEXT: Record<string, { title: string; message: string }> = {
+  "attendance:CHECK_IN": {
+    title: "{user_name} started the day",
+    message: "{user_name} checked in at {check_in_time} on {attendance_date}.",
+  },
+  "attendance:CHECK_OUT": {
+    title: "{user_name} ended the day",
+    message: "{user_name} checked out at {check_out_time} on {attendance_date} after {total_hours} hours.",
+  },
+  "leave_applications:RECORD_CREATED": {
+    title: "Leave applied: {user_name}",
+    message: "{user_name} applied for {leave_type} from {from_date} to {to_date} ({days} day/s). Reason: {reason}",
+  },
+  "leave_applications:RECORD_APPROVED": {
+    title: "Leave approved",
+    message: "Your {leave_type} from {from_date} to {to_date} was approved by {approver_name}.",
+  },
+  "leave_applications:RECORD_REJECTED": {
+    title: "Leave rejected",
+    message: "Your {leave_type} from {from_date} to {to_date} was rejected by {approver_name}.",
+  },
+  "leave_applications:RECORD_CANCELLED": {
+    title: "Leave cancelled: {user_name}",
+    message: "{user_name} cancelled {leave_type} from {from_date} to {to_date}.",
+  },
+  "regularization_requests:RECORD_CREATED": {
+    title: "Regularization requested: {user_name}",
+    message: "{user_name} requested {request_type} for {request_date}. Reason: {reason}",
+  },
+  "regularization_requests:RECORD_APPROVED": {
+    title: "Regularization approved",
+    message: "Your {request_type} request for {request_date} was approved by {approver_name}.",
+  },
+  "regularization_requests:RECORD_REJECTED": {
+    title: "Regularization rejected",
+    message: "Your {request_type} request for {request_date} was rejected. Reason: {rejection_reason}",
+  },
+  "additional_expenses:RECORD_CREATED": {
+    title: "Expense submitted: {amount}",
+    message: "{user_name} submitted a {category} expense of {amount} for {expense_date}.",
+  },
+  "additional_expenses:RECORD_APPROVED": {
+    title: "Expense approved: {amount}",
+    message: "Your {category} expense of {amount} for {expense_date} was approved by {approver_name}.",
+  },
+  "additional_expenses:RECORD_REJECTED": {
+    title: "Expense rejected: {amount}",
+    message: "Your {category} expense of {amount} for {expense_date} was rejected. Reason: {rejection_reason}",
+  },
+  "activity_events:RECORD_CREATED": {
+    title: "New activity: {activity_name}",
+    message: "{user_name} planned \"{activity_name}\" ({activity_type}) on {activity_date}.",
+  },
+  "activity_events:ACTIVITY_CHECKED_IN": {
+    title: "{user_name} checked in: {activity_name}",
+    message: "{user_name} checked in to \"{activity_name}\" at {location}. Travelled {travel_distance_km} km in {travel_time_mins} min.",
+  },
+  "activity_events:ACTIVITY_COMPLETED": {
+    title: "Activity completed: {activity_name}",
+    message: "{user_name} completed \"{activity_name}\" ({activity_type}) on {activity_date}.",
+  },
+};

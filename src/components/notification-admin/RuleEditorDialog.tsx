@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, Eye, Loader2, Smartphone, Users } from "lucide-react";
+import { AlertTriangle, Eye, Loader2, Smartphone, Users, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   RECEIVER_TYPES,
   SAMPLE_VALUES,
+  SUGGESTED_TEXT,
   TOKEN_LABELS,
   fillSample,
   previewRecipients,
@@ -162,13 +163,22 @@ export default function RuleEditorDialog({
     </div>
   );
 
+  const suggestion = SUGGESTED_TEXT[`${form.source_table}:${form.event_code}`];
+  const applySuggestion = () => {
+    if (!suggestion) return;
+    setForm((f) => ({ ...f, title_template: suggestion.title, message_template: suggestion.message }));
+    caret.current = { title: null, message: null };
+  };
+
   const onEventChange = (code: string) => {
     const ev = eventTypes.find((e) => e.source_table === form.source_table && e.event_code === code);
+    const sug = SUGGESTED_TEXT[`${form.source_table}:${code}`];
     setForm((f) => ({
       ...f,
       event_code: code,
       name: f.name || (ev ? `${ev.label} → ${RECEIVER_TYPES.find((r) => r.value === f.receiver_type)?.label ?? ""}` : ""),
-      title_template: f.title_template || (ev ? `${ev.label}: {user_name}` : ""),
+      title_template: f.title_template || sug?.title || (ev ? `${ev.label}: {user_name}` : ""),
+      message_template: f.message_template || sug?.message || "",
     }));
     setRecipients(null);
   };
@@ -423,7 +433,14 @@ export default function RuleEditorDialog({
 
           {/* What */}
           <section className="space-y-3">
-            <h4 className="text-sm font-semibold">Message</h4>
+            <div className="flex items-center justify-between gap-2">
+              <h4 className="text-sm font-semibold">Message</h4>
+              {suggestion && (
+                <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={applySuggestion}>
+                  <Wand2 className="h-3.5 w-3.5 mr-1" /> Use suggested text
+                </Button>
+              )}
+            </div>
             <div className="space-y-1.5">
               <Label htmlFor="rule-title">Title</Label>
               <Input
