@@ -15,6 +15,7 @@ import {
   ListChecks,
   SlidersHorizontal,
   Database,
+  Bell,
 } from "lucide-react";
 import { useProfilePermissions } from "@/hooks/useProfilePermissions";
 import { useUserProfile } from "@/hooks/useUserProfile";
@@ -75,6 +76,14 @@ const allAdminModules = [
     color: "bg-amber-100 text-amber-600",
     path: "/master-data",
     module: "module_master_data",
+  },
+  {
+    title: "Notifications & Reports",
+    description: "Automated notification rules, scheduled report subscriptions and notification history",
+    icon: Bell,
+    color: "bg-rose-100 text-rose-600",
+    path: "/admin/notification-rules",
+    // No permission key: visible to full admins only (isAdmin or module_admin_panel).
   },
 ];
 
