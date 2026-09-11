@@ -106,7 +106,15 @@ export function ReportWorkspace<R>({
     if (prefill) {
       appliedFavourite.current = true;
       try { sessionStorage.removeItem(cacheKey); } catch { /* ignore */ }
-      onApplyFilterState(prefill);
+      const { __visibleColumns, __charts, ...filterPrefill } = prefill as Record<string, unknown> & {
+        __visibleColumns?: string[];
+        __charts?: ChartConfig[];
+      };
+      onApplyFilterState(filterPrefill);
+      if (Array.isArray(__visibleColumns) && __visibleColumns.length) {
+        setVisible(__visibleColumns.filter((k) => columns.some((c) => c.key === k)));
+      }
+      if (Array.isArray(__charts)) setCharts(__charts);
       setPendingGenerate(true);
       return;
     }

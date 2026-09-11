@@ -1,4 +1,6 @@
-import { lazy, Suspense, useEffect, useMemo } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import { applyReportLink } from "@/components/reports/reportLink";
 import { motion } from "framer-motion";
 import { BarChart3 } from "lucide-react";
 import { OverviewTab } from "@/components/analytics/OverviewTab";
@@ -114,8 +116,35 @@ function AnalyticsInner() {
 
 
 export default function Analytics() {
+  const [params, setParams] = useSearchParams();
+  const linkId = params.get("n");
+  const [ready, setReady] = useState(!linkId);
+  const [mountKey, setMountKey] = useState(0);
+
+  // A report-subscription notification opens /reports?n=<id>: load that
+  // delivery's report + period into the session prefill, then (re)mount.
+  useEffect(() => {
+    if (!linkId) return;
+    let cancelled = false;
+    setReady(false);
+    applyReportLink(linkId).finally(() => {
+      if (cancelled) return;
+      const next = new URLSearchParams(params);
+      next.delete("n");
+      setParams(next, { replace: true });
+      setMountKey((k) => k + 1);
+      setReady(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [linkId]);
+
+  if (!ready) return <Fallback />;
+
   return (
-    <ReportProvider>
+    <ReportProvider key={mountKey}>
       <AnalyticsInner />
     </ReportProvider>
   );
