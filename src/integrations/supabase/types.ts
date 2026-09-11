@@ -2679,6 +2679,7 @@ export type Database = {
           app_already_notifies: boolean
           description: string | null
           event_code: string
+          extra_receivers: string[]
           id: string
           is_active: boolean
           label: string
@@ -2691,6 +2692,7 @@ export type Database = {
           app_already_notifies?: boolean
           description?: string | null
           event_code: string
+          extra_receivers?: string[]
           id?: string
           is_active?: boolean
           label: string
@@ -2703,6 +2705,7 @@ export type Database = {
           app_already_notifies?: boolean
           description?: string | null
           event_code?: string
+          extra_receivers?: string[]
           id?: string
           is_active?: boolean
           label?: string
@@ -6167,11 +6170,16 @@ export type Database = {
         Returns: boolean
       }
       notif_can_manage: { Args: { p_user: string }; Returns: boolean }
+      notif_daily_checks: { Args: never; Returns: undefined }
       notif_fill: {
         Args: { p_ctx: Json; p_template: string; p_tz?: string }
         Returns: string
       }
       notif_fmt_date: { Args: { p: string }; Returns: string }
+      notif_fmt_money: {
+        Args: { p: number; p_currency?: string }
+        Returns: string
+      }
       notif_fmt_time: { Args: { p: string }; Returns: string }
       notif_history_list: {
         Args: {
@@ -6216,6 +6224,8 @@ export type Database = {
         Args: { p_include_secondary?: boolean; p_user: string }
         Returns: string[]
       }
+      notif_milestone_ctx: { Args: { p_id: string }; Returns: Json }
+      notif_po_ctx: { Args: { p_po_id: string }; Returns: Json }
       notif_preview_recipients: {
         Args: {
           p_include_secondary?: boolean
@@ -6234,13 +6244,16 @@ export type Database = {
         Args: {
           p_actor: string
           p_include_secondary?: boolean
+          p_project_id?: string
           p_receiver_role: string
           p_receiver_type: string
           p_receiver_user_id: string
+          p_site_id?: string
         }
         Returns: string[]
       }
       notif_source_of: { Args: { p_meta: Json }; Returns: string }
+      notif_task_ctx: { Args: { p_task_id: string }; Returns: Json }
       notif_user_name: { Args: { p: string }; Returns: string }
       notify_send_test: { Args: { p_rule_id: string }; Returns: Json }
       recalculate_monthly_leave_accruals: {
