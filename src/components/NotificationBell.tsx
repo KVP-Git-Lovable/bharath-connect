@@ -29,6 +29,10 @@ export function NotificationBell() {
       n.type === 'regularization_decision'
     ) {
       navigate('/attendance');
+    } else {
+      // Rules-engine / report notifications carry their own destination.
+      const route = (n.metadata as { route?: unknown } | null)?.route;
+      if (typeof route === 'string' && route.startsWith('/')) navigate(route);
     }
   };
 

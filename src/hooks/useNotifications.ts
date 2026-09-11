@@ -11,6 +11,7 @@ interface Notification {
   related_table: string | null;
   related_id: string | null;
   created_at: string;
+  metadata?: Record<string, unknown> | null;
 }
 
 export function useNotifications() {
@@ -34,6 +35,8 @@ export function useNotifications() {
         .select('*')
         .eq('user_id', userId)
         .eq('is_read', false)
+        .eq('is_dismissed', false)
+        .is('deleted_at', null)
         .neq('type', 'device_offline')
         .order('created_at', { ascending: false })
         .limit(50);
