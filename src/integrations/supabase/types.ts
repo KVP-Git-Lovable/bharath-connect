@@ -6071,45 +6071,6 @@ export type Database = {
       }
     }
     Functions: {
-      notif_history_list: {
-        Args: {
-          p_delivery?: string
-          p_from?: string
-          p_limit?: number
-          p_module?: string
-          p_offset?: number
-          p_read?: string
-          p_search?: string
-          p_source?: string
-          p_to?: string
-          p_user?: string
-        }
-        Returns: {
-          created_at: string
-          delivery_status: string
-          event_code: string
-          id: string
-          is_dismissed: boolean
-          is_read: boolean
-          is_test: boolean
-          message: string
-          read_at: string
-          recipient_name: string
-          related_id: string
-          related_table: string
-          route: string
-          rule_name: string
-          source: string
-          title: string
-          total_count: number
-          type: string
-          user_id: string
-        }[]
-      }
-      notif_history_stats: {
-        Args: { p_from?: string; p_to?: string }
-        Returns: Json
-      }
       can_access_crm_record: {
         Args: { _creator: string; _owner: string }
         Returns: boolean
