@@ -6071,45 +6071,6 @@ export type Database = {
       }
     }
     Functions: {
-      notif_history_list: {
-        Args: {
-          p_delivery?: string
-          p_from?: string
-          p_limit?: number
-          p_module?: string
-          p_offset?: number
-          p_read?: string
-          p_search?: string
-          p_source?: string
-          p_to?: string
-          p_user?: string
-        }
-        Returns: {
-          created_at: string
-          delivery_status: string
-          event_code: string
-          id: string
-          is_dismissed: boolean
-          is_read: boolean
-          is_test: boolean
-          message: string
-          read_at: string
-          recipient_name: string
-          related_id: string
-          related_table: string
-          route: string
-          rule_name: string
-          source: string
-          title: string
-          total_count: number
-          type: string
-          user_id: string
-        }[]
-      }
-      notif_history_stats: {
-        Args: { p_from?: string; p_to?: string }
-        Returns: Json
-      }
       can_access_crm_record: {
         Args: { _creator: string; _owner: string }
         Returns: boolean
@@ -6212,6 +6173,45 @@ export type Database = {
       }
       notif_fmt_date: { Args: { p: string }; Returns: string }
       notif_fmt_time: { Args: { p: string }; Returns: string }
+      notif_history_list: {
+        Args: {
+          p_delivery?: string
+          p_from?: string
+          p_limit?: number
+          p_module?: string
+          p_offset?: number
+          p_read?: string
+          p_search?: string
+          p_source?: string
+          p_to?: string
+          p_user?: string
+        }
+        Returns: {
+          created_at: string
+          delivery_status: string
+          event_code: string
+          id: string
+          is_dismissed: boolean
+          is_read: boolean
+          is_test: boolean
+          message: string
+          read_at: string
+          recipient_name: string
+          related_id: string
+          related_table: string
+          route: string
+          rule_name: string
+          source: string
+          title: string
+          total_count: number
+          type: string
+          user_id: string
+        }[]
+      }
+      notif_history_stats: {
+        Args: { p_from?: string; p_to?: string }
+        Returns: Json
+      }
       notif_managers_up_chain: {
         Args: { p_include_secondary?: boolean; p_user: string }
         Returns: string[]
@@ -6240,6 +6240,7 @@ export type Database = {
         }
         Returns: string[]
       }
+      notif_source_of: { Args: { p_meta: Json }; Returns: string }
       notif_user_name: { Args: { p: string }; Returns: string }
       notify_send_test: { Args: { p_rule_id: string }; Returns: Json }
       recalculate_monthly_leave_accruals: {
