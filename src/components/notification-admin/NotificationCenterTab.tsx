@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Activity, BellRing, CheckCircle2, Loader2, MoreVertical, Pencil, Plus, Search, Send, Smartphone, Trash2, Zap } from "lucide-react";
+import { Activity, BellRing, CheckCircle2, Loader2, MoreVertical, Pencil, Plus, Search, Send, Smartphone, Stethoscope, Trash2, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -38,6 +38,7 @@ import {
   type NotificationRule,
 } from "@/hooks/useNotificationRules";
 import RuleEditorDialog from "./RuleEditorDialog";
+import SystemCheckDialog from "./SystemCheckDialog";
 
 function StatCard({ icon: Icon, label, value, tone }: { icon: typeof BellRing; label: string; value: number | string; tone: string }) {
   return (
@@ -70,6 +71,7 @@ export default function NotificationCenterTab() {
   const [editorOpen, setEditorOpen] = useState(false);
   const [deleting, setDeleting] = useState<NotificationRule | null>(null);
   const [testingId, setTestingId] = useState<string | null>(null);
+  const [checkOpen, setCheckOpen] = useState(false);
 
   const eventLabel = (r: NotificationRule) =>
     eventTypes.find((e) => e.source_table === r.source_table && e.event_code === r.event_code);
@@ -168,9 +170,14 @@ export default function NotificationCenterTab() {
           <h2 className="text-lg font-semibold">Notification Center</h2>
           <p className="text-sm text-muted-foreground">Automatically notify people when something happens in the app.</p>
         </div>
-        <Button onClick={openNew} className="shrink-0">
-          <Plus className="h-4 w-4 mr-1.5" /> New rule
-        </Button>
+        <div className="flex gap-2 shrink-0">
+          <Button variant="outline" onClick={() => setCheckOpen(true)}>
+            <Stethoscope className="h-4 w-4 mr-1.5" /> System check
+          </Button>
+          <Button onClick={openNew}>
+            <Plus className="h-4 w-4 mr-1.5" /> New rule
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -330,6 +337,7 @@ export default function NotificationCenterTab() {
       </Card>
 
       <RuleEditorDialog open={editorOpen} onOpenChange={setEditorOpen} rule={editing} />
+      <SystemCheckDialog open={checkOpen} onOpenChange={setCheckOpen} />
 
       <AlertDialog open={!!deleting} onOpenChange={(o) => !o && setDeleting(null)}>
         <AlertDialogContent>
