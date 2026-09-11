@@ -2665,6 +2665,27 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_push_config: {
+        Row: {
+          function_url: string
+          id: boolean
+          trigger_secret: string
+          updated_at: string
+        }
+        Insert: {
+          function_url: string
+          id?: boolean
+          trigger_secret: string
+          updated_at?: string
+        }
+        Update: {
+          function_url?: string
+          id?: boolean
+          trigger_secret?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           created_at: string
