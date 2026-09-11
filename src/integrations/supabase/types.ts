@@ -2638,6 +2638,81 @@ export type Database = {
           },
         ]
       }
+      notification_event_log: {
+        Row: {
+          actor_user_id: string | null
+          created_at: string
+          event_code: string
+          id: string
+          metadata: Json
+          notifications_created: number
+          record_id: string | null
+          rules_matched: number
+          source_table: string
+        }
+        Insert: {
+          actor_user_id?: string | null
+          created_at?: string
+          event_code: string
+          id?: string
+          metadata?: Json
+          notifications_created?: number
+          record_id?: string | null
+          rules_matched?: number
+          source_table: string
+        }
+        Update: {
+          actor_user_id?: string | null
+          created_at?: string
+          event_code?: string
+          id?: string
+          metadata?: Json
+          notifications_created?: number
+          record_id?: string | null
+          rules_matched?: number
+          source_table?: string
+        }
+        Relationships: []
+      }
+      notification_event_types: {
+        Row: {
+          app_already_notifies: boolean
+          description: string | null
+          event_code: string
+          id: string
+          is_active: boolean
+          label: string
+          module_label: string
+          sort_order: number
+          source_table: string
+          tokens: string[]
+        }
+        Insert: {
+          app_already_notifies?: boolean
+          description?: string | null
+          event_code: string
+          id?: string
+          is_active?: boolean
+          label: string
+          module_label: string
+          sort_order?: number
+          source_table: string
+          tokens?: string[]
+        }
+        Update: {
+          app_already_notifies?: boolean
+          description?: string | null
+          event_code?: string
+          id?: string
+          is_active?: boolean
+          label?: string
+          module_label?: string
+          sort_order?: number
+          source_table?: string
+          tokens?: string[]
+        }
+        Relationships: []
+      }
       notification_preferences: {
         Row: {
           created_at: string
@@ -2682,6 +2757,63 @@ export type Database = {
           function_url?: string
           id?: boolean
           trigger_secret?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      notification_rules: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          event_code: string
+          id: string
+          include_secondary_manager: boolean
+          is_active: boolean
+          message_template: string
+          name: string
+          notification_channel: string
+          receiver_role: string | null
+          receiver_type: string
+          receiver_user_id: string | null
+          source_table: string
+          timezone: string
+          title_template: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          event_code: string
+          id?: string
+          include_secondary_manager?: boolean
+          is_active?: boolean
+          message_template?: string
+          name: string
+          notification_channel?: string
+          receiver_role?: string | null
+          receiver_type?: string
+          receiver_user_id?: string | null
+          source_table: string
+          timezone?: string
+          title_template?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          event_code?: string
+          id?: string
+          include_secondary_manager?: boolean
+          is_active?: boolean
+          message_template?: string
+          name?: string
+          notification_channel?: string
+          receiver_role?: string | null
+          receiver_type?: string
+          receiver_user_id?: string | null
+          source_table?: string
+          timezone?: string
+          title_template?: string
           updated_at?: string
         }
         Relationships: []
@@ -5956,6 +6088,16 @@ export type Database = {
         Args: { _lead_id: string; _payload: Json }
         Returns: string
       }
+      emit_notification_event: {
+        Args: {
+          p_actor_user_id: string
+          p_event_code: string
+          p_metadata?: Json
+          p_record_id: string
+          p_source_table: string
+        }
+        Returns: undefined
+      }
       ensure_current_user: {
         Args: { _email: string; _full_name?: string; _username?: string }
         Returns: {
@@ -6024,6 +6166,43 @@ export type Database = {
         Args: { _permission: string; _user_id: string }
         Returns: boolean
       }
+      notif_can_manage: { Args: { p_user: string }; Returns: boolean }
+      notif_fill: {
+        Args: { p_ctx: Json; p_template: string; p_tz?: string }
+        Returns: string
+      }
+      notif_fmt_date: { Args: { p: string }; Returns: string }
+      notif_fmt_time: { Args: { p: string }; Returns: string }
+      notif_managers_up_chain: {
+        Args: { p_include_secondary?: boolean; p_user: string }
+        Returns: string[]
+      }
+      notif_preview_recipients: {
+        Args: {
+          p_include_secondary?: boolean
+          p_receiver_role?: string
+          p_receiver_type: string
+          p_receiver_user_id?: string
+          p_sample_actor?: string
+        }
+        Returns: {
+          email: string
+          id: string
+          name: string
+        }[]
+      }
+      notif_resolve_recipients: {
+        Args: {
+          p_actor: string
+          p_include_secondary?: boolean
+          p_receiver_role: string
+          p_receiver_type: string
+          p_receiver_user_id: string
+        }
+        Returns: string[]
+      }
+      notif_user_name: { Args: { p: string }; Returns: string }
+      notify_send_test: { Args: { p_rule_id: string }; Returns: Json }
       recalculate_monthly_leave_accruals: {
         Args: { _target_user_id?: string }
         Returns: undefined
