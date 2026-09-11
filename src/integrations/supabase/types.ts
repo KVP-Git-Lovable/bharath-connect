@@ -5399,117 +5399,6 @@ export type Database = {
         }
         Relationships: []
       }
-      report_delivery_log: {
-        Row: {
-          created_at: string
-          error: string | null
-          id: string
-          is_manual: boolean
-          period_from: string | null
-          period_to: string | null
-          recipients: number
-          run_key: string
-          status: string
-          subscription_id: string
-        }
-        Insert: {
-          created_at?: string
-          error?: string | null
-          id?: string
-          is_manual?: boolean
-          period_from?: string | null
-          period_to?: string | null
-          recipients?: number
-          run_key: string
-          status?: string
-          subscription_id: string
-        }
-        Update: {
-          created_at?: string
-          error?: string | null
-          id?: string
-          is_manual?: boolean
-          period_from?: string | null
-          period_to?: string | null
-          recipients?: number
-          run_key?: string
-          status?: string
-          subscription_id?: string
-        }
-        Relationships: []
-      }
-      report_subscriptions: {
-        Row: {
-          cadence: string
-          created_at: string
-          created_by: string | null
-          fire_monthday: number | null
-          fire_time: string
-          fire_weekday: number | null
-          id: string
-          last_run_at: string | null
-          module: string
-          name: string
-          next_run_at: string | null
-          period: string
-          push_to_phone: boolean
-          recipient_mode: string
-          recipient_role: string | null
-          recipient_user_ids: string[]
-          report_config: Json
-          saved_report_name: string | null
-          status: string
-          timezone: string
-          updated_at: string
-        }
-        Insert: {
-          cadence?: string
-          created_at?: string
-          created_by?: string | null
-          fire_monthday?: number | null
-          fire_time?: string
-          fire_weekday?: number | null
-          id?: string
-          last_run_at?: string | null
-          module: string
-          name: string
-          next_run_at?: string | null
-          period?: string
-          push_to_phone?: boolean
-          recipient_mode?: string
-          recipient_role?: string | null
-          recipient_user_ids?: string[]
-          report_config?: Json
-          saved_report_name?: string | null
-          status?: string
-          timezone?: string
-          updated_at?: string
-        }
-        Update: {
-          cadence?: string
-          created_at?: string
-          created_by?: string | null
-          fire_monthday?: number | null
-          fire_time?: string
-          fire_weekday?: number | null
-          id?: string
-          last_run_at?: string | null
-          module?: string
-          name?: string
-          next_run_at?: string | null
-          period?: string
-          push_to_phone?: boolean
-          recipient_mode?: string
-          recipient_role?: string | null
-          recipient_user_ids?: string[]
-          report_config?: Json
-          saved_report_name?: string | null
-          status?: string
-          timezone?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
       retailers: {
         Row: {
           address: string | null
@@ -6185,21 +6074,6 @@ export type Database = {
       }
     }
     Functions: {
-      report_run_now: { Args: { p_sub_id: string }; Returns: number }
-      report_subscription_preview: {
-        Args: {
-          p_cadence: string
-          p_fire_time: string
-          p_mode: string
-          p_monthday: number
-          p_period: string
-          p_role: string
-          p_tz?: string
-          p_user_ids: string[]
-          p_weekday: number
-        }
-        Returns: Json
-      }
       can_access_crm_record: {
         Args: { _creator: string; _owner: string }
         Returns: boolean
