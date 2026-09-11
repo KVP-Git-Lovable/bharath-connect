@@ -2638,12 +2638,65 @@ export type Database = {
           },
         ]
       }
-      notifications: {
+      notification_preferences: {
         Row: {
           created_at: string
           id: string
+          is_enabled: boolean
+          notification_type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_enabled?: boolean
+          notification_type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_enabled?: boolean
+          notification_type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      notification_push_config: {
+        Row: {
+          function_url: string
+          id: boolean
+          trigger_secret: string
+          updated_at: string
+        }
+        Insert: {
+          function_url: string
+          id?: boolean
+          trigger_secret: string
+          updated_at?: string
+        }
+        Update: {
+          function_url?: string
+          id?: boolean
+          trigger_secret?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          created_at: string
+          deleted_at: string | null
+          delivery_status: string
+          id: string
+          is_dismissed: boolean
           is_read: boolean | null
           message: string
+          metadata: Json
+          read_at: string | null
           related_id: string | null
           related_table: string | null
           title: string
@@ -2652,9 +2705,14 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          deleted_at?: string | null
+          delivery_status?: string
           id?: string
+          is_dismissed?: boolean
           is_read?: boolean | null
           message: string
+          metadata?: Json
+          read_at?: string | null
           related_id?: string | null
           related_table?: string | null
           title: string
@@ -2663,9 +2721,14 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          deleted_at?: string | null
+          delivery_status?: string
           id?: string
+          is_dismissed?: boolean
           is_read?: boolean | null
           message?: string
+          metadata?: Json
+          read_at?: string | null
           related_id?: string | null
           related_table?: string | null
           title?: string
