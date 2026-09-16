@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import OverrideTable, { type OverrideEntry } from "./OverrideTable";
 import ExpenseGroupsInline, { type ExpenseGroup } from "./ExpenseGroupsInline";
 import TaRateHistory from "./TaRateHistory";
+import VehicleTypesPolicy from "./VehicleTypesPolicy";
 
 
 interface ExpenseConfig {
@@ -361,6 +362,10 @@ export default function ExpensePolicyConfig() {
                 </div>
                 <TaRateHistory onCurrentRateChange={(r) => setConfig((c) => (c ? { ...c, ta_per_km_rate: r } : c))} />
 
+                <div className="border-t border-border/60 pt-4">
+                  <p className="mb-3 text-sm font-semibold text-foreground">Vehicle Types &amp; Rates</p>
+                  <VehicleTypesPolicy />
+                </div>
               </>
             ) : (
               <div className="grid gap-2 lg:grid-cols-[minmax(260px,0.8fr)_minmax(360px,1.2fr)] lg:items-center">

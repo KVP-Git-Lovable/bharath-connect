@@ -63,9 +63,9 @@ export default function ExpenseSummaryCards({
                 <Icon className="h-5 w-5" />
               </div>
               <div className="min-w-0">
-                <p className="text-[11px] text-muted-foreground truncate">{it.label}</p>
-                <p className={cn("text-base font-bold leading-tight", it.fg)}>{it.value}</p>
-                {it.sub && <p className="text-[10px] text-muted-foreground">{it.sub}</p>}
+                <p className="text-xs font-medium text-muted-foreground truncate">{it.label}</p>
+                <p className={cn("text-lg font-bold leading-tight", it.fg)}>{it.value}</p>
+                {it.sub && <p className="text-xs text-muted-foreground">{it.sub}</p>}
               </div>
             </CardContent>
           </Card>

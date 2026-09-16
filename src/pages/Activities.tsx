@@ -98,6 +98,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useAudioRecorder } from "@/hooks/useAudioRecorder";
 import ActivityGeoStamp from "@/components/activities/ActivityGeoStamp";
+import VehicleSelector from "@/components/activities/VehicleSelector";
 
 
 const LeafletMap = lazy(() => import("@/components/LeafletMap"));
@@ -913,6 +914,8 @@ export default function Activities() {
             );
           })}
         </div>
+
+        {currentUserId && <VehicleSelector userId={currentUserId} dateStr={dateStr} />}
 
         {/* Action Buttons Row */}
         <div className="grid grid-cols-3 gap-2 mt-3">
