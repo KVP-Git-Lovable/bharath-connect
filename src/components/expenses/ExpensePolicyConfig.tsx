@@ -1,4 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { format } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,6 +40,7 @@ interface Workflow { id: string; name: string; approval_type: string; steps: num
 interface Rule { id: string; rule_name: string; condition_type: string; min_amount: number | null; max_amount: number | null; workflow_id: string; priority: number; is_active: boolean; }
 
 export default function ExpensePolicyConfig() {
+  const queryClient = useQueryClient();
   const [config, setConfig] = useState<ExpenseConfig | null>(null);
   const [policy, setPolicy] = useState<PolicyRow | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -146,9 +149,50 @@ export default function ExpensePolicyConfig() {
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
+  // Keeps the top-level "Per KM Rate" field as the single control for the
+  // org-wide rate, while still recording every change in ta_rate_history —
+  // so editing it here can never silently bypass the rate-history log.
+  const syncTaRateHistory = async (newRate: number) => {
+    const today = format(new Date(), "yyyy-MM-dd");
+    const { data: rows, error: fetchErr } = await supabase
+      .from("ta_rate_history" as any)
+      .select("id, per_km_rate, effective_from, effective_to")
+      .order("effective_from", { ascending: false });
+    if (fetchErr) { toast.error("Could not check rate history"); return; }
+
+    const history = (rows || []) as any[];
+    const active = history.find((r) => r.effective_from <= today && (!r.effective_to || r.effective_to >= today));
+
+    if (active && Number(active.per_km_rate) === newRate) return; // unchanged
+
+    if (active && active.effective_from === today) {
+      // Already a row for today (e.g. added via "Add Rate" earlier today) — update it in place.
+      const { error } = await supabase.from("ta_rate_history" as any).update({ per_km_rate: newRate }).eq("id", active.id);
+      if (error) { toast.error("Could not update today's rate"); return; }
+    } else {
+      if (active) {
+        const end = new Date(`${today}T00:00:00`);
+        end.setDate(end.getDate() - 1);
+        const { error } = await supabase
+          .from("ta_rate_history" as any)
+          .update({ effective_to: format(end, "yyyy-MM-dd") })
+          .eq("id", active.id);
+        if (error) { toast.error("Could not close previous rate"); return; }
+      }
+      const { error } = await supabase
+        .from("ta_rate_history" as any)
+        .insert({ per_km_rate: newRate, effective_from: today, note: "Updated from Policy Configuration" } as any);
+      if (error) { toast.error("Could not record rate history"); return; }
+    }
+    queryClient.invalidateQueries({ queryKey: ["ta-rate-history"] });
+  };
+
   const saveConfigAndPolicy = async () => {
     if (!config || !policy) return;
     setSaving(true);
+    if (config.ta_type === "from_gps") {
+      await syncTaRateHistory(config.ta_per_km_rate);
+    }
     const [cfgRes, polRes] = await Promise.all([
       supabase.from("expense_master_config" as any).update({
         ta_type: config.ta_type,
@@ -263,12 +307,11 @@ export default function ExpensePolicyConfig() {
   }
 
   return (
-    <div className="relative left-1/2 w-[calc(100vw-1.5rem)] max-w-[1536px] -translate-x-1/2 space-y-6 sm:w-[calc(100vw-3rem)]">
-      <div className="flex flex-col gap-2 border-b border-border/70 pb-4 sm:flex-row sm:items-end sm:justify-between">
+    <div className="relative left-1/2 w-[calc(100vw-1.5rem)] max-w-[1536px] -translate-x-1/2 space-y-8 sm:w-[calc(100vw-3rem)]">
+      <div className="flex flex-col gap-3 border-b border-border/70 pb-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase text-accent">Policy configuration</p>
-          <h2 className="mt-1 text-lg font-bold sm:text-xl">Expense rules and allowances</h2>
-          <p className="mt-1 max-w-3xl text-sm text-muted-foreground">Set travel and daily allowances, claim limits, categories, and approval routing for your team.</p>
+          <h2 className="text-2xl font-bold sm:text-3xl">Policy Configuration</h2>
+          <p className="mt-1 max-w-3xl text-sm text-muted-foreground">Travel, daily &amp; additional expense limits, categories, and approval routing.</p>
         </div>
         <Button onClick={saveConfigAndPolicy} disabled={saving} className="w-full sm:w-auto">
           {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
@@ -278,19 +321,19 @@ export default function ExpensePolicyConfig() {
 
       <div className="space-y-3">
         <div>
-          <h3 className="text-base font-bold">Allowance policies</h3>
-          <p className="text-xs text-muted-foreground">Define standard travel, daily, and additional expense limits.</p>
+          <h3 className="text-xl font-bold">Allowance policies</h3>
+          <p className="text-sm text-muted-foreground">Define standard travel, daily, and additional expense limits.</p>
         </div>
       {/* TA Policy */}
       <Card className="overflow-hidden border-border/70 shadow-card">
-        <CardHeader className="border-b border-border/60 bg-info/5 px-4 py-4 sm:px-6">
-          <CardTitle className="flex items-center gap-3 text-base"><span className="flex h-9 w-9 items-center justify-center rounded-md bg-info/10 text-info"><Car className="h-4 w-4" /></span><span>Travel Allowance (TA) Policy<span className="mt-0.5 block text-xs font-normal text-muted-foreground">Configure how travel allowance is calculated and distributed.</span></span></CardTitle>
+        <CardHeader className="border-b border-border/60 bg-info/5 px-5 py-5 sm:px-7">
+          <CardTitle className="flex items-center gap-3 text-lg"><span className="flex h-10 w-10 items-center justify-center rounded-md bg-info/10 text-info"><Car className="h-5 w-5" /></span><span>Travel Allowance (TA) Policy<span className="mt-0.5 block text-sm font-normal text-muted-foreground">Configure how travel allowance is calculated and distributed.</span></span></CardTitle>
         </CardHeader>
-        <CardContent className="space-y-5 p-4 sm:p-6">
+        <CardContent className="space-y-5 p-5 sm:p-7">
           <div className="grid gap-2 lg:grid-cols-[minmax(260px,0.8fr)_minmax(360px,1.2fr)] lg:items-center">
             <div>
-            <Label className="text-xs">TA Calculation Method</Label>
-              <p className="mt-1 text-xs text-muted-foreground">Choose GPS-based reimbursement or a fixed daily amount.</p>
+            <Label className="text-base font-semibold text-foreground">TA Calculation Method</Label>
+              <p className="mt-1 text-sm text-muted-foreground">Choose GPS-based reimbursement or a fixed daily amount.</p>
             </div>
             <Select value={config.ta_type} onValueChange={(v: any) => setConfig({ ...config, ta_type: v })}>
               <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
@@ -304,14 +347,14 @@ export default function ExpensePolicyConfig() {
           <div className="space-y-4 rounded-md border border-border/70 bg-muted/20 p-4 sm:p-5">
             {config.ta_type === "from_gps" ? (
               <>
-                <p className="text-xs text-muted-foreground flex items-start gap-1.5">
+                <p className="text-sm text-muted-foreground flex items-start gap-1.5">
                   <Navigation className="h-3.5 w-3.5 mt-0.5 shrink-0" />
                   <span>TA is auto-calculated from GPS kilometers traveled per day: <strong className="text-foreground">TA = Total KM × Per KM Rate</strong>.</span>
                 </p>
                 <div className="grid gap-2 lg:grid-cols-[minmax(260px,0.8fr)_minmax(360px,1.2fr)] lg:items-start">
                   <div>
-                  <Label className="text-xs">Per KM Rate (₹) *</Label>
-                    <p className="mt-1 text-[11px] text-muted-foreground">Example: If rate is ₹8/km and user travels 45 km, TA = ₹360</p>
+                  <Label className="text-base font-semibold text-foreground">Per KM Rate (₹) *</Label>
+                    <p className="mt-1 text-sm text-muted-foreground">Example: If rate is ₹8/km and user travels 45 km, TA = ₹360</p>
                   </div>
                   <Input type="number" min="0" step="0.5" value={config.ta_per_km_rate}
                     onChange={(e) => setConfig({ ...config, ta_per_km_rate: Number(e.target.value) })} className="h-10 w-full lg:max-w-xs" />
@@ -321,7 +364,7 @@ export default function ExpensePolicyConfig() {
               </>
             ) : (
               <div className="grid gap-2 lg:grid-cols-[minmax(260px,0.8fr)_minmax(360px,1.2fr)] lg:items-center">
-                <div><Label className="text-xs">Fixed TA Amount (₹ per day)</Label><p className="mt-1 text-[11px] text-muted-foreground">Applied as the standard daily travel allowance.</p></div>
+                <div><Label className="text-base font-semibold text-foreground">Fixed TA Amount (₹ per day)</Label><p className="mt-1 text-sm text-muted-foreground">Applied as the standard daily travel allowance.</p></div>
                 <Input type="number" min="0" value={config.fixed_ta_amount}
                   onChange={(e) => setConfig({ ...config, fixed_ta_amount: Number(e.target.value) })} className="h-10 w-full lg:max-w-xs" />
               </div>
@@ -329,10 +372,10 @@ export default function ExpensePolicyConfig() {
           </div>
 
           <div className="grid gap-3 lg:grid-cols-[minmax(260px,0.8fr)_minmax(360px,1.2fr)] lg:items-center">
-            <div><Label className="text-xs">Distribution</Label><p className="mt-1 text-[11px] text-muted-foreground">Apply one policy to everyone or define exceptions.</p></div>
+            <div><Label className="text-base font-semibold text-foreground">Distribution</Label><p className="mt-1 text-sm text-muted-foreground">Apply one policy to everyone or define exceptions.</p></div>
             <RadioGroup value={taDist} onValueChange={(v: any) => setTaDist(v)} className="flex flex-col gap-2 sm:flex-row sm:gap-4">
-              <div className="flex items-center gap-2"><RadioGroupItem value="same_for_all" id="ta-same" /><Label htmlFor="ta-same" className="text-xs">Same for all</Label></div>
-              <div className="flex items-center gap-2"><RadioGroupItem value="custom" id="ta-custom" /><Label htmlFor="ta-custom" className="text-xs">Custom per user/team</Label></div>
+              <div className="flex items-center gap-2"><RadioGroupItem value="same_for_all" id="ta-same" /><Label htmlFor="ta-same" className="text-sm font-medium text-foreground">Same for all</Label></div>
+              <div className="flex items-center gap-2"><RadioGroupItem value="custom" id="ta-custom" /><Label htmlFor="ta-custom" className="text-sm font-medium text-foreground">Custom per user/team</Label></div>
             </RadioGroup>
           </div>
 
@@ -352,19 +395,19 @@ export default function ExpensePolicyConfig() {
 
       {/* DA Policy */}
       <Card className="overflow-hidden border-border/70 shadow-card">
-        <CardHeader className="border-b border-border/60 bg-success/5 px-4 py-4 sm:px-6">
-          <CardTitle className="flex items-center gap-3 text-base"><span className="flex h-9 w-9 items-center justify-center rounded-md bg-success/10 text-success"><Utensils className="h-4 w-4" /></span><span>Daily Allowance (DA) Policy<span className="mt-0.5 block text-xs font-normal text-muted-foreground">Control daily allowance availability, value, and calculation basis.</span></span></CardTitle>
+        <CardHeader className="border-b border-border/60 bg-success/5 px-5 py-5 sm:px-7">
+          <CardTitle className="flex items-center gap-3 text-lg"><span className="flex h-10 w-10 items-center justify-center rounded-md bg-success/10 text-success"><Utensils className="h-5 w-5" /></span><span>Daily Allowance (DA) Policy<span className="mt-0.5 block text-sm font-normal text-muted-foreground">Control daily allowance availability, value, and calculation basis.</span></span></CardTitle>
         </CardHeader>
-        <CardContent className="space-y-5 p-4 sm:p-6">
+        <CardContent className="space-y-5 p-5 sm:p-7">
           <div className="flex flex-col gap-3 rounded-md border border-border/70 bg-muted/20 p-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <Label className="text-xs font-medium">DA applicable</Label>
-              <p className="text-[11px] text-muted-foreground">
+              <Label className="text-base font-semibold text-foreground">DA applicable</Label>
+              <p className="text-sm text-muted-foreground">
                 If turned off, Daily Allowance is hidden everywhere in the Expenses module.
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground">{config.da_applicable ? "Yes" : "No"}</span>
+              <span className="text-sm text-muted-foreground">{config.da_applicable ? "Yes" : "No"}</span>
               <Switch checked={config.da_applicable}
                 onCheckedChange={(v) => setConfig({ ...config, da_applicable: v })} />
             </div>
@@ -372,10 +415,10 @@ export default function ExpensePolicyConfig() {
 
           {config.da_applicable && (<>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div className="space-y-1"><Label className="text-xs">DA Amount (₹)</Label>
+            <div className="space-y-1"><Label className="text-base font-semibold text-foreground">DA Amount (₹)</Label>
               <Input type="number" min="0" value={config.fixed_da_amount}
                 onChange={(e) => setConfig({ ...config, fixed_da_amount: Number(e.target.value) })} /></div>
-            <div className="space-y-1"><Label className="text-xs">Calculation Basis</Label>
+            <div className="space-y-1"><Label className="text-base font-semibold text-foreground">Calculation Basis</Label>
               <Select value={config.da_calculation_basis} onValueChange={(v: any) => setConfig({ ...config, da_calculation_basis: v })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -388,10 +431,10 @@ export default function ExpensePolicyConfig() {
 
 
           <div className="grid gap-3 lg:grid-cols-[minmax(260px,0.8fr)_minmax(360px,1.2fr)] lg:items-center">
-            <div><Label className="text-xs">Distribution</Label><p className="mt-1 text-[11px] text-muted-foreground">Apply one policy to everyone or define exceptions.</p></div>
+            <div><Label className="text-base font-semibold text-foreground">Distribution</Label><p className="mt-1 text-sm text-muted-foreground">Apply one policy to everyone or define exceptions.</p></div>
             <RadioGroup value={daDist} onValueChange={(v: any) => setDaDist(v)} className="flex flex-col gap-2 sm:flex-row sm:gap-4">
-              <div className="flex items-center gap-2"><RadioGroupItem value="same_for_all" id="da-same" /><Label htmlFor="da-same" className="text-xs">Same for all</Label></div>
-              <div className="flex items-center gap-2"><RadioGroupItem value="custom" id="da-custom" /><Label htmlFor="da-custom" className="text-xs">Custom per user/team</Label></div>
+              <div className="flex items-center gap-2"><RadioGroupItem value="same_for_all" id="da-same" /><Label htmlFor="da-same" className="text-sm font-medium text-foreground">Same for all</Label></div>
+              <div className="flex items-center gap-2"><RadioGroupItem value="custom" id="da-custom" /><Label htmlFor="da-custom" className="text-sm font-medium text-foreground">Custom per user/team</Label></div>
             </RadioGroup>
           </div>
 
@@ -411,51 +454,44 @@ export default function ExpensePolicyConfig() {
 
       {/* Additional Expenses Policy */}
       <Card className="overflow-hidden border-border/70 shadow-card">
-        <CardHeader className="border-b border-border/60 bg-accent/5 px-4 py-4 sm:px-6">
-          <CardTitle className="flex items-center gap-3 text-base"><span className="flex h-9 w-9 items-center justify-center rounded-md bg-accent/10 text-accent"><Receipt className="h-4 w-4" /></span><span>Additional Expenses Policy<span className="mt-0.5 block text-xs font-normal text-muted-foreground">Set claim limits and the threshold for mandatory receipts.</span></span></CardTitle>
+        <CardHeader className="border-b border-border/60 bg-accent/5 px-5 py-5 sm:px-7">
+          <CardTitle className="flex items-center gap-3 text-lg"><span className="flex h-10 w-10 items-center justify-center rounded-md bg-accent/10 text-accent"><Receipt className="h-5 w-5" /></span><span>Additional Expenses Policy<span className="mt-0.5 block text-sm font-normal text-muted-foreground">Set claim limits and the threshold for mandatory receipts.</span></span></CardTitle>
         </CardHeader>
-        <CardContent className="p-4 sm:p-6">
+        <CardContent className="p-5 sm:p-7">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div className="space-y-1">
-              <Label className="text-xs">Max per Day (₹)</Label>
+              <Label className="text-base font-semibold text-foreground">Max per Day (₹)</Label>
               <Input type="number" min="0" value={policy.max_additional_expense_per_day}
                 onChange={(e) => setPolicy({ ...policy, max_additional_expense_per_day: Number(e.target.value) })} />
-              <p className="text-[11px] text-muted-foreground">0 = no limit</p>
+              <p className="text-sm text-muted-foreground">0 = no limit</p>
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Max per Month (₹)</Label>
+              <Label className="text-base font-semibold text-foreground">Max per Month (₹)</Label>
               <Input type="number" min="0" value={policy.max_additional_expense_per_month}
                 onChange={(e) => setPolicy({ ...policy, max_additional_expense_per_month: Number(e.target.value) })} />
-              <p className="text-[11px] text-muted-foreground">0 = no limit</p>
+              <p className="text-sm text-muted-foreground">0 = no limit</p>
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Bill Required Above (₹)</Label>
+              <Label className="text-base font-semibold text-foreground">Bill Required Above (₹)</Label>
               <Input type="number" min="0" value={policy.require_bill_above_amount}
                 onChange={(e) => setPolicy({ ...policy, require_bill_above_amount: Number(e.target.value) })} />
-              <p className="text-[11px] text-muted-foreground">Mandatory bill above this amount</p>
+              <p className="text-sm text-muted-foreground">Mandatory bill above this amount</p>
             </div>
           </div>
         </CardContent>
       </Card>
-
-      <div className="flex justify-end border-t border-border/70 pt-4">
-        <Button onClick={saveConfigAndPolicy} disabled={saving}>
-          {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
-          Save Policies
-        </Button>
-      </div>
       </div>
 
       <div className="space-y-3 pt-2">
         <div>
-          <h3 className="text-base font-bold">Claims and approvals</h3>
-          <p className="text-xs text-muted-foreground">Manage expense categories and route claims through the correct approval process.</p>
+          <h3 className="text-xl font-bold">Claims and approvals</h3>
+          <p className="text-sm text-muted-foreground">Manage expense categories and route claims through the correct approval process.</p>
         </div>
 
       {/* Categories */}
       <Card className="overflow-hidden border-border/70 shadow-card">
-        <CardHeader className="flex flex-row items-center justify-between gap-3 border-b border-border/60 bg-warning/5 px-4 py-4 sm:px-6">
-          <CardTitle className="flex items-center gap-3 text-base"><span className="flex h-9 w-9 items-center justify-center rounded-md bg-warning/10 text-warning"><Tags className="h-4 w-4" /></span><span>Expense Categories<span className="mt-0.5 block text-xs font-normal text-muted-foreground">Control receipt and automatic approval rules by category.</span></span></CardTitle>
+        <CardHeader className="flex flex-row items-center justify-between gap-3 border-b border-border/60 bg-warning/5 px-5 py-5 sm:px-7">
+          <CardTitle className="flex items-center gap-3 text-lg"><span className="flex h-10 w-10 items-center justify-center rounded-md bg-warning/10 text-warning"><Tags className="h-5 w-5" /></span><span>Expense Categories<span className="mt-0.5 block text-sm font-normal text-muted-foreground">Control receipt and automatic approval rules by category.</span></span></CardTitle>
           <Button size="sm" onClick={openAddCat}><Plus className="h-4 w-4 mr-1" />Add</Button>
         </CardHeader>
         <CardContent className="overflow-x-auto p-4 sm:p-6">
@@ -486,8 +522,8 @@ export default function ExpensePolicyConfig() {
 
       {/* Approval Workflows */}
       <Card className="overflow-hidden border-border/70 shadow-card">
-        <CardHeader className="flex flex-row items-center justify-between gap-3 border-b border-border/60 bg-primary/5 px-4 py-4 sm:px-6">
-          <CardTitle className="flex items-center gap-3 text-base"><span className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10 text-primary"><GitBranch className="h-4 w-4" /></span><span>Approval Workflows<span className="mt-0.5 block text-xs font-normal text-muted-foreground">Define the sequence used to review submitted claims.</span></span></CardTitle>
+        <CardHeader className="flex flex-row items-center justify-between gap-3 border-b border-border/60 bg-primary/5 px-5 py-5 sm:px-7">
+          <CardTitle className="flex items-center gap-3 text-lg"><span className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10 text-primary"><GitBranch className="h-5 w-5" /></span><span>Approval Workflows<span className="mt-0.5 block text-sm font-normal text-muted-foreground">Define the sequence used to review submitted claims.</span></span></CardTitle>
           <Button size="sm" onClick={openAddWf}><Plus className="h-4 w-4 mr-1" />Add</Button>
         </CardHeader>
         <CardContent className="space-y-2 p-4 sm:p-6">
@@ -518,29 +554,29 @@ export default function ExpensePolicyConfig() {
 
       {/* Approval Rules */}
       <Card className="overflow-hidden border-border/70 shadow-card">
-        <CardHeader className="flex flex-row items-center justify-between gap-3 border-b border-border/60 bg-info/5 px-4 py-4 sm:px-6">
-          <CardTitle className="flex items-center gap-3 text-base"><span className="flex h-9 w-9 items-center justify-center rounded-md bg-info/10 text-info"><Scale className="h-4 w-4" /></span><span>Approval Rules<span className="mt-0.5 block text-xs font-normal text-muted-foreground">Match expense amounts to the appropriate workflow.</span></span></CardTitle>
+        <CardHeader className="flex flex-row items-center justify-between gap-3 border-b border-border/60 bg-info/5 px-5 py-5 sm:px-7">
+          <CardTitle className="flex items-center gap-3 text-lg"><span className="flex h-10 w-10 items-center justify-center rounded-md bg-info/10 text-info"><Scale className="h-5 w-5" /></span><span>Approval Rules<span className="mt-0.5 block text-sm font-normal text-muted-foreground">Match expense amounts to the appropriate workflow.</span></span></CardTitle>
           <Button size="sm" onClick={() => setShowRuleForm(true)}><Plus className="h-4 w-4 mr-1" />Add Rule</Button>
         </CardHeader>
         <CardContent className="space-y-3 overflow-x-auto p-4 sm:p-6">
-          <p className="text-xs text-muted-foreground flex items-start gap-1.5"><Info className="h-3.5 w-3.5 mt-0.5" />Rules are checked in priority order (lowest first). First match wins.</p>
+          <p className="text-sm text-muted-foreground flex items-start gap-1.5"><Info className="h-3.5 w-3.5 mt-0.5" />Rules are checked in priority order (lowest first). First match wins.</p>
 
           {showRuleForm && (
             <div className="space-y-4 rounded-md border border-border/70 bg-muted/20 p-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div className="space-y-1"><Label className="text-xs">Rule Name</Label>
+                <div className="space-y-1"><Label className="text-base font-semibold text-foreground">Rule Name</Label>
                   <Input value={ruleForm.rule_name} onChange={(e) => setRuleForm({ ...ruleForm, rule_name: e.target.value })} /></div>
-                <div className="space-y-1"><Label className="text-xs">Workflow</Label>
+                <div className="space-y-1"><Label className="text-base font-semibold text-foreground">Workflow</Label>
                   <Select value={ruleForm.workflow_id} onValueChange={(v) => setRuleForm({ ...ruleForm, workflow_id: v })}>
                     <SelectTrigger><SelectValue placeholder="Select workflow" /></SelectTrigger>
                     <SelectContent>{workflows.map((w) => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-1"><Label className="text-xs">Min Amount (₹)</Label>
+                <div className="space-y-1"><Label className="text-base font-semibold text-foreground">Min Amount (₹)</Label>
                   <Input type="number" value={ruleForm.min_amount} onChange={(e) => setRuleForm({ ...ruleForm, min_amount: e.target.value })} /></div>
-                <div className="space-y-1"><Label className="text-xs">Max Amount (₹)</Label>
+                <div className="space-y-1"><Label className="text-base font-semibold text-foreground">Max Amount (₹)</Label>
                   <Input type="number" value={ruleForm.max_amount} onChange={(e) => setRuleForm({ ...ruleForm, max_amount: e.target.value })} /></div>
-                <div className="space-y-1"><Label className="text-xs">Priority</Label>
+                <div className="space-y-1"><Label className="text-base font-semibold text-foreground">Priority</Label>
                   <Input type="number" value={ruleForm.priority} onChange={(e) => setRuleForm({ ...ruleForm, priority: e.target.value })} /></div>
               </div>
               <div className="flex justify-end gap-2">
@@ -581,11 +617,11 @@ export default function ExpensePolicyConfig() {
         <DialogContent className="sm:max-w-[420px]">
           <DialogHeader><DialogTitle>{editingCat ? "Edit" : "Add"} Category</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            <div className="space-y-1"><Label className="text-xs">Name</Label>
+            <div className="space-y-1"><Label className="text-base font-semibold text-foreground">Name</Label>
               <Input value={catForm.name} onChange={(e) => setCatForm({ ...catForm, name: e.target.value })} /></div>
-            <div className="space-y-1"><Label className="text-xs">Receipt required above (₹)</Label>
+            <div className="space-y-1"><Label className="text-base font-semibold text-foreground">Receipt required above (₹)</Label>
               <Input type="number" value={catForm.receipt_required_above} onChange={(e) => setCatForm({ ...catForm, receipt_required_above: e.target.value })} /></div>
-            <div className="space-y-1"><Label className="text-xs">Auto-approval limit (₹)</Label>
+            <div className="space-y-1"><Label className="text-base font-semibold text-foreground">Auto-approval limit (₹)</Label>
               <Input type="number" value={catForm.auto_approval_limit} onChange={(e) => setCatForm({ ...catForm, auto_approval_limit: e.target.value })} /></div>
           </div>
           <DialogFooter>
@@ -600,9 +636,9 @@ export default function ExpensePolicyConfig() {
         <DialogContent className="sm:max-w-[420px]">
           <DialogHeader><DialogTitle>{editingWf ? "Edit" : "Add"} Workflow</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            <div className="space-y-1"><Label className="text-xs">Name</Label>
+            <div className="space-y-1"><Label className="text-base font-semibold text-foreground">Name</Label>
               <Input value={wfForm.name} onChange={(e) => setWfForm({ ...wfForm, name: e.target.value })} /></div>
-            <div className="space-y-1"><Label className="text-xs">Type</Label>
+            <div className="space-y-1"><Label className="text-base font-semibold text-foreground">Type</Label>
               <Select value={wfForm.approval_type} onValueChange={(v) => setWfForm({ ...wfForm, approval_type: v })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -611,11 +647,11 @@ export default function ExpensePolicyConfig() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1"><Label className="text-xs">Steps</Label>
+            <div className="space-y-1"><Label className="text-base font-semibold text-foreground">Steps</Label>
               <Input type="number" min="1" value={wfForm.steps} onChange={(e) => setWfForm({ ...wfForm, steps: Number(e.target.value) })} /></div>
             <div className="flex items-center gap-2">
               <Switch checked={wfForm.is_default} onCheckedChange={(v) => setWfForm({ ...wfForm, is_default: v })} />
-              <Label className="text-xs">Default workflow</Label>
+              <Label className="text-base font-semibold text-foreground">Default workflow</Label>
             </div>
           </div>
           <DialogFooter>

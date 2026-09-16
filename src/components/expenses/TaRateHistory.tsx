@@ -74,14 +74,14 @@ export default function TaRateHistory({ onCurrentRateChange }: { onCurrentRateCh
   const today = format(new Date(), "yyyy-MM-dd");
 
   return (
-    <div className="space-y-4 rounded-md border border-border/70 bg-card p-4 shadow-card sm:p-5">
+    <div className="space-y-4 rounded-md border border-border/70 bg-card p-5 shadow-card sm:p-6">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <p className="flex items-center gap-1.5 text-xs font-semibold">
-          <History className="h-3.5 w-3.5" /> Per KM Rate History
+        <p className="flex items-center gap-1.5 text-base font-semibold text-foreground">
+          <History className="h-4 w-4" /> Per KM Rate History
         </p>
-        <Badge variant="secondary" className="w-fit text-[11px]">Current: ₹{currentRate}/km</Badge>
+        <Badge variant="secondary" className="w-fit text-sm">Current: <span className="font-bold">₹{currentRate}/km</span></Badge>
       </div>
-      <p className="text-[11px] text-muted-foreground">
+      <p className="text-sm text-muted-foreground">
         Each activity and expense is costed with the rate that was effective on its own date, so changing the rate never
         re-prices past records.
       </p>
@@ -102,7 +102,7 @@ export default function TaRateHistory({ onCurrentRateChange }: { onCurrentRateCh
             </TableHeader>
             <TableBody>
               {rates.length === 0 ? (
-                <TableRow><TableCell colSpan={5} className="text-xs text-muted-foreground">No rates configured yet</TableCell></TableRow>
+                <TableRow><TableCell colSpan={5} className="text-sm text-muted-foreground">No rates configured yet</TableCell></TableRow>
               ) : rates.map((r) => {
                 const active = r.effective_from <= today && (!r.effective_to || r.effective_to >= today);
                 return (
@@ -113,7 +113,7 @@ export default function TaRateHistory({ onCurrentRateChange }: { onCurrentRateCh
                     </TableCell>
                     <TableCell className="text-xs">{fmtDate(r.effective_from)}</TableCell>
                     <TableCell className="text-xs">{fmtDate(r.effective_to)}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{r.note || "--"}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{r.note || "--"}</TableCell>
                     <TableCell className="text-right">
                       <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeRate(r.id)}>
                         <Trash2 className="h-3.5 w-3.5 text-destructive" />
@@ -129,15 +129,15 @@ export default function TaRateHistory({ onCurrentRateChange }: { onCurrentRateCh
 
       <div className="grid gap-3 border-t border-border/60 pt-4 sm:grid-cols-2 lg:grid-cols-[minmax(140px,0.7fr)_minmax(170px,0.8fr)_minmax(240px,1.5fr)_auto] lg:items-end">
         <div className="space-y-1">
-          <Label className="text-xs">New Rate (₹/km)</Label>
+          <Label className="text-base font-semibold text-foreground">New Rate (₹/km)</Label>
           <Input type="number" min="0" step="0.5" value={rate} onChange={(e) => setRate(e.target.value)} placeholder="e.g. 9" />
         </div>
         <div className="space-y-1">
-          <Label className="text-xs">Effective From</Label>
+          <Label className="text-base font-semibold text-foreground">Effective From</Label>
           <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
         </div>
         <div className="space-y-1">
-          <Label className="text-xs">Note (optional)</Label>
+          <Label className="text-base font-semibold text-foreground">Note (optional)</Label>
           <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Reason for revision" />
         </div>
         <Button onClick={addRate} disabled={saving} className="h-10 w-full lg:w-auto">
