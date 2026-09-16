@@ -1051,6 +1051,41 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_vehicle_selections: {
+        Row: {
+          activity_date: string
+          created_at: string
+          id: string
+          updated_at: string
+          user_id: string
+          vehicle_type_id: string
+        }
+        Insert: {
+          activity_date: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+          vehicle_type_id: string
+        }
+        Update: {
+          activity_date?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+          vehicle_type_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_vehicle_selections_vehicle_type_id_fkey"
+            columns: ["vehicle_type_id"]
+            isOneToOne: false
+            referencedRelation: "vehicle_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employee_documents: {
         Row: {
           content_type: string | null
@@ -5617,6 +5652,42 @@ export type Database = {
           },
         ]
       }
+      role_vehicle_types: {
+        Row: {
+          created_at: string
+          id: string
+          profile_id: string
+          vehicle_type_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          profile_id: string
+          vehicle_type_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          profile_id?: string
+          vehicle_type_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_vehicle_types_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "security_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "role_vehicle_types_vehicle_type_id_fkey"
+            columns: ["vehicle_type_id"]
+            isOneToOne: false
+            referencedRelation: "vehicle_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       roles: {
         Row: {
           created_at: string
@@ -5991,6 +6062,83 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      vehicle_rate_history: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          effective_from: string
+          effective_to: string | null
+          id: string
+          note: string | null
+          per_km_rate: number
+          updated_at: string
+          vehicle_type_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          effective_from: string
+          effective_to?: string | null
+          id?: string
+          note?: string | null
+          per_km_rate?: number
+          updated_at?: string
+          vehicle_type_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          note?: string | null
+          per_km_rate?: number
+          updated_at?: string
+          vehicle_type_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_rate_history_vehicle_type_id_fkey"
+            columns: ["vehicle_type_id"]
+            isOneToOne: false
+            referencedRelation: "vehicle_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vehicle_types: {
+        Row: {
+          created_at: string
+          icon: string | null
+          id: string
+          is_active: boolean
+          is_no_vehicle: boolean
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          is_no_vehicle?: boolean
+          name: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          is_no_vehicle?: boolean
+          name?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
       }
       vendors: {
         Row: {
