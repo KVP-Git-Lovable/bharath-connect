@@ -142,7 +142,7 @@ interface Expense {
   bill_url: string | null;
   rejection_reason: string | null;
 }
-interface Category { id: string; name: string; auto_approval_limit: number | null; }
+interface Category { id: string; name: string; auto_approval_limit: number | null; receipt_required_above: number | null; }
 
 export default function Expenses() {
   const { userId } = useCurrentUser();
@@ -192,7 +192,7 @@ export default function Expenses() {
       ]);
       setHasTeam(!!role || (Array.isArray(hier.data) && hier.data.length > 0));
     })();
-    supabase.from("expense_categories").select("id, name, auto_approval_limit").eq("is_active", true).order("name")
+    supabase.from("expense_categories").select("id, name, auto_approval_limit, receipt_required_above").eq("is_active", true).order("name")
       .then(({ data }) => setCategories((data || []) as Category[]));
     supabase.from("expense_master_config").select("ta_type, ta_per_km_rate, fixed_ta_amount, fixed_da_amount, da_calculation_basis")
       .order("updated_at", { ascending: false }).limit(1).maybeSingle()
@@ -229,6 +229,13 @@ export default function Expenses() {
 
   const submit = async () => {
     if (!userId || !formCategory || !formAmount) { toast.error("Fill required fields"); return; }
+    const cat0 = categories.find((c) => c.name === formCategory);
+    const amount0 = parseFloat(formAmount);
+    const hasReceipt = !!formFile || !!editing?.bill_url;
+    if (cat0?.receipt_required_above != null && amount0 > cat0.receipt_required_above && !hasReceipt) {
+      toast.error(`A receipt is required for ${cat0.name} expenses above ₹${cat0.receipt_required_above}`);
+      return;
+    }
     setSubmitting(true);
     let billUrl = editing?.bill_url || null;
     if (formFile) {
@@ -481,6 +488,12 @@ export default function Expenses() {
                 <Button type="button" variant="outline" size="icon" className="h-10 w-10 shrink-0" onClick={() => setShowCamera(true)}><Camera className="h-4 w-4" /></Button>
               </div>
               {formFile && <p className="text-[11px] text-muted-foreground">Selected: {formFile.name}</p>}
+              {(() => {
+                const c = categories.find((c) => c.name === formCategory);
+                return c?.receipt_required_above != null
+                  ? <p className="text-[11px] text-muted-foreground">Required for {c.name} above ₹{c.receipt_required_above}</p>
+                  : null;
+              })()}
             </div>
           </div>
           <DialogFooter>
