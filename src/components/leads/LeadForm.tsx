@@ -33,8 +33,9 @@ export function LeadForm({
   const emptyForm = {
     name: "", title: "", contact_role: "unknown", company: "", email: "", phone: "", website: "", address: "", industry: "",
     lead_status_id: "", lead_source_id: "", related_event_id: defaultEventId ?? "",
-    business_card_url: "", researched_information: "", indicative_budget: "",
+    business_card_url: "", researched_information: "",
     opportunity_value: "", opportunity_close_date: "", opportunity_probability: "",
+    enquiry_received_date: "", quotation_number: "", quotation_date: "", value_without_gst: "",
   };
   const [f, setF] = useState(emptyForm);
   const [errors, setErrors] = useState<string[]>([]);
@@ -166,10 +167,13 @@ export function LeadForm({
         related_event_id: lead.related_event_id ?? "",
         business_card_url: lead.business_card_url ?? "",
         researched_information: lead.researched_information ?? "",
-        indicative_budget: l.indicative_budget != null ? String(l.indicative_budget) : "",
         opportunity_value: l.opportunity_value != null ? String(l.opportunity_value) : "",
         opportunity_close_date: l.opportunity_close_date ?? "",
         opportunity_probability: l.opportunity_probability != null ? String(l.opportunity_probability) : "",
+        enquiry_received_date: l.enquiry_received_date ?? "",
+        quotation_number: l.quotation_number ?? "",
+        quotation_date: l.quotation_date ?? "",
+        value_without_gst: l.value_without_gst != null ? String(l.value_without_gst) : "",
       });
     } else {
       setF({ ...emptyForm, related_event_id: defaultEventId ?? "" });
@@ -260,7 +264,6 @@ export function LeadForm({
     const early = ["enquiry", "lost", "on hold", "dropped"];
 
     if (qualified.includes(statusName)) {
-      if (!f.indicative_budget.trim()) errs.push("Indicative Budget is required for this status");
       if (!f.opportunity_value.trim()) errs.push("Opportunity Value is required for this status");
       if (!f.opportunity_close_date) errs.push("Close Date is required for this status");
       if (!f.opportunity_probability.trim()) errs.push("Probability of Win is required for this status");
@@ -304,10 +307,13 @@ export function LeadForm({
       related_event_id: f.related_event_id || null,
       business_card_url: f.business_card_url || null,
       researched_information: f.researched_information.trim() || null,
-      indicative_budget: f.indicative_budget === "" ? null : Number(f.indicative_budget),
       opportunity_value: f.opportunity_value === "" ? null : Number(f.opportunity_value),
       opportunity_close_date: f.opportunity_close_date || null,
       opportunity_probability: f.opportunity_probability === "" ? null : Number(f.opportunity_probability),
+      enquiry_received_date: f.enquiry_received_date || null,
+      quotation_number: f.quotation_number.trim() || null,
+      quotation_date: f.quotation_date || null,
+      value_without_gst: f.value_without_gst === "" ? null : Number(f.value_without_gst),
       owner_id: lead?.owner_id ?? userId ?? null,
       ...(lead?.id ? {} : { created_by: userId ?? null }),
     } as any);
@@ -408,15 +414,6 @@ export function LeadForm({
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <Label className="text-xs">Indicative Budget (₹)</Label>
-                <Input
-                  inputMode="decimal"
-                  placeholder="Budget shared by the customer"
-                  value={f.indicative_budget}
-                  onChange={(e) => setF({ ...f, indicative_budget: e.target.value.replace(/[^0-9.]/g, "") })}
-                />
-              </div>
-              <div>
                 <Label className="text-xs">Opportunity Value (₹)</Label>
                 <Input
                   inputMode="decimal"
@@ -443,6 +440,39 @@ export function LeadForm({
                     const v = e.target.value.replace(/[^0-9]/g, "");
                     if (v === "" || Number(v) <= 100) setF({ ...f, opportunity_probability: v });
                   }}
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Enq Rcd Dt</Label>
+                <Input
+                  type="date"
+                  value={f.enquiry_received_date}
+                  onChange={(e) => setF({ ...f, enquiry_received_date: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Qtn No</Label>
+                <Input
+                  placeholder="e.g. 083/SBEE/2026-27"
+                  value={f.quotation_number}
+                  onChange={(e) => setF({ ...f, quotation_number: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Qtn Date</Label>
+                <Input
+                  type="date"
+                  value={f.quotation_date}
+                  onChange={(e) => setF({ ...f, quotation_date: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Value without GST (₹)</Label>
+                <Input
+                  inputMode="decimal"
+                  placeholder="0"
+                  value={f.value_without_gst}
+                  onChange={(e) => setF({ ...f, value_without_gst: e.target.value.replace(/[^0-9.]/g, "") })}
                 />
               </div>
             </div>

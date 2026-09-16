@@ -432,6 +432,22 @@ export default function LeadDetail() {
                   <div className="text-xs text-muted-foreground">Probability of Win</div>
                   <div>{(lead as any).opportunity_probability != null ? `${(lead as any).opportunity_probability}%` : "—"}</div>
                 </div>
+                <div>
+                  <div className="text-xs text-muted-foreground">Enq Rcd Dt</div>
+                  <div>{(lead as any).enquiry_received_date ? format(new Date((lead as any).enquiry_received_date), "dd MMM yyyy") : "—"}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground">Qtn No</div>
+                  <div>{(lead as any).quotation_number || "—"}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground">Qtn Date</div>
+                  <div>{(lead as any).quotation_date ? format(new Date((lead as any).quotation_date), "dd MMM yyyy") : "—"}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground">Value without GST</div>
+                  <div>{(lead as any).value_without_gst != null ? `₹${Number((lead as any).value_without_gst).toLocaleString("en-IN")}` : "—"}</div>
+                </div>
               </div>
               <div>
                 <div className="text-xs text-muted-foreground mb-1">Requirement Overview</div>
