@@ -5840,6 +5840,39 @@ export type Database = {
           },
         ]
       }
+      ta_rate_history: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          effective_from: string
+          effective_to: string | null
+          id: string
+          note: string | null
+          per_km_rate: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          effective_from: string
+          effective_to?: string | null
+          id?: string
+          note?: string | null
+          per_km_rate?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          note?: string | null
+          per_km_rate?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           assigned_at: string
@@ -6266,6 +6299,7 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_ta_rate_for_date: { Args: { _date: string }; Returns: number }
       get_user_hierarchy: {
         Args: { _manager_id: string }
         Returns: {
