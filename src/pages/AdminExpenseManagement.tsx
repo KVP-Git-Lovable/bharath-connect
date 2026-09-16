@@ -1,13 +1,11 @@
-import { Navigate, useNavigate } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 import { useAdminAccess } from "@/hooks/useAdminAccess";
-import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, BarChart3, Loader2, Receipt, Settings } from "lucide-react";
+import { BarChart3, Loader2, Receipt, Settings } from "lucide-react";
 import ExpensePolicyConfig from "@/components/expenses/ExpensePolicyConfig";
 import TeamExpenseSummary from "@/components/expenses/TeamExpenseSummary";
 
 export default function AdminExpenseManagement() {
-  const navigate = useNavigate();
   const { hasAdminAccess, isLoading } = useAdminAccess();
 
   if (isLoading) {
@@ -23,9 +21,6 @@ export default function AdminExpenseManagement() {
     <div className="min-h-screen bg-background">
       <div className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur-sm">
         <div className="mx-auto flex max-w-7xl items-center gap-3 px-3 py-3 sm:px-6 sm:py-4">
-          <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => navigate("/admin-controls")} aria-label="Back to admin controls">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-sm border border-primary/10 bg-primary/10 shadow-card">
             <Receipt className="h-5 w-5 text-primary" aria-hidden="true" />
           </div>
