@@ -249,8 +249,8 @@ export default function TeamExpenseSummary() {
     <div className="space-y-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase text-info">Finance overview</p>
-          <h2 className="text-lg font-bold sm:text-xl">Team expenses</h2>
+          <h2 className="text-xl font-bold sm:text-2xl">Team expenses</h2>
+          <p className="mt-0.5 text-sm text-muted-foreground">Review claims and approve what's pending.</p>
         </div>
         <div className="flex items-center justify-between gap-2 rounded-sm border bg-card p-1 shadow-card sm:justify-center">
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={goToPrevMonth} aria-label="Previous month">
@@ -326,7 +326,7 @@ export default function TeamExpenseSummary() {
               <div className={`grid grid-cols-2 gap-3 ${daApplicable ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
                 <Card className="col-span-2 rounded-sm border-primary/15 bg-primary/5 shadow-card lg:col-span-1">
                   <CardContent className="flex h-full min-h-[116px] flex-col justify-between p-4">
-                    <div className="flex items-center justify-between"><p className="text-xs font-semibold uppercase text-primary">Grand Total</p><CircleDollarSign className="h-5 w-5 text-primary" /></div>
+                    <div className="flex items-center justify-between"><p className="text-xs font-semibold text-primary">Grand Total</p><CircleDollarSign className="h-5 w-5 text-primary" /></div>
                     <p className="text-2xl font-bold">₹{teamTotal.toFixed(0)}</p>
                     <p className="text-xs text-muted-foreground">{daApplicable ? 'TA + DA + Additional' : 'TA + Additional'}</p>
                   </CardContent>
@@ -354,7 +354,7 @@ export default function TeamExpenseSummary() {
             <section className="rounded-sm border bg-card p-4 shadow-card sm:p-5"><ExpenseReportGenerator isAdmin={isAdmin} /></section>
 
             <section aria-labelledby="pending-approvals-heading">
-              <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs font-semibold uppercase text-warning">Action required</p><h3 id="pending-approvals-heading" className="text-base font-bold">Pending Approvals</h3></div><p className="text-xs text-muted-foreground">{pendingExpenses.length} expense{pendingExpenses.length === 1 ? '' : 's'} awaiting review</p></div>
+              <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between"><div><h3 id="pending-approvals-heading" className="text-lg font-bold">Pending Approvals</h3></div><p className="text-xs text-muted-foreground">{pendingExpenses.length} expense{pendingExpenses.length === 1 ? '' : 's'} awaiting review</p></div>
               {pendingExpenses.length === 0 ? <Card className="rounded-sm border-dashed shadow-none"><CardContent className="py-8 text-center text-sm text-muted-foreground">No pending approvals for this month.</CardContent></Card> : <div className="grid gap-3 lg:grid-cols-2">{pendingExpenses.map(renderExpense)}</div>}
             </section>
 
@@ -362,7 +362,7 @@ export default function TeamExpenseSummary() {
 
             <section aria-labelledby="team-expenses-heading">
               <div className="mb-3 flex items-center gap-2"><Users className="h-4 w-4 text-info" /><h3 id="team-expenses-heading" className="text-sm font-semibold">Expenses by Team Member</h3></div>
-              {summariesLoading ? <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div> : memberSummaries.length === 0 ? <Card className="rounded-sm border-dashed shadow-none"><CardContent className="py-8 text-center text-sm text-muted-foreground">No team members found.</CardContent></Card> : <div className="grid gap-3 lg:grid-cols-2">{memberSummaries.map((u) => <Card key={u.user_id} className="rounded-sm shadow-card"><CardContent className="p-4"><div className="mb-3 flex items-center justify-between gap-3"><div><p className="text-sm font-semibold">{u.name}</p><p className="text-xs text-muted-foreground">{u.present_days} present · {u.total_km.toFixed(1)} km</p></div><span className="text-sm font-bold">₹{(daApplicable ? u.total : u.total - u.da).toFixed(0)}</span></div><div className={`grid ${daApplicable ? 'grid-cols-3' : 'grid-cols-2'} gap-2 text-xs`}><div className="rounded-sm bg-info/10 p-2 text-center text-info"><p className="text-[10px]">TA</p><p className="font-semibold">₹{u.ta.toFixed(0)}</p></div>{daApplicable && <div className="rounded-sm bg-success/10 p-2 text-center text-success"><p className="text-[10px]">DA</p><p className="font-semibold">₹{u.da.toFixed(0)}</p></div>}<div className="rounded-sm bg-accent/10 p-2 text-center text-accent"><p className="text-[10px]">Add</p><p className="font-semibold">₹{u.additional.toFixed(0)}</p></div></div></CardContent></Card>)}</div>}
+              {summariesLoading ? <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div> : memberSummaries.length === 0 ? <Card className="rounded-sm border-dashed shadow-none"><CardContent className="py-8 text-center text-sm text-muted-foreground">No team members found.</CardContent></Card> : <div className="grid gap-3 lg:grid-cols-2">{memberSummaries.map((u) => <Card key={u.user_id} className="rounded-sm shadow-card"><CardContent className="p-4"><div className="mb-3 flex items-center justify-between gap-3"><div><p className="text-sm font-semibold">{u.name}</p><p className="text-xs text-muted-foreground">{u.present_days} present · {u.total_km.toFixed(1)} km</p></div><span className="text-sm font-bold">₹{(daApplicable ? u.total : u.total - u.da).toFixed(0)}</span></div><div className={`grid ${daApplicable ? 'grid-cols-3' : 'grid-cols-2'} gap-2 text-xs`}><div className="rounded-sm bg-info/10 p-2 text-center text-info"><p className="text-xs">TA</p><p className="font-semibold">₹{u.ta.toFixed(0)}</p></div>{daApplicable && <div className="rounded-sm bg-success/10 p-2 text-center text-success"><p className="text-xs">DA</p><p className="font-semibold">₹{u.da.toFixed(0)}</p></div>}<div className="rounded-sm bg-accent/10 p-2 text-center text-accent"><p className="text-xs">Add</p><p className="font-semibold">₹{u.additional.toFixed(0)}</p></div></div></CardContent></Card>)}</div>}
             </section>
           </div>
         );
