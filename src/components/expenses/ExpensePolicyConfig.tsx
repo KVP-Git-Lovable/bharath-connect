@@ -18,7 +18,16 @@ import { toast } from "sonner";
 import OverrideTable, { type OverrideEntry } from "./OverrideTable";
 import ExpenseGroupsInline, { type ExpenseGroup } from "./ExpenseGroupsInline";
 import TaRateHistory from "./TaRateHistory";
-import VehicleTypesPolicy from "./VehicleTypesPolicy";
+import VehicleMaster from "./VehicleMaster";
+import PettyCashSection from "./PettyCashSection";
+
+const SECTIONS = [
+  { id: "ta-policy", label: "Travel Allowance" },
+  { id: "vehicle-master", label: "Vehicle Master" },
+  { id: "da-policy", label: "Daily Allowance" },
+  { id: "petty-cash", label: "Petty Cash" },
+  { id: "claims-approvals", label: "Claims & Approvals" },
+];
 
 
 interface ExpenseConfig {
@@ -49,6 +58,24 @@ export default function ExpensePolicyConfig() {
   const [rules, setRules] = useState<Rule[]>([]);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [activeSection, setActiveSection] = useState(SECTIONS[0].id);
+
+  const scrollTo = (id: string) => {
+    setActiveSection(id);
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  // Highlight the section currently in view.
+  useEffect(() => {
+    if (loading) return;
+    const els = SECTIONS.map((s) => document.getElementById(s.id)).filter(Boolean) as HTMLElement[];
+    const obs = new IntersectionObserver((entries) => {
+      const visible = entries.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+      if (visible[0]) setActiveSection(visible[0].target.id);
+    }, { rootMargin: "-140px 0px -60% 0px" });
+    els.forEach((el) => obs.observe(el));
+    return () => obs.disconnect();
+  }, [loading]);
 
   const [taDist, setTaDist] = useState<"same_for_all" | "custom">("same_for_all");
   const [daDist, setDaDist] = useState<"same_for_all" | "custom">("same_for_all");
@@ -312,7 +339,7 @@ export default function ExpensePolicyConfig() {
       <div className="flex flex-col gap-3 border-b border-border/70 pb-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 className="text-2xl font-bold sm:text-3xl">Policy Configuration</h2>
-          <p className="mt-1 max-w-3xl text-sm text-muted-foreground">Travel, daily &amp; additional expense limits, categories, and approval routing.</p>
+          <p className="mt-1 max-w-3xl text-sm text-muted-foreground">Travel &amp; daily allowances, vehicles, petty cash, categories, and approval routing.</p>
         </div>
         <Button onClick={saveConfigAndPolicy} disabled={saving} className="w-full sm:w-auto">
           {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
@@ -320,13 +347,22 @@ export default function ExpensePolicyConfig() {
         </Button>
       </div>
 
+      <nav className="sticky top-[72px] z-[5] -mt-4 flex gap-2 overflow-x-auto bg-background/95 py-2 backdrop-blur-sm sm:top-[84px]">
+        {SECTIONS.map((sec) => (
+          <button key={sec.id} type="button" onClick={() => scrollTo(sec.id)}
+            className={`shrink-0 rounded-full border px-4 py-1.5 text-sm font-medium transition-colors ${activeSection === sec.id ? "border-primary bg-primary text-primary-foreground" : "bg-background text-muted-foreground hover:bg-muted/50"}`}>
+            {sec.label}
+          </button>
+        ))}
+      </nav>
+
       <div className="space-y-3">
         <div>
           <h3 className="text-xl font-bold">Allowance policies</h3>
-          <p className="text-sm text-muted-foreground">Define standard travel, daily, and additional expense limits.</p>
+          <p className="text-sm text-muted-foreground">Travel allowance, vehicles, daily allowance and petty cash advances.</p>
         </div>
       {/* TA Policy */}
-      <Card className="overflow-hidden border-border/70 shadow-card">
+      <Card id="ta-policy" className="scroll-mt-28 overflow-hidden border-border/70 shadow-card">
         <CardHeader className="border-b border-border/60 bg-info/5 px-5 py-5 sm:px-7">
           <CardTitle className="flex items-center gap-3 text-lg"><span className="flex h-10 w-10 items-center justify-center rounded-md bg-info/10 text-info"><Car className="h-5 w-5" /></span><span>Travel Allowance (TA) Policy<span className="mt-0.5 block text-sm font-normal text-muted-foreground">Configure how travel allowance is calculated and distributed.</span></span></CardTitle>
         </CardHeader>
@@ -362,10 +398,12 @@ export default function ExpensePolicyConfig() {
                 </div>
                 <TaRateHistory onCurrentRateChange={(r) => setConfig((c) => (c ? { ...c, ta_per_km_rate: r } : c))} />
 
-                <div className="border-t border-border/60 pt-4">
-                  <p className="mb-3 text-sm font-semibold text-foreground">Vehicle Types &amp; Rates</p>
-                  <VehicleTypesPolicy />
-                </div>
+                <p className="flex items-start gap-1.5 border-t border-border/60 pt-4 text-sm text-muted-foreground">
+                  <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  <span>Vehicle-wise rates and role access are managed in{" "}
+                    <button type="button" className="font-medium text-primary underline-offset-2 hover:underline" onClick={() => scrollTo("vehicle-master")}>Vehicle Master</button>.
+                  </span>
+                </p>
               </>
             ) : (
               <div className="grid gap-2 lg:grid-cols-[minmax(260px,0.8fr)_minmax(360px,1.2fr)] lg:items-center">
@@ -398,8 +436,10 @@ export default function ExpensePolicyConfig() {
         </CardContent>
       </Card>
 
+      <VehicleMaster />
+
       {/* DA Policy */}
-      <Card className="overflow-hidden border-border/70 shadow-card">
+      <Card id="da-policy" className="scroll-mt-28 overflow-hidden border-border/70 shadow-card">
         <CardHeader className="border-b border-border/60 bg-success/5 px-5 py-5 sm:px-7">
           <CardTitle className="flex items-center gap-3 text-lg"><span className="flex h-10 w-10 items-center justify-center rounded-md bg-success/10 text-success"><Utensils className="h-5 w-5" /></span><span>Daily Allowance (DA) Policy<span className="mt-0.5 block text-sm font-normal text-muted-foreground">Control daily allowance availability, value, and calculation basis.</span></span></CardTitle>
         </CardHeader>
@@ -457,41 +497,29 @@ export default function ExpensePolicyConfig() {
         </CardContent>
       </Card>
 
-      {/* Additional Expenses Policy */}
-      <Card className="overflow-hidden border-border/70 shadow-card">
-        <CardHeader className="border-b border-border/60 bg-accent/5 px-5 py-5 sm:px-7">
-          <CardTitle className="flex items-center gap-3 text-lg"><span className="flex h-10 w-10 items-center justify-center rounded-md bg-accent/10 text-accent"><Receipt className="h-5 w-5" /></span><span>Additional Expenses Policy<span className="mt-0.5 block text-sm font-normal text-muted-foreground">Set claim limits and the threshold for mandatory receipts.</span></span></CardTitle>
-        </CardHeader>
-        <CardContent className="p-5 sm:p-7">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <div className="space-y-1">
-              <Label className="text-base font-semibold text-foreground">Max per Day (₹)</Label>
-              <Input type="number" min="0" value={policy.max_additional_expense_per_day}
-                onChange={(e) => setPolicy({ ...policy, max_additional_expense_per_day: Number(e.target.value) })} />
-              <p className="text-sm text-muted-foreground">0 = no limit</p>
-            </div>
-            <div className="space-y-1">
-              <Label className="text-base font-semibold text-foreground">Max per Month (₹)</Label>
-              <Input type="number" min="0" value={policy.max_additional_expense_per_month}
-                onChange={(e) => setPolicy({ ...policy, max_additional_expense_per_month: Number(e.target.value) })} />
-              <p className="text-sm text-muted-foreground">0 = no limit</p>
-            </div>
-            <div className="space-y-1">
-              <Label className="text-base font-semibold text-foreground">Bill Required Above (₹)</Label>
-              <Input type="number" min="0" value={policy.require_bill_above_amount}
-                onChange={(e) => setPolicy({ ...policy, require_bill_above_amount: Number(e.target.value) })} />
-              <p className="text-sm text-muted-foreground">Mandatory bill above this amount</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <PettyCashSection />
       </div>
 
-      <div className="space-y-3 pt-2">
+      <div id="claims-approvals" className="scroll-mt-28 space-y-3 pt-2">
         <div>
           <h3 className="text-xl font-bold">Claims and approvals</h3>
           <p className="text-sm text-muted-foreground">Manage expense categories and route claims through the correct approval process.</p>
         </div>
+
+      {/* Receipt rule (kept from the old Additional Expenses Policy) */}
+      <Card className="overflow-hidden border-border/70 shadow-card">
+        <CardContent className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between sm:px-7">
+          <div className="flex items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-md bg-accent/10 text-accent"><Receipt className="h-5 w-5" /></span>
+            <div>
+              <Label className="text-base font-semibold text-foreground">Bill required above (₹)</Label>
+              <p className="text-sm text-muted-foreground">Claims above this amount must have a bill attached. Saved with “Save Policies”.</p>
+            </div>
+          </div>
+          <Input type="number" min="0" value={policy.require_bill_above_amount}
+            onChange={(e) => setPolicy({ ...policy, require_bill_above_amount: Number(e.target.value) })} className="h-10 w-full sm:max-w-[180px]" />
+        </CardContent>
+      </Card>
 
       {/* Categories */}
       <Card className="overflow-hidden border-border/70 shadow-card">
