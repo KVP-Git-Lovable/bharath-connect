@@ -30,6 +30,7 @@ interface ExpenseConfig {
   fixed_da_amount: number;
   da_calculation_basis: "per_day" | "per_half_day";
   da_applicable: boolean;
+  ta_default_enabled: boolean;
 }
 interface PolicyRow {
   id: string;
@@ -100,6 +101,7 @@ export default function ExpensePolicyConfig() {
       fixed_da_amount: Number(cfgRow.fixed_da_amount || 0),
       da_calculation_basis: cfgRow.da_calculation_basis || "per_day",
       da_applicable: cfgRow.da_applicable !== false,
+      ta_default_enabled: cfgRow.ta_default_enabled !== false,
     });
 
     // policy
@@ -203,6 +205,7 @@ export default function ExpensePolicyConfig() {
         fixed_da_amount: config.fixed_da_amount,
         da_calculation_basis: config.da_calculation_basis,
         da_applicable: config.da_applicable,
+        ta_default_enabled: config.ta_default_enabled,
       }).eq("id", config.id),
       supabase.from("expense_policy").update({
         max_additional_expense_per_day: policy.max_additional_expense_per_day,
@@ -335,6 +338,8 @@ export default function ExpensePolicyConfig() {
         defaultFixed={config.fixed_ta_amount}
         onDefaultRateChange={(n) => setConfig((c) => (c ? { ...c, ta_per_km_rate: n } : c))}
         onDefaultFixedChange={(n) => setConfig((c) => (c ? { ...c, fixed_ta_amount: n } : c))}
+        defaultEnabled={config.ta_default_enabled}
+        onDefaultEnabledChange={(v) => setConfig((c) => (c ? { ...c, ta_default_enabled: v } : c))}
         dist={taDist}
         onDistChange={setTaDist}
         overrides={taOverrides}

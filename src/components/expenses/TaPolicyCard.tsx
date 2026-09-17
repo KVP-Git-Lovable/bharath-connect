@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
@@ -24,7 +25,7 @@ type Dist = "same_for_all" | "custom";
 interface Role { id: string; name: string }
 interface TaRow {
   id: string; name: string; fixed_ta_amount: number; ta_per_km_rate: number;
-  role_ids: string[]; members: { id: string; name: string }[];
+  role_ids: string[]; members: { id: string; name: string }[]; is_active: boolean;
 }
 
 interface Props {
@@ -34,6 +35,8 @@ interface Props {
   defaultFixed: number;
   onDefaultRateChange: (n: number) => void;
   onDefaultFixedChange: (n: number) => void;
+  defaultEnabled: boolean;
+  onDefaultEnabledChange: (v: boolean) => void;
   dist: Dist;
   onDistChange: (d: Dist) => void;
   overrides: OverrideEntry[];
@@ -78,6 +81,7 @@ export default function TaPolicyCard(props: Props) {
       id: g.id, name: g.name,
       fixed_ta_amount: Number(g.fixed_ta_amount || 0), ta_per_km_rate: Number(g.ta_per_km_rate || 0),
       role_ids: Array.isArray(g.role_ids) ? g.role_ids : [],
+      is_active: g.is_active !== false,
       members: mem.filter((m) => m.group_id === g.id).map((m) => ({ id: m.user_id, name: names.get(m.user_id) || "Unknown" })),
     })));
     setLoading(false);
@@ -122,6 +126,17 @@ export default function TaPolicyCard(props: Props) {
       load(); return;
     }
     setRows((p) => p.map((r) => (r.id === row.id ? next : r)));
+  };
+
+  const toggleRow = async (row: TaRow, on: boolean) => {
+    setRows((p) => p.map((r) => (r.id === row.id ? { ...r, is_active: on } : r)));
+    const { error } = await supabase.from("expense_groups" as any).update({ is_active: on }).eq("id", row.id);
+    if (error) {
+      toast.error(/is_active/.test(error.message) ? "Apply the latest migration to use this switch" : "Could not update row");
+      setRows((p) => p.map((r) => (r.id === row.id ? { ...r, is_active: !on } : r)));
+      return;
+    }
+    toast.success(`${row.name} turned ${on ? "on" : "off"}`);
   };
 
   const addMembers = async (row: TaRow, sel: { id: string; name: string }[]) => {
@@ -225,41 +240,45 @@ export default function TaPolicyCard(props: Props) {
                 <span>Applies to</span>
                 <span className={cn(isFixed && "opacity-40")}>Rate / km</span>
                 <span className={cn(!isFixed && "opacity-40")}>Fixed price / day</span>
-                <span>Assigned roles</span><span>Custom users</span><span className="w-[76px] text-right">Actions</span>
+                <span>Assigned roles</span><span>Custom users</span><span className="w-[150px] text-right">Actions</span>
               </div>
 
               {/* Everyone */}
-              <div className={cn("grid items-center gap-3 border-t px-4 py-2.5 text-sm", rowCols)}>
-                <div><p className="font-semibold">Everyone</p>{dist === "custom" && <p className="text-xs text-muted-foreground">Default</p>}</div>
+              <div className={cn("grid items-center gap-3 border-t px-4 py-2.5 text-sm", rowCols, !props.defaultEnabled && "bg-muted/30")}>
+                <div className={cn(!props.defaultEnabled && "opacity-50")}><p className="font-semibold">Everyone</p>{dist === "custom" && <p className="text-xs text-muted-foreground">Default</p>}</div>
                 <div className={cn(isFixed && "opacity-40")}><MoneyInput value={props.defaultRate} disabled={isFixed} suffix="/km" onCommit={props.onDefaultRateChange} /></div>
                 <div className={cn(!isFixed && "opacity-40")}><MoneyInput value={props.defaultFixed} disabled={!isFixed} onCommit={props.onDefaultFixedChange} /></div>
                 <div className="text-muted-foreground">All roles</div>
+                {dist === "same_for_all" ? (
+                  <div className="text-muted-foreground">All users</div>
+                ) : (
                 <div className="space-y-1.5">
-                  {overrides.map((o) => (
-                    <div key={o.id} className="flex items-center gap-2">
-                      <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold",
-                        o.type === "user" ? "bg-primary text-primary-foreground" : "bg-muted text-foreground")}>
-                        {o.type === "user" ? <User className="h-3 w-3" /> : <Users className="h-3 w-3" />}{o.type === "user" ? "User" : "Team"}
-                      </span>
-                      <span className="min-w-0 truncate font-medium">{o.name}</span>
-                      <OverrideAmount entry={o} suffix={isFixed ? "" : "/km"} onCommit={(n) => props.onUpdateOverride(o.id, n)} />
-                      <button type="button" aria-label={`Remove ${o.name}`} onClick={() => props.onDeleteOverride(o)} className="text-muted-foreground hover:text-destructive"><X className="h-3.5 w-3.5" /></button>
+                    {overrides.map((o) => (
+                      <div key={o.id} className="flex items-center gap-2">
+                        <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold",
+                          o.type === "user" ? "bg-primary text-primary-foreground" : "bg-muted text-foreground")}>
+                          {o.type === "user" ? <User className="h-3 w-3" /> : <Users className="h-3 w-3" />}{o.type === "user" ? "User" : "Team"}
+                        </span>
+                        <span className="min-w-0 truncate font-medium">{o.name}</span>
+                        <OverrideAmount entry={o} suffix={isFixed ? "" : "/km"} onCommit={(n) => props.onUpdateOverride(o.id, n)} />
+                        <button type="button" aria-label={`Remove ${o.name}`} onClick={() => props.onDeleteOverride(o)} className="text-muted-foreground hover:text-destructive"><X className="h-3.5 w-3.5" /></button>
+                      </div>
+                    ))}
+                    <div className="flex flex-wrap gap-1.5 [&_button]:h-7 [&_button]:px-2 [&_button]:text-xs">
+                      <MultiProfileSelector excludeIds={takenOverrideIds} label="Add user" onAdd={(s) => addEveryoneCustom("user", s)} />
+                      <MultiProfileSelector excludeIds={takenOverrideIds} label="Add team" managersOnly onAdd={(s) => addEveryoneCustom("team", s)} />
                     </div>
-                  ))}
-                  <div className="flex flex-wrap gap-1.5 [&_button]:h-7 [&_button]:px-2 [&_button]:text-xs">
-                    <MultiProfileSelector excludeIds={takenOverrideIds} label="Add user" onAdd={(s) => addEveryoneCustom("user", s)} />
-                    <MultiProfileSelector excludeIds={takenOverrideIds} label="Add team" managersOnly onAdd={(s) => addEveryoneCustom("team", s)} />
                   </div>
-                </div>
-                <div className="w-[76px] text-right text-xs text-muted-foreground">Always on</div>
+                )}
+                <OnOffSwitch checked={props.defaultEnabled} label="Everyone" onChange={props.onDefaultEnabledChange} />
               </div>
 
               {/* Custom rows */}
               {dist === "custom" && (loading ? (
                 <div className="flex justify-center border-t py-6"><Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /></div>
               ) : rows.map((r) => (
-                <div key={r.id} className={cn("grid items-center gap-3 border-t px-4 py-2.5 text-sm", rowCols)}>
-                  <p className="truncate font-semibold">{r.name}</p>
+                <div key={r.id} className={cn("grid items-center gap-3 border-t px-4 py-2.5 text-sm", rowCols, !r.is_active && "bg-muted/30")}>
+                  <p className={cn("truncate font-semibold", !r.is_active && "opacity-50")}>{r.name}</p>
                   <div className={cn(isFixed && "opacity-40")}><MoneyInput value={r.ta_per_km_rate} disabled={isFixed} suffix="/km" onCommit={(n) => updateRow(r, { ta_per_km_rate: n })} /></div>
                   <div className={cn(!isFixed && "opacity-40")}><MoneyInput value={r.fixed_ta_amount} disabled={!isFixed} onCommit={(n) => updateRow(r, { fixed_ta_amount: n })} /></div>
                   <RoleSelect roles={roles} value={r.role_ids} onChange={(ids) => updateRow(r, { role_ids: ids })} placeholder="No roles" />
@@ -275,7 +294,8 @@ export default function TaPolicyCard(props: Props) {
                       <MultiProfileSelector excludeIds={r.members.map((m) => m.id)} label="Add user" onAdd={(s) => addMembers(r, s)} />
                     </div>
                   </div>
-                  <div className="flex w-[76px] justify-end">
+                  <div className="flex w-[150px] items-center justify-end gap-1">
+                    <OnOffSwitch checked={r.is_active} label={r.name} onChange={(v) => toggleRow(r, v)} />
                     <Button variant="ghost" size="icon" className="h-9 w-9" aria-label={`Rename ${r.name}`} onClick={() => { setEditing(r); setEditName(r.name); }}><Pencil className="h-4 w-4" /></Button>
                     <Button variant="ghost" size="icon" className="h-9 w-9" aria-label={`Delete ${r.name}`} onClick={() => setDeleting(r)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                   </div>
@@ -297,7 +317,7 @@ export default function TaPolicyCard(props: Props) {
                   </div>
                   <RoleSelect roles={roles} value={draft.role_ids} onChange={(ids) => setDraft({ ...draft, role_ids: ids })} placeholder="Select roles" />
                   <p className="text-xs text-muted-foreground">Add users after saving</p>
-                  <div className="flex gap-1.5">
+                  <div className="flex w-[150px] justify-end gap-1.5">
                     <Button variant="outline" size="sm" onClick={() => setDraft(null)}>Cancel</Button>
                     <Button size="sm" onClick={saveDraft} disabled={savingDraft}>{savingDraft && <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />}Save</Button>
                   </div>
@@ -313,7 +333,7 @@ export default function TaPolicyCard(props: Props) {
           )}
           {dist === "custom" && (
             <p className="text-xs text-muted-foreground">
-              Who gets which rate: a user listed on a row, then a team, then an assigned role, otherwise Everyone.
+              Who gets which rate: a user listed on a row, then a team, then an assigned role, otherwise Everyone. Rows switched off are ignored; if Everyone is off, people not covered by a row get no TA.
             </p>
           )}
         </div>
@@ -408,5 +428,14 @@ function RoleSelect({ roles, value, onChange, placeholder = "All roles" }: {
         <p className="px-2 pt-1 text-[11px] text-muted-foreground">Saved when you close this list.</p>
       </PopoverContent>
     </Popover>
+  );
+}
+
+function OnOffSwitch({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
+  return (
+    <label className="flex items-center gap-1.5">
+      <Switch checked={checked} onCheckedChange={onChange} aria-label={`${label} on or off`} />
+      <span className={cn("w-7 text-xs font-medium", checked ? "text-foreground" : "text-muted-foreground")}>{checked ? "On" : "Off"}</span>
+    </label>
   );
 }
