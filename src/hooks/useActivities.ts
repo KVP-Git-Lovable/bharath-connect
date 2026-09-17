@@ -92,6 +92,7 @@ export interface Activity {
   manual_distance_km?: number | null;
   manual_distance_note?: string | null;
   manual_distance_attachments?: { url: string; name: string; at: string }[];
+  vehicle_type_id?: string | null;
 
 
   // Offline queue metadata
@@ -418,6 +419,7 @@ export function useActivities() {
       'status_history', 'photo_urls',
       'travel_distance_km', 'travel_time_mins', 'travel_from_type', 'travel_from_activity_id',
       'travel_from_at', 'manual_distance_km', 'manual_distance_note', 'manual_distance_attachments',
+      'vehicle_type_id',
 
     ];
     fields.forEach((f) => {

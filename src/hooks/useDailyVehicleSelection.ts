@@ -53,7 +53,7 @@ export function useDailyVehicleSelection(userId: string, dateStr: string) {
   }, [loadEligibility, loadSelection]);
 
   const eligibleVehicles: VehicleType[] = eligibleIds
-    ? vehicleTypes.filter((v) => eligibleIds.has(v.id))
+    ? vehicleTypes.filter((v) => eligibleIds.has(v.id) || v.is_no_vehicle) // Outstation is always allowed
     : vehicleTypes;
 
   const selectVehicle = useCallback(async (vehicleTypeId: string) => {
@@ -79,6 +79,8 @@ export function useDailyVehicleSelection(userId: string, dateStr: string) {
     eligibleVehicles,
     selectedId,
     selectVehicle,
+    reloadSelection: loadSelection,
+    setSelectedId,
   };
 }
 

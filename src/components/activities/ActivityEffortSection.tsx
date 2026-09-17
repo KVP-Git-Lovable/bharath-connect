@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
-import { Gauge, HelpCircle, IndianRupee, Loader2, Paperclip, RefreshCw, Route, Timer, X } from "lucide-react";
+import { Bike, Bus, Car as CarIcon, Gauge, HelpCircle, IndianRupee, MapPinOff, Truck, Loader2, Paperclip, RefreshCw, Route, Timer, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   computeTravelForCheckIn,
@@ -17,6 +17,7 @@ import {
 } from "@/utils/activityTravel";
 import { resolveSignedUrl } from "@/utils/signedStorage";
 import { useTaRates } from "@/hooks/useTaRates";
+import { useActivityTravelExpense, type ActivityTravelExpense } from "@/hooks/useActivityTravelExpense";
 import type { Activity } from "@/hooks/useActivities";
 
 
@@ -46,6 +47,74 @@ function Field({ icon, label, help, value }: { icon: React.ReactNode; label: str
   );
 }
 
+const inr = (n: number) => `₹${n.toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
+
+const SOURCE_LABEL: Record<ActivityTravelExpense["rate_source"], (vehicle: string) => string> = {
+  no_vehicle: () => "No vehicle used",
+  personal_vehicle: (v) => `Your ${v} rate`,
+  vehicle: (v) => `Standard ${v} rate`,
+  user: () => "Your personal TA",
+  team: () => "Your team's TA",
+  row: () => "Your TA row",
+  role: () => "Your role's TA",
+  default: () => "Company default",
+};
+
+function vehicleIcon(name: string | null, noVehicle: boolean) {
+  if (noVehicle) return MapPinOff;
+  const n = (name || "").toLowerCase();
+  if (n.includes("bike")) return Bike;
+  if (n.includes("truck")) return Truck;
+  if (n.includes("bus")) return Bus;
+  return CarIcon;
+}
+
+function TravelExpenseTile({ exp, km }: { exp: ActivityTravelExpense; km: number | null }) {
+  const vehicle = exp.vehicle_name || "No vehicle";
+  const VIcon = vehicleIcon(exp.vehicle_name, exp.is_no_vehicle);
+  const fixed = exp.method === "fixed";
+  const amount = exp.is_no_vehicle ? 0 : fixed ? exp.rate : km != null ? Math.round(km * exp.rate * 100) / 100 : null;
+  const source = SOURCE_LABEL[exp.rate_source]?.(vehicle) ?? "";
+  const vehicleWhen = exp.vehicle_source === "activity" ? "saved when this activity was checked in"
+    : exp.vehicle_source === "day" ? "the vehicle recorded for this day" : "no vehicle was chosen";
+  const help = exp.is_no_vehicle
+    ? "Outstation / no vehicle: no travel allowance for this trip."
+    : `Vehicle: ${vehicle} (${vehicleWhen}). Rate: ${source}. ` +
+      (fixed ? "Fixed method pays per working day, so every activity that day shows the same day amount."
+             : "Variable method: distance (or your meter reading) × rate per km.");
+  return (
+    <div className="rounded-lg border-[1.5px] border-amber-400 bg-amber-50/60 p-2.5 dark:bg-amber-950/20">
+      <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800 dark:text-amber-300">
+        <IndianRupee className="h-3 w-3" /> Travel expense <Help text={help} />
+      </p>
+      <div className="mt-0.5 flex items-center justify-between gap-2">
+        <p className="text-base font-bold">{amount != null ? inr(amount) : "—"}</p>
+        <span className="inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-[11px] font-semibold text-primary-foreground">
+          <VIcon className="h-3 w-3" />{vehicle}
+        </span>
+      </div>
+      <div className="mt-1.5 space-y-0.5 border-t border-dashed border-amber-300 pt-1.5 text-[11px]">
+        {exp.is_no_vehicle ? (
+          <p className="flex justify-between"><span className="text-muted-foreground">No vehicle used</span><span className="font-semibold">no TA</span></p>
+        ) : fixed ? (
+          <>
+            <p className="flex justify-between"><span className="text-muted-foreground">{vehicle} · per day</span><span className="font-semibold">{inr(exp.rate)}</span></p>
+            <p className="flex justify-between"><span className="text-muted-foreground">Counted</span><span className="font-semibold">once that day</span></p>
+          </>
+        ) : (
+          <>
+            <p className="flex justify-between">
+              <span className="text-muted-foreground">{km != null ? `${km} km × ${inr(exp.rate)}/km` : `${inr(exp.rate)}/km`}</span>
+              <span className="font-semibold">{amount != null ? `= ${inr(amount)}` : "distance needed"}</span>
+            </p>
+            <p className="flex justify-between"><span className="text-muted-foreground">Rate</span><span className="font-semibold">{source}</span></p>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function ActivityEffortSection({
   activity,
   onSaved,
@@ -57,6 +126,7 @@ export default function ActivityEffortSection({
 }) {
   const navigate = useNavigate();
   const { rateFor } = useTaRates();
+  const { data: expense } = useActivityTravelExpense(activity.id);
   const existingProofs = (activity.manual_distance_attachments || []) as TravelProofEntry[];
 
   const [manualKm, setManualKm] = useState(
@@ -239,12 +309,16 @@ export default function ActivityEffortSection({
           help="Time spent with the customer (check-out time − check-in time)"
           value={meetingMins != null ? `${meetingMins} min` : "—"}
         />
-        <Field
-          icon={<IndianRupee className="h-3 w-3" />}
-          label="Travel expense"
-          help={`Distance × the per KM rate effective on this activity's date (₹${perKmRate}/km)`}
-          value={travelCost != null ? `₹${travelCost.toLocaleString("en-IN", { maximumFractionDigits: 2 })}` : "—"}
-        />
+        {expense ? (
+          <TravelExpenseTile exp={expense} km={effectiveKm} />
+        ) : (
+          <Field
+            icon={<IndianRupee className="h-3 w-3" />}
+            label="Travel expense"
+            help={`Distance × the per KM rate effective on this activity's date (₹${perKmRate}/km)`}
+            value={travelCost != null ? `₹${travelCost.toLocaleString("en-IN", { maximumFractionDigits: 2 })}` : "—"}
+          />
+        )}
         <div className="col-span-2 rounded-lg border bg-muted/30 p-2.5">
           <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
             Previous activity considered

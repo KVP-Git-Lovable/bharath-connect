@@ -98,7 +98,8 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useAudioRecorder } from "@/hooks/useAudioRecorder";
 import ActivityGeoStamp from "@/components/activities/ActivityGeoStamp";
-import VehicleSelector from "@/components/activities/VehicleSelector";
+import VehiclePinPicker from "@/components/activities/VehiclePinPicker";
+import { resolveActivityVehicle } from "@/utils/activityVehicle";
 
 
 const LeafletMap = lazy(() => import("@/components/LeafletMap"));
@@ -858,11 +859,13 @@ export default function Activities() {
     <motion.div className="space-y-0" variants={container} initial="hidden" animate="show">
       {/* Gradient Header */}
       <motion.div variants={item} className="gradient-hero text-primary-foreground p-4 pb-6">
-        <div className="flex items-center justify-between">
+        <div className="flex items-start justify-between gap-3">
           <div>
             <h1 className="text-lg font-bold">Activities</h1>
             <p className="text-xs opacity-80">Log & track daily work</p>
           </div>
+          <div className="flex flex-wrap items-start justify-end gap-2">
+          {currentUserId && <VehiclePinPicker userId={currentUserId} dateStr={dateStr} />}
           {hasSubordinates && (
             <Select value={selectedUserId} onValueChange={setSelectedUserId}>
               <SelectTrigger className="w-[140px] h-8 bg-white/15 border-white/20 text-primary-foreground text-xs">
@@ -877,6 +880,7 @@ export default function Activities() {
               </SelectContent>
             </Select>
           )}
+          </div>
         </div>
 
         {/* Week Info + Navigation */}
@@ -915,7 +919,6 @@ export default function Activities() {
           })}
         </div>
 
-        {currentUserId && <VehicleSelector userId={currentUserId} dateStr={dateStr} />}
 
         {/* Action Buttons Row */}
         <div className="grid grid-cols-3 gap-2 mt-3">
@@ -1984,6 +1987,14 @@ function ActivityCard({ a, isAdmin, onEdit, onDelete, onOpenDetails, onReceiveGo
           if (travel) Object.assign(updates, travel);
         } catch (e) {
           console.warn("travel effort calculation failed", e);
+        }
+        // Vehicle in use at check-in (pinned / day's vehicle), kept on the activity.
+        try {
+          const vehicleId = await resolveActivityVehicle(a.user_id, a.activity_date);
+          if (vehicleId) updates.vehicle_type_id = vehicleId;
+          else toast.warning("No vehicle chosen — pick your vehicle at the top so travel expense can be worked out.");
+        } catch (e) {
+          console.warn("vehicle lookup failed", e);
         }
       }
 
