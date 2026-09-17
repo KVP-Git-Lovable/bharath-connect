@@ -43,10 +43,43 @@ function checkOutPoint(row: any): LatLng | null {
   return null;
 }
 
+/** Local calendar date (device time zone) of an ISO timestamp. */
+function localDate(iso: string): string {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+/** The moment an activity was actually checked out: the last "completed" transition, else its end time. */
+export function checkOutAt(row: any): string | null {
+  const history = Array.isArray(row?.status_history) ? row.status_history : [];
+  const completed = [...history].reverse().find((h: any) => h?.status === "completed" && h?.at);
+  return (completed?.at as string | undefined) ?? (row?.end_time as string | null) ?? null;
+}
+
 /**
- * Find where this journey started:
- *  - the most recent activity of the same user/day that was checked out before now
- *  - otherwise the day's attendance check-in (i.e. the first activity of the day)
+ * Pick the previous checkpoint for a check-in: the latest check-out that happened
+ * inside the current attendance session (at or after the session start) and before
+ * this check-in. Returns null when there is none (then the attendance check-in is the start).
+ */
+export function pickPreviousCheckout<T>(rows: T[], checkInAt: string, sessionStart: string | null): { row: T; at: string } | null {
+  const inMs = new Date(checkInAt).getTime();
+  const startMs = sessionStart ? new Date(sessionStart).getTime() : -Infinity;
+  let best: { row: T; at: string; ms: number } | null = null;
+  for (const row of rows) {
+    const at = checkOutAt(row);
+    if (!at) continue;
+    const ms = new Date(at).getTime();
+    if (!Number.isFinite(ms) || ms >= inMs || ms < startMs) continue;
+    if (!best || ms > best.ms) best = { row, at, ms };
+  }
+  return best ? { row: best.row, at: best.at } : null;
+}
+
+/**
+ * Find where this journey started — every activity is a checkpoint:
+ *  - the previous activity's check-out within the same attendance session
+ *  - otherwise the attendance check-in (i.e. the first activity of the session)
  * Only the start TIME is required. Coordinates are attached when available.
  */
 async function findOrigin(
@@ -55,42 +88,61 @@ async function findOrigin(
   currentActivityId: string,
   checkInAt: string
 ): Promise<Origin | null> {
-  const { data: prev } = await supabase
+  // The attendance session this check-in belongs to: the day it actually happened
+  // (falls back to the activity's own date).
+  const checkInDay = localDate(checkInAt);
+  const loadAttendance = async (day: string) => {
+    const { data } = await supabase
+      .from("attendance")
+      .select("check_in_time, check_in_location")
+      .eq("user_id", userId)
+      .eq("date", day)
+      .maybeSingle();
+    return data as { check_in_time: string | null; check_in_location: any } | null;
+  };
+  let att = await loadAttendance(checkInDay);
+  if (!att?.check_in_time && dateStr && dateStr !== checkInDay) att = await loadAttendance(dateStr);
+  const sessionStart =
+    att?.check_in_time && new Date(att.check_in_time).getTime() <= new Date(checkInAt).getTime()
+      ? att.check_in_time
+      : null;
+
+  // Previous check-outs: inside the session window when there is one,
+  // otherwise (no attendance) the activity's own date as before.
+  let query = supabase
     .from("activity_events")
     .select("id, end_time, status_history, status_change_lat, status_change_lng, location_lat, location_lng")
     .eq("user_id", userId)
-    .eq("activity_date", dateStr)
     .neq("id", currentActivityId)
-    .not("end_time", "is", null)
-    .lt("end_time", checkInAt)
-    .order("end_time", { ascending: false })
-    .limit(1);
+    .not("end_time", "is", null);
+  if (sessionStart) {
+    // end_time can be edited by hand, so widen the window and decide on the real check-out moment below.
+    const from = new Date(new Date(sessionStart).getTime() - 12 * 3600_000).toISOString();
+    const to = new Date(new Date(checkInAt).getTime() + 12 * 3600_000).toISOString();
+    query = query.gte("end_time", from).lte("end_time", to);
+  } else {
+    query = query.eq("activity_date", dateStr);
+  }
+  const { data: prev } = await query.order("end_time", { ascending: false }).limit(100);
 
-  const last = prev?.[0];
-  if (last?.end_time) {
-    const pt = checkOutPoint(last);
+  const picked = pickPreviousCheckout((prev || []) as any[], checkInAt, sessionStart);
+  if (picked) {
+    const pt = checkOutPoint(picked.row);
     return {
       lat: pt?.lat ?? null,
       lng: pt?.lng ?? null,
-      at: last.end_time as string,
+      at: picked.at,
       type: "activity",
-      activityId: last.id as string,
+      activityId: picked.row.id as string,
     };
   }
 
-  const { data: att } = await supabase
-    .from("attendance")
-    .select("check_in_time, check_in_location")
-    .eq("user_id", userId)
-    .eq("date", dateStr)
-    .maybeSingle();
-
-  if (att?.check_in_time && new Date(att.check_in_time as string).getTime() <= new Date(checkInAt).getTime()) {
-    const pt = readLatLng(att.check_in_location);
+  if (sessionStart) {
+    const pt = readLatLng(att?.check_in_location);
     return {
       lat: pt?.lat ?? null,
       lng: pt?.lng ?? null,
-      at: att.check_in_time as string,
+      at: sessionStart,
       type: "attendance",
       activityId: null,
     };
@@ -237,12 +289,22 @@ export async function explainMissingTravel(params: {
   if (!checkInAt) return "Travel is measured when the activity is checked in.";
   const fmt = (iso: string) =>
     new Date(iso).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true });
-  const { data: att, error } = await supabase
+  // Same session rule as the calculation: the day the check-in happened, else the activity's date.
+  const day = localDate(checkInAt);
+  let { data: att, error } = await supabase
     .from("attendance")
     .select("check_in_time")
     .eq("user_id", userId)
-    .eq("date", activityDate)
+    .eq("date", day)
     .maybeSingle();
+  if (!error && !att?.check_in_time && activityDate !== day) {
+    ({ data: att, error } = await supabase
+      .from("attendance")
+      .select("check_in_time")
+      .eq("user_id", userId)
+      .eq("date", activityDate)
+      .maybeSingle());
+  }
   if (error) return "Could not read the day check-in for this activity's owner.";
   if (!att?.check_in_time) {
     return "No day check-in was recorded on this date, so there is no starting point. Start the day before checking in to an activity.";

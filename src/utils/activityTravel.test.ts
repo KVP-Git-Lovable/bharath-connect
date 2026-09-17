@@ -6,7 +6,7 @@ vi.mock("@/integrations/supabase/client", () => ({
     from: () => ({ select: () => ({ eq: () => ({ eq: () => ({ maybeSingle: async () => ({ data: h.row, error: null }) }) }) }) }),
   },
 }));
-import { explainMissingTravel } from "./activityTravel";
+import { explainMissingTravel, pickPreviousCheckout, checkOutAt } from "./activityTravel";
 
 describe("explainMissingTravel", () => {
   const base = { userId: "u1", activityDate: "2026-09-11", checkInAt: "2026-09-11T04:10:00Z" };
@@ -20,5 +20,37 @@ describe("explainMissingTravel", () => {
   });
   it("not checked in yet", async () => {
     expect(await explainMissingTravel({ ...base, checkInAt: null })).toMatch(/when the activity is checked in/);
+  });
+});
+
+describe("travel checkpoints", () => {
+  const out = (id: string, at: string, endTime = at) => ({ id, end_time: endTime, status_history: [{ status: "in_progress", at: "x" }, { status: "completed", at }] });
+  const session = "2026-09-11T03:00:00Z"; // attendance check-in
+
+  it("first activity of the session starts from attendance (no earlier check-out)", () => {
+    expect(pickPreviousCheckout([], "2026-09-11T03:20:00Z", session)).toBeNull();
+  });
+
+  it("each activity starts from the previous activity's check-out, not from attendance", () => {
+    const a1 = out("a1", "2026-09-11T04:05:00Z");
+    const a2 = out("a2", "2026-09-11T05:30:00Z");
+    // Activity 2 check-in: previous checkpoint is Activity 1 check-out
+    expect(pickPreviousCheckout([a1], "2026-09-11T04:30:00Z", session)?.row.id).toBe("a1");
+    // Activity 3 check-in: previous checkpoint is Activity 2 check-out (latest one)
+    const p3 = pickPreviousCheckout([a1, a2], "2026-09-11T05:45:00Z", session);
+    expect(p3?.row.id).toBe("a2");
+    expect(p3?.at).toBe("2026-09-11T05:30:00Z");
+  });
+
+  it("ignores check-outs from before this attendance session or after this check-in", () => {
+    const before = out("old", "2026-09-11T02:00:00Z");
+    const later = out("later", "2026-09-11T06:00:00Z");
+    expect(pickPreviousCheckout([before, later], "2026-09-11T04:00:00Z", session)).toBeNull();
+  });
+
+  it("uses the real check-out moment even if the end time was edited", () => {
+    const edited = out("a1", "2026-09-11T04:05:00Z", "2026-09-11T09:00:00Z");
+    expect(checkOutAt(edited)).toBe("2026-09-11T04:05:00Z");
+    expect(pickPreviousCheckout([edited], "2026-09-11T04:30:00Z", session)?.row.id).toBe("a1");
   });
 });
