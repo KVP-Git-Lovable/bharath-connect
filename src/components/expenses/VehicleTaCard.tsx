@@ -111,6 +111,7 @@ export default function VehicleTaCard({ method }: Props) {
                   <th className={cn("px-3 py-3", !isFixed && "opacity-40")}>Fixed price / day</th>
                   <th className="px-3 py-3">Assigned roles</th>
                   <th className="px-3 py-3">Custom users</th>
+                  <th className="px-3 py-3">Status</th>
                   <th className="px-3 py-3 text-right">Actions</th>
                 </tr>
               </thead>
@@ -211,10 +212,6 @@ function VehicleRow({ v, isFixed, rates, roles, links, allVehicleIds, emps, empN
             noTa || !v.is_active ? "bg-muted text-muted-foreground" : "bg-info/10 text-info")}><Icon className="h-4 w-4" /></span>
           <div className="min-w-0">
             <p className="font-semibold text-foreground">{v.name}</p>
-            <div className="mt-1 flex items-center gap-1.5">
-              <Switch checked={v.is_active} onCheckedChange={toggleActive} className="scale-75" aria-label={`${v.name} active`} />
-              <span className="text-xs">{v.is_active ? "Active" : "Off"}</span>
-            </div>
           </div>
         </div>
       </td>
@@ -244,6 +241,13 @@ function VehicleRow({ v, isFixed, rates, roles, links, allVehicleIds, emps, empN
         {noTa ? <span className="text-xs text-muted-foreground">—</span> : (
           <CustomUsers vehicle={v} isFixed={isFixed} emps={emps} empName={empName} overrides={overrides} ready={overridesReady} onChanged={onChanged} />
         )}
+      </td>
+
+      <td className="px-3 py-3">
+        <label className="flex items-center gap-2">
+          <Switch checked={v.is_active} onCheckedChange={toggleActive} aria-label={`${v.name} on or off`} />
+          <span className={cn("text-xs font-medium", v.is_active ? "text-foreground" : "text-muted-foreground")}>{v.is_active ? "Active" : "Off"}</span>
+        </label>
       </td>
 
       <td className="px-3 py-3">
