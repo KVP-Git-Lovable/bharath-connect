@@ -6213,6 +6213,7 @@ export type Database = {
       vehicle_types: {
         Row: {
           created_at: string
+          fixed_ta_amount: number
           icon: string | null
           id: string
           is_active: boolean
@@ -6223,6 +6224,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          fixed_ta_amount?: number
           icon?: string | null
           id?: string
           is_active?: boolean
@@ -6233,6 +6235,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          fixed_ta_amount?: number
           icon?: string | null
           id?: string
           is_active?: boolean
@@ -6242,6 +6245,51 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      vehicle_user_overrides: {
+        Row: {
+          created_at: string
+          fixed_ta_amount: number | null
+          id: string
+          per_km_rate: number | null
+          updated_at: string
+          user_id: string
+          vehicle_type_id: string
+        }
+        Insert: {
+          created_at?: string
+          fixed_ta_amount?: number | null
+          id?: string
+          per_km_rate?: number | null
+          updated_at?: string
+          user_id: string
+          vehicle_type_id: string
+        }
+        Update: {
+          created_at?: string
+          fixed_ta_amount?: number | null
+          id?: string
+          per_km_rate?: number | null
+          updated_at?: string
+          user_id?: string
+          vehicle_type_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_user_overrides_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicle_user_overrides_vehicle_type_id_fkey"
+            columns: ["vehicle_type_id"]
+            isOneToOne: false
+            referencedRelation: "vehicle_types"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       vendors: {
         Row: {
