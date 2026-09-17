@@ -334,6 +334,39 @@ function RolePicker({ vehicleId, roles, links, allVehicleIds, onChanged }: {
 
   const allowed = roles.filter((r) => canUse(r.id));
   const everyone = allowed.length === roles.length && roles.length > 0;
+  const noRoles = roles.length > 0 && allowed.length === 0;
+
+  // "No roles": take this vehicle away from every role (or give it back to all when unticked).
+  const setNoRoles = async (on: boolean) => {
+    setBusy("__none");
+    const skipped: string[] = [];
+    try {
+      for (const r of roles) {
+        if (on && canUse(r.id)) {
+          if (unrestricted(r.id)) {
+            const others = allVehicleIds.filter((id) => id !== vehicleId);
+            if (!others.length) { skipped.push(r.name); continue; }
+            const { error } = await supabase.from("role_vehicle_types" as any)
+              .insert(others.map((id) => ({ profile_id: r.id, vehicle_type_id: id })) as any);
+            if (error) throw error;
+          } else {
+            const active = [...rowsByRole.get(r.id)!].filter((id) => allVehicleIds.includes(id));
+            if (active.length <= 1) { skipped.push(r.name); continue; }
+            const { error } = await supabase.from("role_vehicle_types" as any).delete().eq("profile_id", r.id).eq("vehicle_type_id", vehicleId);
+            if (error) throw error;
+          }
+        } else if (!on && !canUse(r.id)) {
+          const { error } = await supabase.from("role_vehicle_types" as any).insert({ profile_id: r.id, vehicle_type_id: vehicleId } as any);
+          if (error) throw error;
+        }
+      }
+      if (skipped.length) toast.warning(`Kept for ${skipped.join(", ")} — it's their only vehicle. Give them another vehicle first.`);
+      onChanged();
+    } catch (e: any) {
+      toast.error(e?.message || "Could not update roles");
+      onChanged();
+    } finally { setBusy(null); }
+  };
 
   return (
     <Popover>
@@ -349,6 +382,12 @@ function RolePicker({ vehicleId, roles, links, allVehicleIds, onChanged }: {
       </PopoverTrigger>
       <PopoverContent className="w-64 p-2" align="start">
         <p className="px-2 pb-2 text-xs text-muted-foreground">Tick the roles that can pick this vehicle on Activities.</p>
+        <label className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted/50">
+          {busy === "__none" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Checkbox checked={noRoles} onCheckedChange={(c) => setNoRoles(!!c)} />}
+          <span className="flex-1 font-medium">No roles</span>
+          <span className="text-[10px] text-muted-foreground">nobody can pick it</span>
+        </label>
+        <div className="my-1 border-t" />
         {roles.map((r) => (
           <label key={r.id} className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted/50">
             {busy === r.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Checkbox checked={canUse(r.id)} onCheckedChange={() => toggle(r.id)} />}
@@ -368,14 +407,16 @@ function CustomUsers({ vehicle, isFixed, emps, empName, overrides, ready, onChan
 }) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Override | null>(null);
-  const [userId, setUserId] = useState("");
+  const [userIds, setUserIds] = useState<string[]>([]);
+  const [empSearch, setEmpSearch] = useState("");
   const [amount, setAmount] = useState("");
   const [saving, setSaving] = useState(false);
 
   const shown = overrides.filter((o) => (isFixed ? o.fixed_ta_amount != null : o.per_km_rate != null));
   const openFor = (o: Override | null) => {
     setEditing(o);
-    setUserId(o?.user_id || "");
+    setUserIds(o ? [o.user_id] : []);
+    setEmpSearch("");
     const val = o ? (isFixed ? o.fixed_ta_amount : o.per_km_rate) : null;
     setAmount(val == null ? "" : String(val));
     setOpen(true);
@@ -383,17 +424,23 @@ function CustomUsers({ vehicle, isFixed, emps, empName, overrides, ready, onChan
 
   const save = async () => {
     const n = Number(amount);
-    if (!userId) { toast.error("Select an employee"); return; }
+    if (!userIds.length) { toast.error("Select at least one employee"); return; }
     if (amount === "" || !Number.isFinite(n) || n < 0) { toast.error("Enter a valid amount"); return; }
     setSaving(true);
     const field = isFixed ? "fixed_ta_amount" : "per_km_rate";
-    const existing = editing || overrides.find((o) => o.user_id === userId);
-    const { error } = existing
-      ? await supabase.from("vehicle_user_overrides" as any).update({ [field]: n }).eq("id", existing.id)
-      : await supabase.from("vehicle_user_overrides" as any).insert({ vehicle_type_id: vehicle.id, user_id: userId, [field]: n } as any);
+    let error: any = null;
+    const existingIds = overrides.filter((o) => userIds.includes(o.user_id)).map((o) => o.id);
+    const fresh = userIds.filter((id) => !overrides.some((o) => o.user_id === id));
+    if (existingIds.length) {
+      ({ error } = await supabase.from("vehicle_user_overrides" as any).update({ [field]: n }).in("id", existingIds));
+    }
+    if (!error && fresh.length) {
+      ({ error } = await supabase.from("vehicle_user_overrides" as any)
+        .insert(fresh.map((user_id) => ({ vehicle_type_id: vehicle.id, user_id, [field]: n })) as any));
+    }
     setSaving(false);
     if (error) { toast.error(error.message || "Could not save exception"); return; }
-    toast.success("Exception saved");
+    toast.success(userIds.length > 1 ? `Exception saved for ${userIds.length} employees` : "Exception saved");
     setOpen(false);
     onChanged();
   };
@@ -428,16 +475,38 @@ function CustomUsers({ vehicle, isFixed, emps, empName, overrides, ready, onChan
           <DialogHeader><DialogTitle>{editing ? "Edit" : "Add"} exception — {vehicle.name}</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div className="space-y-1.5">
-              <Label>Employee</Label>
-              <Select value={userId} onValueChange={setUserId} disabled={!!editing}>
-                <SelectTrigger><SelectValue placeholder="Select employee" /></SelectTrigger>
-                <SelectContent>{emps.map((e) => <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>)}</SelectContent>
-              </Select>
+              <Label>{editing ? "Employee" : "Employees"}</Label>
+              {editing ? (
+                <p className="rounded-md border bg-muted/30 px-3 py-2 text-sm">{empName.get(editing.user_id) || "Unknown"}</p>
+              ) : (
+                <div className="rounded-md border">
+                  <div className="border-b p-2">
+                    <Input value={empSearch} onChange={(e) => setEmpSearch(e.target.value)} placeholder="Search employees" className="h-9" />
+                  </div>
+                  <div className="max-h-56 overflow-y-auto p-1">
+                    {emps.filter((e) => e.name.toLowerCase().includes(empSearch.toLowerCase())).map((e) => {
+                      const has = overrides.some((o) => o.user_id === e.id);
+                      return (
+                        <label key={e.id} className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted/50">
+                          <Checkbox checked={userIds.includes(e.id)}
+                            onCheckedChange={(c) => setUserIds((p) => (c ? [...p, e.id] : p.filter((x) => x !== e.id)))} />
+                          <span className="flex-1">{e.name}</span>
+                          {has && <span className="text-[10px] text-muted-foreground">has exception</span>}
+                        </label>
+                      );
+                    })}
+                  </div>
+                  <div className="flex items-center justify-between border-t px-3 py-1.5 text-xs text-muted-foreground">
+                    <span>{userIds.length} selected</span>
+                    {userIds.length > 0 && <button type="button" className="text-primary hover:underline" onClick={() => setUserIds([])}>Clear</button>}
+                  </div>
+                </div>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label>{isFixed ? "Custom fixed price (₹/day)" : "Custom rate (₹/km)"}</Label>
               <Input type="number" min="0" step="0.5" value={amount} onChange={(e) => setAmount(e.target.value)} />
-              <p className="text-xs text-muted-foreground">Used instead of the vehicle’s {isFixed ? "fixed price" : "rate"} for this employee.</p>
+              <p className="text-xs text-muted-foreground">Used instead of the vehicle’s {isFixed ? "fixed price" : "rate"} for {userIds.length > 1 ? "these employees" : "this employee"}.</p>
             </div>
           </div>
           <DialogFooter>
