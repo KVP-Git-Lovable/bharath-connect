@@ -3301,6 +3301,109 @@ export type Database = {
         }
         Relationships: []
       }
+      petty_cash_advances: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          id: string
+          issued_on: string
+          payment_mode: string
+          purpose: string | null
+          reference_no: string | null
+          settled_on: string | null
+          settlement_note: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          issued_on?: string
+          payment_mode?: string
+          purpose?: string | null
+          reference_no?: string | null
+          settled_on?: string | null
+          settlement_note?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          issued_on?: string
+          payment_mode?: string
+          purpose?: string | null
+          reference_no?: string | null
+          settled_on?: string | null
+          settlement_note?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "petty_cash_advances_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      petty_cash_transactions: {
+        Row: {
+          advance_id: string
+          amount: number
+          created_at: string
+          created_by: string | null
+          id: string
+          kind: string
+          note: string | null
+          payment_mode: string
+          reference_no: string | null
+          txn_date: string
+        }
+        Insert: {
+          advance_id: string
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kind: string
+          note?: string | null
+          payment_mode?: string
+          reference_no?: string | null
+          txn_date?: string
+        }
+        Update: {
+          advance_id?: string
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kind?: string
+          note?: string | null
+          payment_mode?: string
+          reference_no?: string | null
+          txn_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "petty_cash_transactions_advance_id_fkey"
+            columns: ["advance_id"]
+            isOneToOne: false
+            referencedRelation: "petty_cash_advances"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pm_ai_insights: {
         Row: {
           content: string
