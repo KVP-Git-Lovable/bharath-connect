@@ -1792,6 +1792,84 @@ export type Database = {
           },
         ]
       }
+      lead_quotations: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          enquiry_number: string | null
+          enquiry_received_date: string | null
+          followed_by_name: string | null
+          followed_by_user_id: string | null
+          id: string
+          lead_id: string
+          po_amount: number | null
+          po_date: string | null
+          po_number: string | null
+          quotation_date: string | null
+          quotation_number: string | null
+          remarks: string | null
+          status_id: string | null
+          status_name: string | null
+          updated_at: string
+          value_without_gst: number | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          enquiry_number?: string | null
+          enquiry_received_date?: string | null
+          followed_by_name?: string | null
+          followed_by_user_id?: string | null
+          id?: string
+          lead_id: string
+          po_amount?: number | null
+          po_date?: string | null
+          po_number?: string | null
+          quotation_date?: string | null
+          quotation_number?: string | null
+          remarks?: string | null
+          status_id?: string | null
+          status_name?: string | null
+          updated_at?: string
+          value_without_gst?: number | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          enquiry_number?: string | null
+          enquiry_received_date?: string | null
+          followed_by_name?: string | null
+          followed_by_user_id?: string | null
+          id?: string
+          lead_id?: string
+          po_amount?: number | null
+          po_date?: string | null
+          po_number?: string | null
+          quotation_date?: string | null
+          quotation_number?: string | null
+          remarks?: string | null
+          status_id?: string | null
+          status_name?: string | null
+          updated_at?: string
+          value_without_gst?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_quotations_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_quotations_status_id_fkey"
+            columns: ["status_id"]
+            isOneToOne: false
+            referencedRelation: "master_lead_statuses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leads: {
         Row: {
           actual_first_contact_date: string | null
@@ -1804,6 +1882,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           email: string | null
+          enquiry_received_date: string | null
           id: string
           indicative_budget: number | null
           industry: string | null
@@ -1815,12 +1894,15 @@ export type Database = {
           opportunity_value: number | null
           owner_id: string | null
           phone: string | null
+          quotation_date: string | null
+          quotation_number: string | null
           related_event_id: string | null
           researched_information: string | null
           target_conversion_date: string | null
           target_first_contact_date: string | null
           title: string | null
           updated_at: string
+          value_without_gst: number | null
           website: string | null
         }
         Insert: {
@@ -1834,6 +1916,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           email?: string | null
+          enquiry_received_date?: string | null
           id?: string
           indicative_budget?: number | null
           industry?: string | null
@@ -1845,12 +1928,15 @@ export type Database = {
           opportunity_value?: number | null
           owner_id?: string | null
           phone?: string | null
+          quotation_date?: string | null
+          quotation_number?: string | null
           related_event_id?: string | null
           researched_information?: string | null
           target_conversion_date?: string | null
           target_first_contact_date?: string | null
           title?: string | null
           updated_at?: string
+          value_without_gst?: number | null
           website?: string | null
         }
         Update: {
@@ -1864,6 +1950,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           email?: string | null
+          enquiry_received_date?: string | null
           id?: string
           indicative_budget?: number | null
           industry?: string | null
@@ -1875,12 +1962,15 @@ export type Database = {
           opportunity_value?: number | null
           owner_id?: string | null
           phone?: string | null
+          quotation_date?: string | null
+          quotation_number?: string | null
           related_event_id?: string | null
           researched_information?: string | null
           target_conversion_date?: string | null
           target_first_contact_date?: string | null
           title?: string | null
           updated_at?: string
+          value_without_gst?: number | null
           website?: string | null
         }
         Relationships: [
