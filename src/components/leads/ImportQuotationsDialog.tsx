@@ -67,7 +67,7 @@ export default function ImportQuotationsDialog({ open, onOpenChange, onImported 
               company: group.companyDisplay,
               contact_role: "unknown",
               lead_status_id: status?.id ?? null,
-              owner_id: followedByUser?.id ?? userId ?? null,
+              owner_id: followedByUser?.id ?? null,
               created_by: userId ?? null,
             } as any)
             .select("id")
