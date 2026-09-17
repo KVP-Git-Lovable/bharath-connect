@@ -1,0 +1,1 @@
+ALTER TABLE public.lead_audit_log ADD COLUMN IF NOT EXISTS field_name text;

@@ -1759,6 +1759,7 @@ export type Database = {
           action: string
           actor_id: string | null
           created_at: string
+          field_name: string | null
           from_value: string | null
           id: string
           lead_id: string
@@ -1768,6 +1769,7 @@ export type Database = {
           action: string
           actor_id?: string | null
           created_at?: string
+          field_name?: string | null
           from_value?: string | null
           id?: string
           lead_id: string
@@ -1777,6 +1779,7 @@ export type Database = {
           action?: string
           actor_id?: string | null
           created_at?: string
+          field_name?: string | null
           from_value?: string | null
           id?: string
           lead_id?: string
