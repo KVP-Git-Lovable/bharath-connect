@@ -1407,6 +1407,7 @@ export type Database = {
           description: string | null
           fixed_ta_amount: number
           id: string
+          is_active: boolean
           name: string
           role_ids: string[]
           ta_per_km_rate: number
@@ -1419,6 +1420,7 @@ export type Database = {
           description?: string | null
           fixed_ta_amount?: number
           id?: string
+          is_active?: boolean
           name: string
           role_ids?: string[]
           ta_per_km_rate?: number
@@ -1431,6 +1433,7 @@ export type Database = {
           description?: string | null
           fixed_ta_amount?: number
           id?: string
+          is_active?: boolean
           name?: string
           role_ids?: string[]
           ta_per_km_rate?: number
@@ -1447,6 +1450,7 @@ export type Database = {
           fixed_da_amount: number | null
           fixed_ta_amount: number | null
           id: string
+          ta_default_enabled: boolean
           ta_per_km_rate: number
           ta_type: string
           updated_at: string
@@ -1458,6 +1462,7 @@ export type Database = {
           fixed_da_amount?: number | null
           fixed_ta_amount?: number | null
           id?: string
+          ta_default_enabled?: boolean
           ta_per_km_rate?: number
           ta_type?: string
           updated_at?: string
@@ -1469,6 +1474,7 @@ export type Database = {
           fixed_da_amount?: number | null
           fixed_ta_amount?: number | null
           id?: string
+          ta_default_enabled?: boolean
           ta_per_km_rate?: number
           ta_type?: string
           updated_at?: string
