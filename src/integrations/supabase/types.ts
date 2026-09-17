@@ -1408,6 +1408,7 @@ export type Database = {
           fixed_ta_amount: number
           id: string
           name: string
+          role_ids: string[]
           ta_per_km_rate: number
           ta_type: string
           updated_at: string
@@ -1419,6 +1420,7 @@ export type Database = {
           fixed_ta_amount?: number
           id?: string
           name: string
+          role_ids?: string[]
           ta_per_km_rate?: number
           ta_type?: string
           updated_at?: string
@@ -1430,6 +1432,7 @@ export type Database = {
           fixed_ta_amount?: number
           id?: string
           name?: string
+          role_ids?: string[]
           ta_per_km_rate?: number
           ta_type?: string
           updated_at?: string
