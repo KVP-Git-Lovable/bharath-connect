@@ -26,6 +26,7 @@ import { LeadForm } from "@/components/leads/LeadForm";
 import { ConvertLeadDialog } from "@/components/leads/ConvertLeadDialog";
 import { LeadScoreTab } from "@/components/leads/LeadScoreTab";
 import { LeadSlaTab } from "@/components/leads/LeadSlaTab";
+import LeadQuotationsTab from "@/components/leads/LeadQuotationsTab";
 import { LeadStagePath } from "@/components/leads/LeadStagePath";
 
 import { format, differenceInCalendarDays, parseISO } from "date-fns";
@@ -347,6 +348,7 @@ export default function LeadDetail() {
           <TabsTrigger value="activities">Activities ({activities.length})</TabsTrigger>
           <TabsTrigger value="score">Lead Score (BANT)</TabsTrigger>
           <TabsTrigger value="sla">Lead SLA</TabsTrigger>
+          <TabsTrigger value="quotations">Quotations</TabsTrigger>
           <TabsTrigger value="attachments">Attachments ({insight?.documentCount ?? 0})</TabsTrigger>
           <TabsTrigger value="audit">Audit Log</TabsTrigger>
         </TabsList>
@@ -527,6 +529,10 @@ export default function LeadDetail() {
 
         <TabsContent value="sla" className="mt-4">
           <LeadSlaTab lead={lead as any} />
+        </TabsContent>
+
+        <TabsContent value="quotations" className="mt-4">
+          <LeadQuotationsTab leadId={lead.id} />
         </TabsContent>
 
         <TabsContent value="activities" className="mt-4 space-y-3">

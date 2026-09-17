@@ -4,7 +4,8 @@ import { motion } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus } from "lucide-react";
+import { Plus, Upload } from "lucide-react";
+import ImportQuotationsDialog from "@/components/leads/ImportQuotationsDialog";
 import {
   useLeads, useLeadStatuses, useLeadSources, useIndustries, statusColorClasses,
 } from "@/hooks/useLeadsEvents";
@@ -92,6 +93,7 @@ export default function Leads() {
   const sourceMap = useMemo(() => Object.fromEntries(sources.map((s) => [s.id, s])), [sources]);
 
   const [leadOpen, setLeadOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [userMap, setUserMap] = useState<Record<string, string>>({});
   const [search, setSearch] = useState("");
   const [display, setDisplay] = useState<ListDisplayMode>("table");
@@ -243,11 +245,18 @@ export default function Leads() {
           <h1 className="text-xl md:text-2xl font-bold">Leads</h1>
           <p className="text-xs md:text-sm text-muted-foreground">Capture and convert leads into customers</p>
         </div>
-        <Button size="sm" className="shrink-0" onClick={() => setLeadOpen(true)}>
-          <Plus className="h-4 w-4 mr-1" />New Lead
-        </Button>
+        <div className="flex shrink-0 items-center gap-2">
+          <Button size="sm" variant="outline" onClick={() => setImportOpen(true)}>
+            <Upload className="h-4 w-4 mr-1" />Import Quotations
+          </Button>
+          <Button size="sm" onClick={() => setLeadOpen(true)}>
+            <Plus className="h-4 w-4 mr-1" />New Lead
+          </Button>
+        </div>
       </div>
 
+
+      <ImportQuotationsDialog open={importOpen} onOpenChange={setImportOpen} onImported={() => qc.invalidateQueries({ queryKey: ["leads"] })} />
 
       <ViewBar
         views={allViews}
