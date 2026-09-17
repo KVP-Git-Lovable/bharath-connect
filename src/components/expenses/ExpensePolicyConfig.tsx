@@ -17,15 +17,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import OverrideTable, { type OverrideEntry } from "./OverrideTable";
 import ExpenseGroupsInline, { type ExpenseGroup } from "./ExpenseGroupsInline";
-import TravelAllowanceTable from "./TravelAllowanceTable";
+import TaPolicyCard from "./TaPolicyCard";
+import VehicleTaCard from "./VehicleTaCard";
 import PettyCashSection from "./PettyCashSection";
-
-const SECTIONS = [
-  { id: "ta-policy", label: "Travel Allowance" },
-  { id: "da-policy", label: "Daily Allowance" },
-  { id: "petty-cash", label: "Petty Cash" },
-  { id: "claims-approvals", label: "Claims & Approvals" },
-];
 
 
 interface ExpenseConfig {
@@ -56,24 +50,6 @@ export default function ExpensePolicyConfig() {
   const [rules, setRules] = useState<Rule[]>([]);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [activeSection, setActiveSection] = useState(SECTIONS[0].id);
-
-  const scrollTo = (id: string) => {
-    setActiveSection(id);
-    document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
-
-  // Highlight the section currently in view.
-  useEffect(() => {
-    if (loading) return;
-    const els = SECTIONS.map((s) => document.getElementById(s.id)).filter(Boolean) as HTMLElement[];
-    const obs = new IntersectionObserver((entries) => {
-      const visible = entries.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
-      if (visible[0]) setActiveSection(visible[0].target.id);
-    }, { rootMargin: "-140px 0px -60% 0px" });
-    els.forEach((el) => obs.observe(el));
-    return () => obs.disconnect();
-  }, [loading]);
 
   const [taDist, setTaDist] = useState<"same_for_all" | "custom">("same_for_all");
   const [daDist, setDaDist] = useState<"same_for_all" | "custom">("same_for_all");
@@ -345,58 +321,33 @@ export default function ExpensePolicyConfig() {
         </Button>
       </div>
 
-      <nav className="sticky top-[72px] z-[5] -mt-4 flex gap-2 overflow-x-auto bg-background/95 py-2 backdrop-blur-sm sm:top-[84px]">
-        {SECTIONS.map((sec) => (
-          <button key={sec.id} type="button" onClick={() => scrollTo(sec.id)}
-            className={`shrink-0 rounded-full border px-4 py-1.5 text-sm font-medium transition-colors ${activeSection === sec.id ? "border-primary bg-primary text-primary-foreground" : "bg-background text-muted-foreground hover:bg-muted/50"}`}>
-            {sec.label}
-          </button>
-        ))}
-      </nav>
 
       <div className="space-y-3">
         <div>
           <h3 className="text-xl font-bold">Allowance policies</h3>
           <p className="text-sm text-muted-foreground">Travel allowance, vehicles, daily allowance and petty cash advances.</p>
         </div>
-      {/* Travel Allowance — one table, one row per vehicle */}
-      <TravelAllowanceTable
+      {/* Travel Allowance */}
+      <TaPolicyCard
         method={config.ta_type}
         onMethodChange={(m) => setConfig({ ...config, ta_type: m })}
         defaultRate={config.ta_per_km_rate}
         defaultFixed={config.fixed_ta_amount}
         onDefaultRateChange={(n) => setConfig((c) => (c ? { ...c, ta_per_km_rate: n } : c))}
         onDefaultFixedChange={(n) => setConfig((c) => (c ? { ...c, fixed_ta_amount: n } : c))}
-      >
-        <details className="group rounded-md border border-border/70 bg-muted/10" open={taDist === "custom"}>
-          <summary className="cursor-pointer list-none px-4 py-3 text-sm font-medium text-foreground">
-            Team &amp; group exceptions for the Default row
-            <span className="ml-2 text-xs font-normal text-muted-foreground">
-              {taOverrides.length ? `${taOverrides.length} set` : "optional"}
-            </span>
-          </summary>
-          <div className="space-y-4 border-t border-border/60 p-4">
-            <RadioGroup value={taDist} onValueChange={(v: any) => setTaDist(v)} className="flex flex-col gap-2 sm:flex-row sm:gap-4">
-              <div className="flex items-center gap-2"><RadioGroupItem value="same_for_all" id="ta-same" /><Label htmlFor="ta-same" className="text-sm font-medium">Same for all</Label></div>
-              <div className="flex items-center gap-2"><RadioGroupItem value="custom" id="ta-custom" /><Label htmlFor="ta-custom" className="text-sm font-medium">Custom per user/team</Label></div>
-            </RadioGroup>
-            {taDist === "custom" && (
-              <>
-                <OverrideTable field="ta" overrides={taOverrides}
-                  defaultAmount={config.ta_type === "from_gps" ? config.ta_per_km_rate : config.fixed_ta_amount}
-                  unitLabel={config.ta_type === "from_gps" ? "/km" : ""}
-                  onAdd={(t, id, name) => addOverride("ta", t, id, name)}
-                  onUpdateAmount={(id, amt) => updateOverride("ta", id, amt)}
-                  onDelete={(e) => deleteOverride("ta", e)} />
-                <ExpenseGroupsInline field="ta" groups={groups} reload={fetchAll} />
-              </>
-            )}
-          </div>
-        </details>
-      </TravelAllowanceTable>
+        dist={taDist}
+        onDistChange={setTaDist}
+        overrides={taOverrides}
+        onAddOverride={(t, id, name) => addOverride("ta", t, id, name)}
+        onUpdateOverride={(id, amt) => updateOverride("ta", id, amt)}
+        onDeleteOverride={(e) => deleteOverride("ta", e)}
+        onSave={saveConfigAndPolicy}
+        saving={saving}
+      />
+      <VehicleTaCard method={config.ta_type} />
 
       {/* DA Policy */}
-      <Card id="da-policy" className="scroll-mt-28 overflow-hidden border-border/70 shadow-card">
+      <Card className="overflow-hidden border-border/70 shadow-card">
         <CardHeader className="border-b border-border/60 bg-success/5 px-5 py-5 sm:px-7">
           <CardTitle className="flex items-center gap-3 text-lg"><span className="flex h-10 w-10 items-center justify-center rounded-md bg-success/10 text-success"><Utensils className="h-5 w-5" /></span><span>Daily Allowance (DA) Policy<span className="mt-0.5 block text-sm font-normal text-muted-foreground">Control daily allowance availability, value, and calculation basis.</span></span></CardTitle>
         </CardHeader>
@@ -457,7 +408,7 @@ export default function ExpensePolicyConfig() {
       <PettyCashSection />
       </div>
 
-      <div id="claims-approvals" className="scroll-mt-28 space-y-3 pt-2">
+      <div className="space-y-3 pt-2">
         <div>
           <h3 className="text-xl font-bold">Claims and approvals</h3>
           <p className="text-sm text-muted-foreground">Manage expense categories and route claims through the correct approval process.</p>

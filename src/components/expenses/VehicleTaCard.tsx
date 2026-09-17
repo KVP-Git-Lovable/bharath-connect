@@ -37,18 +37,9 @@ interface Override { id: string; vehicle_type_id: string; user_id: string; per_k
 
 interface Props {
   method: Method;
-  onMethodChange: (m: Method) => void;
-  defaultRate: number;
-  defaultFixed: number;
-  onDefaultRateChange: (n: number) => void;
-  onDefaultFixedChange: (n: number) => void;
-  /** Rendered under the table (team / group exceptions for the default row). */
-  children?: React.ReactNode;
 }
 
-export default function TravelAllowanceTable({
-  method, onMethodChange, defaultRate, defaultFixed, onDefaultRateChange, onDefaultFixedChange, children,
-}: Props) {
+export default function VehicleTaCard({ method }: Props) {
   const qc = useQueryClient();
   const { vehicleTypes, loading: vLoading, refetch: refetchVehicles } = useVehicleTypes(false);
   const refData = useQuery({
@@ -96,37 +87,18 @@ export default function TravelAllowanceTable({
   const isFixed = method === "fixed";
 
   return (
-    <Card id="ta-policy" className="scroll-mt-28 overflow-hidden border-border/70 shadow-card">
-      <CardHeader className="border-b border-border/60 bg-info/5 px-5 py-5 sm:px-7">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <CardTitle className="flex items-center gap-3 text-lg">
-            <span className="flex h-10 w-10 items-center justify-center rounded-md bg-info/10 text-info"><CarIcon className="h-5 w-5" /></span>
-            <span>Travel Allowance Configuration
-              <span className="mt-0.5 block text-sm font-normal text-muted-foreground">One row per vehicle — rate, fixed price, roles and employee exceptions all in one place.</span>
-            </span>
-          </CardTitle>
-          <div className="flex flex-col gap-1.5">
-            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">TA method</span>
-            <div className="grid grid-cols-2 overflow-hidden rounded-md border bg-background">
-              {([{ v: "fixed", l: "Fixed Amount" }, { v: "from_gps", l: "Variable (per km)" }] as const).map((o) => (
-                <button key={o.v} type="button" onClick={() => onMethodChange(o.v)}
-                  className={cn("px-4 py-2 text-sm font-semibold", method === o.v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted/50")}>
-                  {o.l}
-                </button>
-              ))}
-            </div>
-          </div>
+    <Card className="overflow-hidden border-border/70 shadow-card">
+      <CardHeader className="flex flex-col gap-3 px-5 pb-2 pt-6 sm:flex-row sm:items-center sm:justify-between sm:px-7">
+        <div>
+          <CardTitle className="text-lg">Vehicle TA</CardTitle>
+          <p className="mt-0.5 text-sm text-muted-foreground">Used when the person picks this vehicle on Activities. Same method as above.</p>
         </div>
+        <Button variant="outline" onClick={() => setVehicleDialog({ open: true, editing: null })}>
+          <Plus className="mr-1 h-4 w-4" />Add vehicle
+        </Button>
       </CardHeader>
 
-      <CardContent className="space-y-4 p-5 sm:p-7">
-        <p className="text-sm text-muted-foreground">
-          {isFixed
-            ? <>Each present day pays the <b className="text-foreground">Fixed price</b> of the vehicle picked on Activities that day.</>
-            : <>TA for a day = <b className="text-foreground">GPS km × Rate/km</b> of the vehicle picked on Activities that day.</>}
-          {" "}Method and the Default row are saved with “Save Policies”; vehicle rows save instantly.
-        </p>
-
+      <CardContent className="space-y-4 px-5 pb-6 pt-2 sm:px-7">
         {vLoading || refData.isLoading ? (
           <div className="flex justify-center py-10"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
         ) : (
@@ -134,7 +106,7 @@ export default function TravelAllowanceTable({
             <table className="w-full min-w-[980px] text-sm">
               <thead className="bg-muted/40 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 <tr>
-                  <th className="px-4 py-3">Vehicle</th>
+                  <th className="px-4 py-3 font-medium normal-case tracking-normal">Vehicle</th>
                   <th className={cn("px-3 py-3", isFixed && "opacity-40")}>Rate / km</th>
                   <th className={cn("px-3 py-3", !isFixed && "opacity-40")}>Fixed price / day</th>
                   <th className="px-3 py-3">Assigned roles</th>
@@ -143,25 +115,6 @@ export default function TravelAllowanceTable({
                 </tr>
               </thead>
               <tbody>
-                {/* Default row: company-wide values used when no vehicle rate applies */}
-                <tr className="border-t bg-muted/20 align-top">
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-3">
-                      <span className="flex h-9 w-9 items-center justify-center rounded-md bg-muted text-muted-foreground"><Globe className="h-4 w-4" /></span>
-                      <div><p className="font-semibold">Default</p><p className="text-xs text-muted-foreground">When no vehicle is picked</p></div>
-                    </div>
-                  </td>
-                  <td className={cn("px-3 py-3", isFixed && "opacity-40")}>
-                    <MoneyInput value={defaultRate} disabled={isFixed} suffix="/km" onCommit={onDefaultRateChange} />
-                  </td>
-                  <td className={cn("px-3 py-3", !isFixed && "opacity-40")}>
-                    <MoneyInput value={defaultFixed} disabled={!isFixed} onCommit={onDefaultFixedChange} />
-                  </td>
-                  <td className="px-3 py-3 text-muted-foreground">All roles</td>
-                  <td className="px-3 py-3 text-xs text-muted-foreground">Team &amp; group exceptions below</td>
-                  <td className="px-3 py-3" />
-                </tr>
-
                 {vehicleTypes.map((v) => (
                   <VehicleRow key={v.id} v={v} isFixed={isFixed} rates={ratesBy.get(v.id) || []}
                     roles={data?.roles || []} links={data?.links || []}
@@ -176,13 +129,6 @@ export default function TravelAllowanceTable({
           </div>
         )}
 
-        <div className="flex justify-center">
-          <Button variant="outline" className="border-dashed" onClick={() => setVehicleDialog({ open: true, editing: null })}>
-            <Plus className="mr-1 h-4 w-4" />Add vehicle
-          </Button>
-        </div>
-
-        {children}
       </CardContent>
 
       <VehicleDialog state={vehicleDialog} vehicles={vehicleTypes} onClose={() => setVehicleDialog({ open: false, editing: null })} onChanged={reload} />
@@ -191,7 +137,7 @@ export default function TravelAllowanceTable({
 }
 
 /* ---------- small inline money editor ---------- */
-function MoneyInput({ value, onCommit, disabled, suffix, placeholder }: {
+export function MoneyInput({ value, onCommit, disabled, suffix, placeholder }: {
   value: number | null; onCommit: (n: number) => void | Promise<void>; disabled?: boolean; suffix?: string; placeholder?: string;
 }) {
   const [draft, setDraft] = useState(value == null ? "" : String(value));
