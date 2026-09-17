@@ -108,6 +108,7 @@ export type Database = {
           travel_from_type: string | null
           travel_time_mins: number | null
           user_id: string
+          vehicle_type_id: string | null
           visit_id: string | null
         }
         Insert: {
@@ -159,6 +160,7 @@ export type Database = {
           travel_from_type?: string | null
           travel_time_mins?: number | null
           user_id: string
+          vehicle_type_id?: string | null
           visit_id?: string | null
         }
         Update: {
@@ -210,6 +212,7 @@ export type Database = {
           travel_from_type?: string | null
           travel_time_mins?: number | null
           user_id?: string
+          vehicle_type_id?: string | null
           visit_id?: string | null
         }
         Relationships: [
@@ -267,6 +270,13 @@ export type Database = {
             columns: ["site_id"]
             isOneToOne: false
             referencedRelation: "project_sites"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activity_events_vehicle_type_id_fkey"
+            columns: ["vehicle_type_id"]
+            isOneToOne: false
+            referencedRelation: "vehicle_types"
             referencedColumns: ["id"]
           },
           {
@@ -6149,6 +6159,35 @@ export type Database = {
         }
         Relationships: []
       }
+      user_pinned_vehicles: {
+        Row: {
+          pinned_at: string
+          updated_at: string
+          user_id: string
+          vehicle_type_id: string
+        }
+        Insert: {
+          pinned_at?: string
+          updated_at?: string
+          user_id: string
+          vehicle_type_id: string
+        }
+        Update: {
+          pinned_at?: string
+          updated_at?: string
+          user_id?: string
+          vehicle_type_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_pinned_vehicles_vehicle_type_id_fkey"
+            columns: ["vehicle_type_id"]
+            isOneToOne: false
+            referencedRelation: "vehicle_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           assigned_at: string
@@ -6663,6 +6702,10 @@ export type Database = {
           user_id: string
           username: string
         }[]
+      }
+      get_activity_travel_expense: {
+        Args: { _activity_id: string }
+        Returns: Json
       }
       get_company_profile_full: {
         Args: never
