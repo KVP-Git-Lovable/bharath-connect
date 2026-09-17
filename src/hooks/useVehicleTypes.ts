@@ -8,15 +8,17 @@ export interface VehicleType {
   is_no_vehicle: boolean;
   is_active: boolean;
   sort_order: number;
+  /** Fixed TA per day for this vehicle (added 2026-09-17; 0 until the migration is applied). */
+  fixed_ta_amount: number;
 }
 
 export async function fetchVehicleTypes(): Promise<VehicleType[]> {
   const { data, error } = await supabase
     .from("vehicle_types" as any)
-    .select("id, name, icon, is_no_vehicle, is_active, sort_order")
+    .select("*")
     .order("sort_order");
   if (error) throw error;
-  return (data || []) as any as VehicleType[];
+  return ((data || []) as any[]).map((v) => ({ ...v, fixed_ta_amount: Number(v.fixed_ta_amount || 0) })) as VehicleType[];
 }
 
 export function useVehicleTypes(activeOnly = true) {

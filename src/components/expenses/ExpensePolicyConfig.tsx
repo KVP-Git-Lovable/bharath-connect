@@ -17,13 +17,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import OverrideTable, { type OverrideEntry } from "./OverrideTable";
 import ExpenseGroupsInline, { type ExpenseGroup } from "./ExpenseGroupsInline";
-import TaRateHistory from "./TaRateHistory";
-import VehicleMaster from "./VehicleMaster";
+import TravelAllowanceTable from "./TravelAllowanceTable";
 import PettyCashSection from "./PettyCashSection";
 
 const SECTIONS = [
   { id: "ta-policy", label: "Travel Allowance" },
-  { id: "vehicle-master", label: "Vehicle Master" },
   { id: "da-policy", label: "Daily Allowance" },
   { id: "petty-cash", label: "Petty Cash" },
   { id: "claims-approvals", label: "Claims & Approvals" },
@@ -361,82 +359,41 @@ export default function ExpensePolicyConfig() {
           <h3 className="text-xl font-bold">Allowance policies</h3>
           <p className="text-sm text-muted-foreground">Travel allowance, vehicles, daily allowance and petty cash advances.</p>
         </div>
-      {/* TA Policy */}
-      <Card id="ta-policy" className="scroll-mt-28 overflow-hidden border-border/70 shadow-card">
-        <CardHeader className="border-b border-border/60 bg-info/5 px-5 py-5 sm:px-7">
-          <CardTitle className="flex items-center gap-3 text-lg"><span className="flex h-10 w-10 items-center justify-center rounded-md bg-info/10 text-info"><Car className="h-5 w-5" /></span><span>Travel Allowance (TA) Policy<span className="mt-0.5 block text-sm font-normal text-muted-foreground">Configure how travel allowance is calculated and distributed.</span></span></CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-5 p-5 sm:p-7">
-          <div className="grid gap-2 lg:grid-cols-[minmax(260px,0.8fr)_minmax(360px,1.2fr)] lg:items-center">
-            <div>
-            <Label className="text-base font-semibold text-foreground">TA Calculation Method</Label>
-              <p className="mt-1 text-sm text-muted-foreground">Choose GPS-based reimbursement or a fixed daily amount.</p>
-            </div>
-            <Select value={config.ta_type} onValueChange={(v: any) => setConfig({ ...config, ta_type: v })}>
-              <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="from_gps">Variable Amount</SelectItem>
-                <SelectItem value="fixed">Fixed Amount</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-4 rounded-md border border-border/70 bg-muted/20 p-4 sm:p-5">
-            {config.ta_type === "from_gps" ? (
+      {/* Travel Allowance — one table, one row per vehicle */}
+      <TravelAllowanceTable
+        method={config.ta_type}
+        onMethodChange={(m) => setConfig({ ...config, ta_type: m })}
+        defaultRate={config.ta_per_km_rate}
+        defaultFixed={config.fixed_ta_amount}
+        onDefaultRateChange={(n) => setConfig((c) => (c ? { ...c, ta_per_km_rate: n } : c))}
+        onDefaultFixedChange={(n) => setConfig((c) => (c ? { ...c, fixed_ta_amount: n } : c))}
+      >
+        <details className="group rounded-md border border-border/70 bg-muted/10" open={taDist === "custom"}>
+          <summary className="cursor-pointer list-none px-4 py-3 text-sm font-medium text-foreground">
+            Team &amp; group exceptions for the Default row
+            <span className="ml-2 text-xs font-normal text-muted-foreground">
+              {taOverrides.length ? `${taOverrides.length} set` : "optional"}
+            </span>
+          </summary>
+          <div className="space-y-4 border-t border-border/60 p-4">
+            <RadioGroup value={taDist} onValueChange={(v: any) => setTaDist(v)} className="flex flex-col gap-2 sm:flex-row sm:gap-4">
+              <div className="flex items-center gap-2"><RadioGroupItem value="same_for_all" id="ta-same" /><Label htmlFor="ta-same" className="text-sm font-medium">Same for all</Label></div>
+              <div className="flex items-center gap-2"><RadioGroupItem value="custom" id="ta-custom" /><Label htmlFor="ta-custom" className="text-sm font-medium">Custom per user/team</Label></div>
+            </RadioGroup>
+            {taDist === "custom" && (
               <>
-                <p className="text-sm text-muted-foreground flex items-start gap-1.5">
-                  <Navigation className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-                  <span>TA is auto-calculated from GPS kilometers traveled per day: <strong className="text-foreground">TA = Total KM × Per KM Rate</strong>.</span>
-                </p>
-                <div className="grid gap-2 lg:grid-cols-[minmax(260px,0.8fr)_minmax(360px,1.2fr)] lg:items-start">
-                  <div>
-                  <Label className="text-base font-semibold text-foreground">Per KM Rate (₹) *</Label>
-                    <p className="mt-1 text-sm text-muted-foreground">Example: If rate is ₹8/km and user travels 45 km, TA = ₹360</p>
-                  </div>
-                  <Input type="number" min="0" step="0.5" value={config.ta_per_km_rate}
-                    onChange={(e) => setConfig({ ...config, ta_per_km_rate: Number(e.target.value) })} className="h-10 w-full lg:max-w-xs" />
-                </div>
-                <TaRateHistory onCurrentRateChange={(r) => setConfig((c) => (c ? { ...c, ta_per_km_rate: r } : c))} />
-
-                <p className="flex items-start gap-1.5 border-t border-border/60 pt-4 text-sm text-muted-foreground">
-                  <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                  <span>Vehicle-wise rates and role access are managed in{" "}
-                    <button type="button" className="font-medium text-primary underline-offset-2 hover:underline" onClick={() => scrollTo("vehicle-master")}>Vehicle Master</button>.
-                  </span>
-                </p>
+                <OverrideTable field="ta" overrides={taOverrides}
+                  defaultAmount={config.ta_type === "from_gps" ? config.ta_per_km_rate : config.fixed_ta_amount}
+                  unitLabel={config.ta_type === "from_gps" ? "/km" : ""}
+                  onAdd={(t, id, name) => addOverride("ta", t, id, name)}
+                  onUpdateAmount={(id, amt) => updateOverride("ta", id, amt)}
+                  onDelete={(e) => deleteOverride("ta", e)} />
+                <ExpenseGroupsInline field="ta" groups={groups} reload={fetchAll} />
               </>
-            ) : (
-              <div className="grid gap-2 lg:grid-cols-[minmax(260px,0.8fr)_minmax(360px,1.2fr)] lg:items-center">
-                <div><Label className="text-base font-semibold text-foreground">Fixed TA Amount (₹ per day)</Label><p className="mt-1 text-sm text-muted-foreground">Applied as the standard daily travel allowance.</p></div>
-                <Input type="number" min="0" value={config.fixed_ta_amount}
-                  onChange={(e) => setConfig({ ...config, fixed_ta_amount: Number(e.target.value) })} className="h-10 w-full lg:max-w-xs" />
-              </div>
             )}
           </div>
-
-          <div className="grid gap-3 lg:grid-cols-[minmax(260px,0.8fr)_minmax(360px,1.2fr)] lg:items-center">
-            <div><Label className="text-base font-semibold text-foreground">Distribution</Label><p className="mt-1 text-sm text-muted-foreground">Apply one policy to everyone or define exceptions.</p></div>
-            <RadioGroup value={taDist} onValueChange={(v: any) => setTaDist(v)} className="flex flex-col gap-2 sm:flex-row sm:gap-4">
-              <div className="flex items-center gap-2"><RadioGroupItem value="same_for_all" id="ta-same" /><Label htmlFor="ta-same" className="text-sm font-medium text-foreground">Same for all</Label></div>
-              <div className="flex items-center gap-2"><RadioGroupItem value="custom" id="ta-custom" /><Label htmlFor="ta-custom" className="text-sm font-medium text-foreground">Custom per user/team</Label></div>
-            </RadioGroup>
-          </div>
-
-          {taDist === "custom" && (
-            <>
-              <OverrideTable field="ta" overrides={taOverrides}
-                defaultAmount={config.ta_type === "from_gps" ? config.ta_per_km_rate : config.fixed_ta_amount}
-                unitLabel={config.ta_type === "from_gps" ? "/km" : ""}
-                onAdd={(t, id, name) => addOverride("ta", t, id, name)}
-                onUpdateAmount={(id, amt) => updateOverride("ta", id, amt)}
-                onDelete={(e) => deleteOverride("ta", e)} />
-              <ExpenseGroupsInline field="ta" groups={groups} reload={fetchAll} />
-            </>
-          )}
-        </CardContent>
-      </Card>
-
-      <VehicleMaster />
+        </details>
+      </TravelAllowanceTable>
 
       {/* DA Policy */}
       <Card id="da-policy" className="scroll-mt-28 overflow-hidden border-border/70 shadow-card">
