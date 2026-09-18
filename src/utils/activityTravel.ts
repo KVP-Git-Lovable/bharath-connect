@@ -82,7 +82,7 @@ export function pickPreviousCheckout<T>(rows: T[], checkInAt: string, sessionSta
  *  - otherwise the attendance check-in (i.e. the first activity of the session)
  * Only the start TIME is required. Coordinates are attached when available.
  */
-async function findOrigin(
+export async function findOrigin(
   userId: string,
   dateStr: string,
   currentActivityId: string,

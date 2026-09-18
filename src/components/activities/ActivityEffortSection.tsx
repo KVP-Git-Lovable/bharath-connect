@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   computeTravelForCheckIn,
   explainMissingTravel,
+  findOrigin,
   uploadTravelProof,
   TRAVEL_PROOF_BUCKET,
   type TravelProofEntry,
@@ -208,19 +209,43 @@ export default function ActivityEffortSection({
     }
   };
 
-  // Self-heal once: activities checked in before the travel fix have no
-  // travel values stored.
+  // Self-heal once:
+  //  - activities checked in before the travel fix have no travel values stored
+  //  - stored values measured from the wrong checkpoint (e.g. the day check-in
+  //    when an earlier activity check-out now exists in the same session) are
+  //    re-measured from the correct previous checkpoint.
   const healedRef = useRef(false);
   useEffect(() => {
     if (healedRef.current) return;
     healedRef.current = true;
-    if (activity.travel_time_mins != null || activity.travel_from_type != null) return;
     if (!ownerId) return;
     if (!checkInAt) {
-      setTravelReason("Travel is measured when the activity is checked in.");
+      if (activity.travel_time_mins == null && activity.travel_from_type == null) {
+        setTravelReason("Travel is measured when the activity is checked in.");
+      }
       return;
     }
-    void recalculate();
+    const hasStored = activity.travel_time_mins != null || activity.travel_from_type != null;
+    if (!hasStored) {
+      void recalculate();
+      return;
+    }
+    void (async () => {
+      try {
+        const origin = await findOrigin(ownerId, activity.activity_date, activity.id, checkInAt);
+        if (!origin) return;
+        const sameStart =
+          activity.travel_from_at != null &&
+          new Date(activity.travel_from_at as string).getTime() === new Date(origin.at).getTime();
+        const sameSource =
+          (activity.travel_from_activity_id ?? null) === origin.activityId &&
+          (activity.travel_from_type ?? null) === origin.type;
+        if (sameStart && sameSource) return;
+        await recalculate();
+      } catch (e) {
+        console.warn("[ActivityEffortSection] checkpoint check failed", e);
+      }
+    })();
   }, [activity.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const prevLabel =
