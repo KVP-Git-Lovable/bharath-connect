@@ -448,6 +448,188 @@ export type Database = {
         }
         Relationships: []
       }
+      app_usage_intervals: {
+        Row: {
+          app_version: string | null
+          boot_id: string | null
+          clock_jump_ms: number
+          coalesced_count: number
+          created_at: string
+          date: string
+          device_id: string
+          duration_seconds: number | null
+          end_confidence: string
+          end_reason: string | null
+          ended_at: string
+          gps_service_recent: boolean | null
+          id: string
+          interactive_ms: number | null
+          is_midnight_split: boolean
+          kind: string
+          os_version: string | null
+          seq: number
+          session_id: string
+          source: string
+          start_reason: string | null
+          started_at: string
+          tz_offset_minutes: number
+          uncertainty_ms: number
+          user_id: string
+        }
+        Insert: {
+          app_version?: string | null
+          boot_id?: string | null
+          clock_jump_ms?: number
+          coalesced_count?: number
+          created_at?: string
+          date: string
+          device_id: string
+          duration_seconds?: number | null
+          end_confidence?: string
+          end_reason?: string | null
+          ended_at: string
+          gps_service_recent?: boolean | null
+          id?: string
+          interactive_ms?: number | null
+          is_midnight_split?: boolean
+          kind: string
+          os_version?: string | null
+          seq: number
+          session_id: string
+          source?: string
+          start_reason?: string | null
+          started_at: string
+          tz_offset_minutes: number
+          uncertainty_ms?: number
+          user_id: string
+        }
+        Update: {
+          app_version?: string | null
+          boot_id?: string | null
+          clock_jump_ms?: number
+          coalesced_count?: number
+          created_at?: string
+          date?: string
+          device_id?: string
+          duration_seconds?: number | null
+          end_confidence?: string
+          end_reason?: string | null
+          ended_at?: string
+          gps_service_recent?: boolean | null
+          id?: string
+          interactive_ms?: number | null
+          is_midnight_split?: boolean
+          kind?: string
+          os_version?: string | null
+          seq?: number
+          session_id?: string
+          source?: string
+          start_reason?: string | null
+          started_at?: string
+          tz_offset_minutes?: number
+          uncertainty_ms?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_usage_intervals_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "app_usage_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      app_usage_sessions: {
+        Row: {
+          app_version: string | null
+          background_seconds: number
+          boot_id: string | null
+          created_at: string
+          date: string
+          device_id: string
+          device_model: string | null
+          end_confidence: string | null
+          end_reason: string | null
+          ended_at: string | null
+          exit_importance: number | null
+          exit_reason_code: number | null
+          foreground_seconds: number
+          id: string
+          interval_count: number
+          last_heartbeat_at: string | null
+          os_version: string | null
+          pid: number | null
+          platform: string
+          source: string
+          started_at: string
+          status: string
+          tz_offset_minutes: number
+          uncertainty_ms: number
+          updated_at: string
+          usage_policy_version: number
+          user_id: string
+        }
+        Insert: {
+          app_version?: string | null
+          background_seconds?: number
+          boot_id?: string | null
+          created_at?: string
+          date: string
+          device_id: string
+          device_model?: string | null
+          end_confidence?: string | null
+          end_reason?: string | null
+          ended_at?: string | null
+          exit_importance?: number | null
+          exit_reason_code?: number | null
+          foreground_seconds?: number
+          id?: string
+          interval_count?: number
+          last_heartbeat_at?: string | null
+          os_version?: string | null
+          pid?: number | null
+          platform?: string
+          source?: string
+          started_at: string
+          status?: string
+          tz_offset_minutes: number
+          uncertainty_ms?: number
+          updated_at?: string
+          usage_policy_version?: number
+          user_id: string
+        }
+        Update: {
+          app_version?: string | null
+          background_seconds?: number
+          boot_id?: string | null
+          created_at?: string
+          date?: string
+          device_id?: string
+          device_model?: string | null
+          end_confidence?: string | null
+          end_reason?: string | null
+          ended_at?: string | null
+          exit_importance?: number | null
+          exit_reason_code?: number | null
+          foreground_seconds?: number
+          id?: string
+          interval_count?: number
+          last_heartbeat_at?: string | null
+          os_version?: string | null
+          pid?: number | null
+          platform?: string
+          source?: string
+          started_at?: string
+          status?: string
+          tz_offset_minutes?: number
+          uncertainty_ms?: number
+          updated_at?: string
+          usage_policy_version?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       attendance: {
         Row: {
           check_in_address: string | null
@@ -6739,6 +6921,19 @@ export type Database = {
       get_activity_travel_expense: {
         Args: { _activity_id: string }
         Returns: Json
+      }
+      get_app_usage_summary: {
+        Args: { _from: string; _to: string; _user_id: string }
+        Returns: {
+          background_seconds: number
+          day: string
+          device_count: number
+          first_foreground_at: string
+          foreground_seconds: number
+          inferred_seconds: number
+          last_foreground_at: string
+          session_count: number
+        }[]
       }
       get_company_profile_full: {
         Args: never
