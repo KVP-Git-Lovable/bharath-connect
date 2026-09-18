@@ -222,7 +222,7 @@ export function MoneyInput({ value, onCommit, disabled, suffix, placeholder }: {
 }
 
 /* ---------- one vehicle row ---------- */
-function VehicleRow({ v, isFixed, rates, roles, links, allVehicleIds, emps, empName, overrides, overridesReady, onEdit, onChanged }: {
+function VehicleRow({ v, isFixed, rates, stage, roles, links, allVehicleIds, emps, empName, overrides, overridesReady, onChanged }: {
   v: VehicleType; isFixed: boolean; rates: VehicleRate[]; roles: Role[];
   stage: 2 | 3;
   links: { profile_id: string; vehicle_type_id: string }[]; allVehicleIds: string[]; emps: Emp[]; empName: Map<string, string>;
@@ -259,11 +259,6 @@ function VehicleRow({ v, isFixed, rates, roles, links, allVehicleIds, emps, empN
     if (error) { toast.error(/fixed_ta_amount/.test(error.message) ? "Apply the latest migration to enable fixed price per vehicle" : error.message); return; }
     toast.success(`${v.name}: ${inr(n)} per day`);
     onChanged();
-  };
-
-  const toggleActive = async (on: boolean) => {
-    const { error } = await supabase.from("vehicle_types" as any).update({ is_active: on }).eq("id", v.id);
-    if (error) toast.error("Could not update vehicle"); else onChanged();
   };
 
   return (
