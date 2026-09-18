@@ -17,9 +17,9 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { MapPin, AlertTriangle, RefreshCw, Clock, Navigation, CalendarIcon, Smartphone, Moon } from "lucide-react";
+import { MapPin, AlertTriangle, RefreshCw, Clock, Navigation, CalendarIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { formatHHMM } from "@/utils/duration";
+import { AppUsageCards, type AppUsageSummary } from "@/components/gps/AppUsageCards";
 import { getCurrentPosition, openAppSettings, isNative, prepareNativeLocationSettings } from "@/utils/nativePermissions";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -77,17 +77,6 @@ interface AppUsageRpcClient {
     fn: string,
     args: Record<string, unknown>
   ) => Promise<{ data: AppUsageDayRow[] | null; error: { message: string } | null }>;
-}
-
-/** Totals for the selected user over the selected range, summed from the
- *  per-day rows the RPC returns. */
-interface AppUsageSummary {
-  foregroundSeconds: number;
-  backgroundSeconds: number;
-  inferredSeconds: number;
-  sessionCount: number;
-  deviceCount: number;
-  daysWithData: number;
 }
 
 interface ActivityAtLocation {
@@ -193,6 +182,7 @@ export default function GPSTracking() {
   // App foreground/background usage. Held separately from the GPS payload so a
   // usage failure can never blank the trail (see fetchAppUsage).
   const [usageSummary, setUsageSummary] = useState<AppUsageSummary | null>(null);
+  const [usageError, setUsageError] = useState(false);
 
   useEffect(() => {
     const tick = () => setQueueStats(getGpsQueueStats());
@@ -421,8 +411,11 @@ export default function GPSTracking() {
         { _user_id: userId, _from: from, _to: to }
       );
       if (error) throw error;
+      setUsageError(false);
       const rows = data ?? [];
       if (rows.length === 0) {
+        // No usage recorded for this member and range. The cards still render,
+        // as 00:00 — see AppUsageCards.
         setUsageSummary(null);
         return;
       }
@@ -438,8 +431,10 @@ export default function GPSTracking() {
         daysWithData: rows.length,
       });
     } catch {
-      // Silent by design: never toast over the GPS path.
+      // Silent by design: never toast over the GPS path. The cards stay
+      // visible and say so rather than reporting a zero we did not measure.
       setUsageSummary(null);
+      setUsageError(true);
     }
   }, [currentUserId, selectedUser, getDateRange]);
 
@@ -751,38 +746,10 @@ export default function GPSTracking() {
 
           {/* App usage. Deliberately outside the gpsPoints guard above: time in
               the app and location fixes fail independently, and "used the app
-              for 47 minutes, produced no fixes" is the case most worth seeing. */}
-          {usageSummary && (
-            <div className="grid grid-cols-2 gap-2">
-              <Card className="shadow-card">
-                <CardContent className="p-3 text-center">
-                  <Smartphone className="h-4 w-4 mx-auto mb-1 text-primary" />
-                  <p className="text-xs text-muted-foreground">Total foreground time</p>
-                  <p className="text-sm font-semibold">{formatHHMM(usageSummary.foregroundSeconds)}</p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">
-                    {usageSummary.sessionCount} session{usageSummary.sessionCount === 1 ? "" : "s"}
-                  </p>
-                </CardContent>
-              </Card>
-              <Card className="shadow-card">
-                <CardContent className="p-3 text-center">
-                  <Moon className="h-4 w-4 mx-auto mb-1 text-primary" />
-                  <p className="text-xs text-muted-foreground">Total background time</p>
-                  <p className="text-sm font-semibold">{formatHHMM(usageSummary.backgroundSeconds)}</p>
-                  {usageSummary.inferredSeconds > 0 && (
-                    <p className="text-[10px] text-muted-foreground mt-0.5">
-                      incl. {formatHHMM(usageSummary.inferredSeconds)} reconciled after a kill
-                    </p>
-                  )}
-                  {usageSummary.deviceCount > 1 && (
-                    <p className="text-[10px] text-amber-600 mt-0.5">
-                      across {usageSummary.deviceCount} devices
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-          )}
+              for 47 minutes, produced no fixes" is the case most worth seeing.
+              Always rendered, including as 00:00 before any device has
+              reported — a missing card reads as a missing feature. */}
+          <AppUsageCards summary={usageSummary} error={usageError} />
 
           {/* Tracking-gap warning: recorded distance can only be as complete as the trail */}
           {gpsPoints.length > 1 && longestGapMinutes > 15 && (
