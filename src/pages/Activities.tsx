@@ -98,6 +98,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useAudioRecorder } from "@/hooks/useAudioRecorder";
 import ActivityGeoStamp from "@/components/activities/ActivityGeoStamp";
+import ActivityExpenseStrip from "@/components/activities/ActivityExpenseStrip";
 import VehiclePinPicker from "@/components/activities/VehiclePinPicker";
 import { resolveActivityVehicle } from "@/utils/activityVehicle";
 
@@ -2202,6 +2203,8 @@ function ActivityCard({ a, isAdmin, onEdit, onDelete, onOpenDetails, onReceiveGo
                   {a.user_full_name ? ` by ${a.user_full_name}` : ""}
                 </p>
               </div>
+
+              <ActivityExpenseStrip activity={a as any} className="mt-2" />
 
               <ActivityGeoStamp activity={a as any} className="mt-2" compact />
             </div>
