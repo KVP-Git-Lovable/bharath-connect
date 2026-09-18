@@ -17,8 +17,9 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { MapPin, AlertTriangle, RefreshCw, Clock, Navigation, CalendarIcon } from "lucide-react";
+import { MapPin, AlertTriangle, RefreshCw, Clock, Navigation, CalendarIcon, Smartphone, Moon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { formatHHMM } from "@/utils/duration";
 import { getCurrentPosition, openAppSettings, isNative, prepareNativeLocationSettings } from "@/utils/nativePermissions";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -58,6 +59,35 @@ interface GPSStop {
   timestamp: string;
   duration_minutes: number | null;
   reason: string | null;
+}
+
+/** One row per local day, as returned by get_app_usage_summary. Postgres
+ *  bigint arrives over PostgREST as a string, hence the union. */
+interface AppUsageDayRow {
+  day: string;
+  foreground_seconds: number | string;
+  background_seconds: number | string;
+  session_count: number | string;
+  device_count: number | string;
+  inferred_seconds: number | string;
+}
+
+interface AppUsageRpcClient {
+  rpc: (
+    fn: string,
+    args: Record<string, unknown>
+  ) => Promise<{ data: AppUsageDayRow[] | null; error: { message: string } | null }>;
+}
+
+/** Totals for the selected user over the selected range, summed from the
+ *  per-day rows the RPC returns. */
+interface AppUsageSummary {
+  foregroundSeconds: number;
+  backgroundSeconds: number;
+  inferredSeconds: number;
+  sessionCount: number;
+  deviceCount: number;
+  daysWithData: number;
 }
 
 interface ActivityAtLocation {
@@ -160,6 +190,9 @@ export default function GPSTracking() {
   // Local capture/sync health: distinguishes "nothing captured" from
   // "captured but stuck in the device queue" without attaching DevTools.
   const [queueStats, setQueueStats] = useState<GpsQueueStats>(() => getGpsQueueStats());
+  // App foreground/background usage. Held separately from the GPS payload so a
+  // usage failure can never blank the trail (see fetchAppUsage).
+  const [usageSummary, setUsageSummary] = useState<AppUsageSummary | null>(null);
 
   useEffect(() => {
     const tick = () => setQueueStats(getGpsQueueStats());
@@ -368,6 +401,53 @@ export default function GPSTracking() {
       fetchTrackingData();
     }
   }, [activeTab, fetchTrackingData]);
+
+  /**
+   * App-usage totals, loaded separately from the GPS payload on purpose.
+   * fetchTrackingData has a single catch that toasts and abandons everything;
+   * folding this in would mean a missing RPC (very likely while the migration
+   * is ahead of the APK) blanks the map, distance, points and activities too.
+   * Here a failure just means the cards do not render.
+   */
+  const fetchAppUsage = useCallback(async () => {
+    if (!currentUserId) return;
+    const userId = selectedUser === "me" ? currentUserId : selectedUser;
+    const { from, to } = getDateRange();
+    try {
+      // The generated Database type will not know this RPC until types.ts is
+      // regenerated, so the client is widened here rather than anywhere else.
+      const { data, error } = await (supabase as unknown as AppUsageRpcClient).rpc(
+        "get_app_usage_summary",
+        { _user_id: userId, _from: from, _to: to }
+      );
+      if (error) throw error;
+      const rows = data ?? [];
+      if (rows.length === 0) {
+        setUsageSummary(null);
+        return;
+      }
+      // Postgres bigint arrives over PostgREST as a string; `+` on strings
+      // would concatenate rather than add.
+      const num = (v: unknown) => Number(v ?? 0);
+      setUsageSummary({
+        foregroundSeconds: rows.reduce((a, r) => a + num(r.foreground_seconds), 0),
+        backgroundSeconds: rows.reduce((a, r) => a + num(r.background_seconds), 0),
+        inferredSeconds: rows.reduce((a, r) => a + num(r.inferred_seconds), 0),
+        sessionCount: rows.reduce((a, r) => a + num(r.session_count), 0),
+        deviceCount: Math.max(...rows.map((r) => num(r.device_count))),
+        daysWithData: rows.length,
+      });
+    } catch {
+      // Silent by design: never toast over the GPS path.
+      setUsageSummary(null);
+    }
+  }, [currentUserId, selectedUser, getDateRange]);
+
+  useEffect(() => {
+    if (activeTab === "tracking") {
+      fetchAppUsage();
+    }
+  }, [activeTab, fetchAppUsage]);
 
   // Display trajectory: validated points, plus the latest raw fix appended
   // for the pins/timeline (display only — never part of the distance).
@@ -664,6 +744,41 @@ export default function GPSTracking() {
                   <Clock className="h-4 w-4 mx-auto mb-1 text-primary" />
                   <p className="text-xs text-muted-foreground">Activities</p>
                   <p className="text-sm font-semibold">{activityMarkers.length}</p>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* App usage. Deliberately outside the gpsPoints guard above: time in
+              the app and location fixes fail independently, and "used the app
+              for 47 minutes, produced no fixes" is the case most worth seeing. */}
+          {usageSummary && (
+            <div className="grid grid-cols-2 gap-2">
+              <Card className="shadow-card">
+                <CardContent className="p-3 text-center">
+                  <Smartphone className="h-4 w-4 mx-auto mb-1 text-primary" />
+                  <p className="text-xs text-muted-foreground">Total foreground time</p>
+                  <p className="text-sm font-semibold">{formatHHMM(usageSummary.foregroundSeconds)}</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">
+                    {usageSummary.sessionCount} session{usageSummary.sessionCount === 1 ? "" : "s"}
+                  </p>
+                </CardContent>
+              </Card>
+              <Card className="shadow-card">
+                <CardContent className="p-3 text-center">
+                  <Moon className="h-4 w-4 mx-auto mb-1 text-primary" />
+                  <p className="text-xs text-muted-foreground">Total background time</p>
+                  <p className="text-sm font-semibold">{formatHHMM(usageSummary.backgroundSeconds)}</p>
+                  {usageSummary.inferredSeconds > 0 && (
+                    <p className="text-[10px] text-muted-foreground mt-0.5">
+                      incl. {formatHHMM(usageSummary.inferredSeconds)} reconciled after a kill
+                    </p>
+                  )}
+                  {usageSummary.deviceCount > 1 && (
+                    <p className="text-[10px] text-amber-600 mt-0.5">
+                      across {usageSummary.deviceCount} devices
+                    </p>
+                  )}
                 </CardContent>
               </Card>
             </div>

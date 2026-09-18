@@ -6,8 +6,13 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// app_usage_intervals is deliberately absent: it is the second-largest table
+// after gps_tracking and would push the full run past its time budget. Export it
+// on demand with ?table=app_usage_intervals. The session rows carry the totals,
+// status, close reasons and versions, which is what a report actually consumes.
 const TABLES = [
   "activity_events","activity_types_master","additional_expenses","app_configuration",
+  "app_usage_sessions",
   "attendance","attendance_policy","beat_allowances","beat_plans","company_profile",
   "customer_activities","customer_contact_roles","customer_contacts","customer_documents",
   "customer_opportunities","customers","employee_documents","employees","events",

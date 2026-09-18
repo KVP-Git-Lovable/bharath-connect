@@ -13,6 +13,7 @@ import WebPushPrompt from "@/components/WebPushPrompt";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useDeviceStatusReporter } from "@/hooks/useDeviceStatusReporter";
 import { useGPSTracker } from "@/hooks/useGPSTracker";
+import { useAppUsageTracker } from "@/hooks/useAppUsageTracker";
 import { useAutoAssignRoles } from "@/hooks/useAutoAssignRoles";
 
 // Keys of caches scoped to the signed-in user. Must be cleared on user change.
@@ -47,6 +48,7 @@ export function AppLayout() {
   usePushNotifications(userId ?? undefined);
   useDeviceStatusReporter(userId);
   useGPSTracker(userId);
+  useAppUsageTracker(userId);
 
   useEffect(() => {
     const handleSession = (session: Awaited<ReturnType<typeof supabase.auth.getSession>>["data"]["session"]) => {

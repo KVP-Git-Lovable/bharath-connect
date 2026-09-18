@@ -1,4 +1,20 @@
-// Removes @capacitor/push-notifications from the ANDROID build only.
+// Removes plugins from the ANDROID build only, after every `npx cap sync`.
+//
+// Two plugins are stripped, for unrelated reasons:
+//
+//   @capacitor/push-notifications  — see below.
+//   @capacitor/device              — it has never been part of the Android
+//     build, so Device.getBatteryInfo() has always failed there and
+//     useDeviceStatusReporter has always reported a null battery on Android.
+//     Letting `cap sync` add it would silently start writing real battery
+//     values to public.users, i.e. change battery tracking behaviour as a side
+//     effect of an unrelated build step. Keeping the strip makes today's
+//     behaviour deterministic instead of depending on who last ran a sync.
+//     To turn Android battery reporting ON, delete DEVICE from ALWAYS_STRIP
+//     below and ship a new APK — a deliberate, reviewable change.
+//
+// ---------------------------------------------------------------------------
+// @capacitor/push-notifications
 //
 // Why: the plugin's register() throws a native, uncatchable
 //   java.lang.IllegalStateException: Default FirebaseApp is not initialized
@@ -29,37 +45,49 @@ const targets = [
 // "not implemented". So it must be stripped in lockstep with the Gradle files.
 const PLUGINS_JSON = "android/app/src/main/assets/capacitor.plugins.json";
 
-if (existsSync("android/app/google-services.json")) {
-  console.log("[strip-push] google-services.json present — leaving push enabled.");
-  process.exit(0);
-}
+const PUSH = { pkg: "@capacitor/push-notifications", gradle: "capacitor-push-notifications", label: "push-notifications" };
+const DEVICE = { pkg: "@capacitor/device", gradle: "capacitor-device", label: "device" };
+
+/** Stripped on every sync regardless of the google-services.json check below. */
+const ALWAYS_STRIP = [DEVICE];
 
 let touched = 0;
-for (const file of targets) {
-  if (!existsSync(file)) continue;
-  const before = readFileSync(file, "utf8");
-  const after = before
-    .split("\n")
-    .filter((line) => !line.includes("capacitor-push-notifications"))
-    .join("\n");
-  if (after !== before) {
-    writeFileSync(file, after);
-    console.log(`[strip-push] removed push-notifications from ${file}`);
-    touched++;
+
+function strip({ pkg, gradle, label }) {
+  for (const file of targets) {
+    if (!existsSync(file)) continue;
+    const before = readFileSync(file, "utf8");
+    const after = before
+      .split("\n")
+      .filter((line) => !line.includes(gradle))
+      .join("\n");
+    if (after !== before) {
+      writeFileSync(file, after);
+      console.log(`[strip-push] removed ${label} from ${file}`);
+      touched++;
+    }
+  }
+  if (existsSync(PLUGINS_JSON)) {
+    const list = JSON.parse(readFileSync(PLUGINS_JSON, "utf8"));
+    const kept = list.filter((p) => p.pkg !== pkg);
+    if (kept.length !== list.length) {
+      writeFileSync(PLUGINS_JSON, JSON.stringify(kept, null, "\t") + "\n");
+      console.log(`[strip-push] removed ${label} from ${PLUGINS_JSON}`);
+      touched++;
+    }
   }
 }
-if (existsSync(PLUGINS_JSON)) {
-  const list = JSON.parse(readFileSync(PLUGINS_JSON, "utf8"));
-  const kept = list.filter((p) => p.pkg !== "@capacitor/push-notifications");
-  if (kept.length !== list.length) {
-    writeFileSync(PLUGINS_JSON, JSON.stringify(kept, null, "\t") + "\n");
-    console.log(`[strip-push] removed push-notifications from ${PLUGINS_JSON}`);
-    touched++;
-  }
+
+for (const plugin of ALWAYS_STRIP) strip(plugin);
+
+if (existsSync("android/app/google-services.json")) {
+  console.log("[strip-push] google-services.json present — leaving push enabled.");
+} else {
+  strip(PUSH);
 }
 
 console.log(
   touched
-    ? "[strip-push] done — Android build excludes push notifications."
+    ? "[strip-push] done — Android build excludes the plugins listed above."
     : "[strip-push] nothing to strip."
 );
