@@ -1096,6 +1096,39 @@ export type Database = {
           },
         ]
       }
+      data_audit_log: {
+        Row: {
+          actor_role: string
+          actor_uid: string | null
+          at: string
+          id: number
+          op: string
+          row_data: Json
+          row_id: string | null
+          table_name: string
+        }
+        Insert: {
+          actor_role?: string
+          actor_uid?: string | null
+          at?: string
+          id?: number
+          op: string
+          row_data: Json
+          row_id?: string | null
+          table_name: string
+        }
+        Update: {
+          actor_role?: string
+          actor_uid?: string | null
+          at?: string
+          id?: number
+          op?: string
+          row_data?: Json
+          row_id?: string | null
+          table_name?: string
+        }
+        Relationships: []
+      }
       employee_documents: {
         Row: {
           content_type: string | null

@@ -1,0 +1,1 @@
+ALTER FUNCTION public.guard_bulk_delete() SET search_path TO 'public';
