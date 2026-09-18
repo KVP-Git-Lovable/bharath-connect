@@ -83,6 +83,12 @@ export default function VehicleTaCard({ method }: Props) {
   const empName = useMemo(() => new Map((data?.emps || []).map((e) => [e.id, e.name])), [data?.emps]);
 
   const [vehicleDialog, setVehicleDialog] = useState<{ open: boolean; editing: VehicleType | null }>({ open: false, editing: null });
+  // Header switch: "Active first" lists active vehicles on top, "Inactive first" flips it.
+  const [activeFirst, setActiveFirst] = useState(true);
+  const sortedVehicles = useMemo(
+    () => [...vehicleTypes].sort((a, b) => (a.is_active === b.is_active ? 0 : (a.is_active ? -1 : 1) * (activeFirst ? 1 : -1))),
+    [vehicleTypes, activeFirst],
+  );
 
   const isFixed = method === "fixed";
 
@@ -93,9 +99,16 @@ export default function VehicleTaCard({ method }: Props) {
           <CardTitle className="text-lg">Vehicle TA</CardTitle>
           <p className="mt-0.5 text-sm text-muted-foreground">Used when the person picks this vehicle on Activities. Same method as above.</p>
         </div>
+        <div className="flex flex-wrap items-center gap-3">
+        <label className="flex items-center gap-2 rounded-md border px-3 py-2">
+          <Switch checked={activeFirst} onCheckedChange={setActiveFirst} aria-label="Show active vehicles first" />
+          <span className="text-sm font-medium">{activeFirst ? "Active" : "Inactive"}</span>
+          <span className="text-xs text-muted-foreground">first</span>
+        </label>
         <Button variant="outline" onClick={() => setVehicleDialog({ open: true, editing: null })}>
           <Plus className="mr-1 h-4 w-4" />Add vehicle
         </Button>
+        </div>
       </CardHeader>
 
       <CardContent className="space-y-4 px-5 pb-6 pt-2 sm:px-7">
@@ -116,7 +129,7 @@ export default function VehicleTaCard({ method }: Props) {
                 </tr>
               </thead>
               <tbody>
-                {vehicleTypes.map((v) => (
+                {sortedVehicles.map((v) => (
                   <VehicleRow key={v.id} v={v} isFixed={isFixed} rates={ratesBy.get(v.id) || []}
                     roles={data?.roles || []} links={data?.links || []}
                     allVehicleIds={vehicleTypes.filter((x) => x.is_active).map((x) => x.id)}
