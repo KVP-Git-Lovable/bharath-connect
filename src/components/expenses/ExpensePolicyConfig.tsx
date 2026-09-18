@@ -12,7 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Save, Loader2, Car, Utensils, Receipt, Tags, GitBranch, Scale, Plus, Trash2, Pencil, ChevronDown, ChevronUp, Navigation, Info } from "lucide-react";
+import { Save, Loader2, Car, Utensils, Receipt, Tags, GitBranch, Scale, Plus, Trash2, Pencil, ChevronDown, ChevronUp, Navigation, Info, WalletCards, SlidersHorizontal } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import OverrideTable, { type OverrideEntry } from "./OverrideTable";
@@ -51,6 +51,7 @@ export default function ExpensePolicyConfig() {
   const [rules, setRules] = useState<Rule[]>([]);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [activeSection, setActiveSection] = useState<"travel" | "vehicles" | "petty" | "claims">("travel");
 
   const [taDist, setTaDist] = useState<"same_for_all" | "custom">("same_for_all");
   const [daDist, setDaDist] = useState<"same_for_all" | "custom">("same_for_all");
@@ -324,11 +325,34 @@ export default function ExpensePolicyConfig() {
         </Button>
       </div>
 
+      <nav className="overflow-x-auto border-b border-border" aria-label="Expense configuration sections">
+        <div className="flex min-w-max gap-1">
+          {[
+            { id: "travel" as const, label: "Travel Policy", icon: Navigation },
+            { id: "vehicles" as const, label: "Vehicle Master", icon: Car },
+            { id: "petty" as const, label: "Petty Cash", icon: WalletCards },
+            { id: "claims" as const, label: "Claims & Approvals", icon: SlidersHorizontal },
+          ].map((item) => {
+            const Icon = item.icon;
+            return (
+              <Button
+                key={item.id}
+                type="button"
+                variant="ghost"
+                onClick={() => setActiveSection(item.id)}
+                className={`h-12 rounded-none border-b-2 px-4 ${activeSection === item.id ? "border-primary bg-primary/5 text-primary" : "border-transparent text-muted-foreground"}`}
+              >
+                <Icon className="mr-2 h-4 w-4" />{item.label}
+              </Button>
+            );
+          })}
+        </div>
+      </nav>
 
-      <div className="space-y-3">
+      {activeSection === "travel" && <div className="space-y-3">
         <div>
-          <h3 className="text-xl font-bold">Allowance policies</h3>
-          <p className="text-sm text-muted-foreground">Travel allowance, vehicles, daily allowance and petty cash advances.</p>
+          <h3 className="text-xl font-bold">Travel Policy</h3>
+          <p className="text-sm text-muted-foreground">Set organisation-wide travel and daily allowance rules.</p>
         </div>
       {/* Travel Allowance */}
       <TaPolicyCard
@@ -349,7 +373,6 @@ export default function ExpensePolicyConfig() {
         onSave={saveConfigAndPolicy}
         saving={saving}
       />
-      <VehicleTaCard method={config.ta_type} />
 
       {/* DA Policy */}
       <Card className="overflow-hidden border-border/70 shadow-card">
@@ -410,10 +433,17 @@ export default function ExpensePolicyConfig() {
         </CardContent>
       </Card>
 
-      <PettyCashSection />
-      </div>
+      </div>}
 
-      <div className="space-y-3 pt-2">
+      {activeSection === "vehicles" && (
+        <VehicleTaCard method={config.ta_type} />
+      )}
+
+      {activeSection === "petty" && (
+        <PettyCashSection />
+      )}
+
+      {activeSection === "claims" && <div className="space-y-3 pt-2">
         <div>
           <h3 className="text-xl font-bold">Claims and approvals</h3>
           <p className="text-sm text-muted-foreground">Manage expense categories and route claims through the correct approval process.</p>
@@ -556,7 +586,7 @@ export default function ExpensePolicyConfig() {
           )}
         </CardContent>
       </Card>
-      </div>
+      </div>}
 
       {/* Category dialog */}
       <Dialog open={catDlgOpen} onOpenChange={setCatDlgOpen}>

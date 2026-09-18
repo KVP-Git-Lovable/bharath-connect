@@ -113,15 +113,16 @@ export default function PettyCashSection() {
         <Button onClick={() => setPanel({ kind: "issue" })}><Plus className="mr-1 h-4 w-4" />Issue petty cash</Button>
       </CardHeader>
       <CardContent className="space-y-5 p-5 sm:p-7">
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {[
             { l: "Issued this month", v: issuedThisMonth },
             { l: "Spent against open advances", v: spentOpen },
             { l: "Still with employees", v: withEmployees },
+            { l: "Unsettled advances", v: openAdvs.length, count: true },
           ].map((s) => (
             <div key={s.l} className="rounded-lg border bg-background px-4 py-3">
               <p className="text-xs text-muted-foreground">{s.l}</p>
-              <p className="text-2xl font-bold">{inr(s.v)}</p>
+              <p className="text-2xl font-bold">{s.count ? s.v : inr(s.v)}</p>
             </div>
           ))}
         </div>
