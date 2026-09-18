@@ -83,11 +83,13 @@ export default function VehicleTaCard({ method }: Props) {
   const empName = useMemo(() => new Map((data?.emps || []).map((e) => [e.id, e.name])), [data?.emps]);
 
   const [vehicleDialog, setVehicleDialog] = useState<{ open: boolean; editing: VehicleType | null }>({ open: false, editing: null });
-  // Header switch: "Active first" lists active vehicles on top, "Inactive first" flips it.
-  const [activeFirst, setActiveFirst] = useState(true);
+  // Header switch: on = every vehicle (active and inactive), off = active vehicles only.
+  const [showInactive, setShowInactive] = useState(true);
   const sortedVehicles = useMemo(
-    () => [...vehicleTypes].sort((a, b) => (a.is_active === b.is_active ? 0 : (a.is_active ? -1 : 1) * (activeFirst ? 1 : -1))),
-    [vehicleTypes, activeFirst],
+    () => vehicleTypes
+      .filter((v) => showInactive || v.is_active)
+      .sort((a, b) => (a.is_active === b.is_active ? 0 : a.is_active ? -1 : 1)),
+    [vehicleTypes, showInactive],
   );
 
   const isFixed = method === "fixed";
@@ -101,9 +103,8 @@ export default function VehicleTaCard({ method }: Props) {
         </div>
         <div className="flex flex-wrap items-center gap-3">
         <label className="flex items-center gap-2 rounded-md border px-3 py-2">
-          <Switch checked={activeFirst} onCheckedChange={setActiveFirst} aria-label="Show active vehicles first" />
-          <span className="text-sm font-medium">{activeFirst ? "Active" : "Inactive"}</span>
-          <span className="text-xs text-muted-foreground">first</span>
+          <Switch checked={showInactive} onCheckedChange={setShowInactive} aria-label="Show inactive vehicles as well" />
+          <span className="text-sm font-medium">{showInactive ? "Active" : "Inactive"}</span>
         </label>
         <Button variant="outline" onClick={() => setVehicleDialog({ open: true, editing: null })}>
           <Plus className="mr-1 h-4 w-4" />Add vehicle
