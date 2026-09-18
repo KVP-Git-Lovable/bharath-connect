@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   computeTravelForCheckIn,
   explainMissingTravel,
+  findOrigin,
   uploadTravelProof,
   TRAVEL_PROOF_BUCKET,
   type TravelProofEntry,
