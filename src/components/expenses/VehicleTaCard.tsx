@@ -83,12 +83,10 @@ export default function VehicleTaCard({ method }: Props) {
   const empName = useMemo(() => new Map((data?.emps || []).map((e) => [e.id, e.name])), [data?.emps]);
 
   const [vehicleDialog, setVehicleDialog] = useState<{ open: boolean; editing: VehicleType | null }>({ open: false, editing: null });
-  // Header switch: on = every vehicle (active and inactive), off = active vehicles only.
-  const [showInactive, setShowInactive] = useState(true);
-  const sortedVehicles = useMemo(
-    () => vehicleTypes
-      .filter((v) => showInactive || v.is_active)
-      .sort((a, b) => (a.is_active === b.is_active ? 0 : a.is_active ? -1 : 1)),
+  // Header switch: off = active vehicles only; on = inactive vehicles shown as well (natural order, no active-first sorting).
+  const [showInactive, setShowInactive] = useState(false);
+  const visibleVehicles = useMemo(
+    () => vehicleTypes.filter((v) => showInactive || v.is_active),
     [vehicleTypes, showInactive],
   );
 
@@ -103,8 +101,8 @@ export default function VehicleTaCard({ method }: Props) {
         </div>
         <div className="flex flex-wrap items-center gap-3">
         <label className="flex items-center gap-2 rounded-md border px-3 py-2">
-          <Switch checked={showInactive} onCheckedChange={setShowInactive} aria-label="Show inactive vehicles as well" />
-          <span className="text-sm font-medium">{showInactive ? "Active" : "Inactive"}</span>
+          <Switch checked={showInactive} onCheckedChange={setShowInactive} aria-label="Include inactive vehicles" />
+          <span className="text-sm font-medium">Inactive</span>
         </label>
         <Button variant="outline" onClick={() => setVehicleDialog({ open: true, editing: null })}>
           <Plus className="mr-1 h-4 w-4" />Add vehicle
@@ -130,7 +128,7 @@ export default function VehicleTaCard({ method }: Props) {
                 </tr>
               </thead>
               <tbody>
-                {sortedVehicles.map((v) => (
+                {visibleVehicles.map((v) => (
                   <VehicleRow key={v.id} v={v} isFixed={isFixed} rates={ratesBy.get(v.id) || []}
                     roles={data?.roles || []} links={data?.links || []}
                     allVehicleIds={vehicleTypes.filter((x) => x.is_active).map((x) => x.id)}
