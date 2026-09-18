@@ -5,3 +5,4 @@
   - [x] Added missing backend schema: `list_views` table + `activity_events` travel/manual-distance columns
   - [x] Edge function TS errors (unknown catch types, client generics, PDF buffer, magic-link API)
 - [x] Modernize `/admin/expenses` UI only, remove duplicate navigation, and preserve all expense behavior
+- [x] Redesign Expense Master Configuration with focused Travel, Vehicle Master, Petty Cash, and Claims sections
