@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  App-usage tracking state is tied to one physical handset: it holds the
+  device_id and, sometimes, a still-open interval. Restoring it onto a second
+  device would clone the device identity and resurrect an interval that belongs
+  to another phone. Everything else keeps the app's existing backup behaviour.
+-->
+<full-backup-content>
+    <exclude domain="sharedpref" path="app_usage_state.xml" />
+    <exclude domain="file" path="app_usage" />
+</full-backup-content>
