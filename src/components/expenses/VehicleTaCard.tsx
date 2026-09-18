@@ -11,7 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  Bike, Bus, Car as CarIcon, Check, ChevronDown, History, Loader2, MapPinOff, Pencil, Plus, Trash2, Truck, X, CircleDollarSign, UsersRound,
+  Bike, Bus, Car as CarIcon, Check, ChevronDown, History, Loader2, MapPinOff, Pencil, Plus, Trash2, Truck, X, Globe,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -85,7 +85,6 @@ export default function VehicleTaCard({ method }: Props) {
   const [vehicleDialog, setVehicleDialog] = useState<{ open: boolean; editing: VehicleType | null }>({ open: false, editing: null });
   // Header switch: off = active vehicles only; on = inactive vehicles shown as well (natural order, no active-first sorting).
   const [showInactive, setShowInactive] = useState(false);
-  const [stage, setStage] = useState<1 | 2 | 3>(1);
   const visibleVehicles = useMemo(
     () => vehicleTypes.filter((v) => showInactive || v.is_active),
     [vehicleTypes, showInactive],
@@ -95,90 +94,42 @@ export default function VehicleTaCard({ method }: Props) {
 
   return (
     <Card className="overflow-hidden border-border/70 shadow-card">
-      <CardHeader className="flex flex-col gap-4 border-b border-border/60 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-7">
+      <CardHeader className="flex flex-col gap-3 px-5 pb-2 pt-6 sm:flex-row sm:items-center sm:justify-between sm:px-7">
         <div>
-          <CardTitle className="text-xl">Vehicle Master</CardTitle>
-          <p className="mt-1 text-sm text-muted-foreground">Create vehicles, set their allowance, then choose who can use them.</p>
+          <CardTitle className="text-lg">Vehicle TA</CardTitle>
+          <p className="mt-0.5 text-sm text-muted-foreground">Used when the person picks this vehicle on Activities. Same method as above.</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          {stage === 1 && <>
-            <label className="flex items-center gap-2 rounded-md border px-3 py-2">
-              <Switch checked={showInactive} onCheckedChange={setShowInactive} aria-label="Show inactive vehicles" />
-              <span className="text-sm font-medium">Show inactive</span>
-            </label>
-            <Button onClick={() => setVehicleDialog({ open: true, editing: null })}>
-              <Plus className="mr-1 h-4 w-4" />Add vehicle
-            </Button>
-          </>}
+        <label className="flex items-center gap-2 rounded-md border px-3 py-2">
+          <Switch checked={showInactive} onCheckedChange={setShowInactive} aria-label="Include inactive vehicles" />
+          <span className="text-sm font-medium">Inactive</span>
+        </label>
+        <Button variant="outline" onClick={() => setVehicleDialog({ open: true, editing: null })}>
+          <Plus className="mr-1 h-4 w-4" />Add vehicle
+        </Button>
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-6 p-5 sm:p-7">
-        <div className="grid grid-cols-3 overflow-hidden rounded-md border bg-muted/20">
-          {[
-            { id: 1 as const, label: "Vehicle Types", icon: CarIcon },
-            { id: 2 as const, label: "Rates", icon: CircleDollarSign },
-            { id: 3 as const, label: "Role Assignment", icon: UsersRound },
-          ].map((item) => {
-            const Icon = item.icon;
-            const selected = stage === item.id;
-            return (
-              <Button key={item.id} type="button" variant="ghost" onClick={() => setStage(item.id)}
-                className={cn("h-auto min-h-16 rounded-none border-r px-2 py-3 last:border-r-0 sm:px-4", selected && "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground") }>
-                <span className="flex min-w-0 flex-col items-center gap-1 sm:flex-row sm:gap-2">
-                  <span className={cn("flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-xs font-bold", selected ? "border-primary-foreground/40" : "border-border bg-background")}>{item.id}</span>
-                  <Icon className="hidden h-4 w-4 sm:block" />
-                  <span className="text-xs sm:text-sm">{item.label}</span>
-                </span>
-              </Button>
-            );
-          })}
-        </div>
-
-        <div>
-          <h3 className="font-semibold">{stage === 1 ? "Manage vehicle types" : stage === 2 ? "Set vehicle rates" : "Assign vehicles to roles"}</h3>
-          <p className="text-sm text-muted-foreground">
-            {stage === 1 ? "Add the travel options employees can select and control which are active." : stage === 2 ? `Enter the ${isFixed ? "daily fixed amount" : "per-kilometre rate"} for each active vehicle.` : "Choose which roles can select each vehicle and add employee-specific exceptions."}
-          </p>
-        </div>
-
+      <CardContent className="space-y-4 px-5 pb-6 pt-2 sm:px-7">
         {vLoading || refData.isLoading ? (
           <div className="flex justify-center py-10"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
-        ) : stage === 1 ? (
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {visibleVehicles.map((v) => {
-              const Icon = iconFor(v);
-              return (
-                <div key={v.id} className={cn("flex items-center gap-3 rounded-md border p-4", !v.is_active && "bg-muted/20 text-muted-foreground")}>
-                  <span className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-md", v.is_active ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground")}><Icon className="h-5 w-5" /></span>
-                  <div className="min-w-0 flex-1"><p className="truncate font-semibold text-foreground">{v.name}</p><p className="text-xs">{v.is_no_vehicle ? "No travel allowance" : v.is_active ? "Active" : "Inactive"}</p></div>
-                  <Switch checked={v.is_active} onCheckedChange={async (on) => { const { error } = await supabase.from("vehicle_types" as any).update({ is_active: on }).eq("id", v.id); if (error) toast.error("Could not update vehicle"); else reload(); }} aria-label={`${v.name} active status`} />
-                  <Button variant="ghost" size="icon" className="h-8 w-8" aria-label={`Edit ${v.name}`} onClick={() => setVehicleDialog({ open: true, editing: v })}><Pencil className="h-4 w-4" /></Button>
-                  <DeleteVehicle v={v} onChanged={reload} />
-                </div>
-              );
-            })}
-            {!visibleVehicles.length && <p className="py-8 text-center text-sm text-muted-foreground sm:col-span-2 xl:col-span-3">No active vehicles. Turn on “Show inactive” or add a vehicle.</p>}
-          </div>
         ) : (
           <div className="overflow-x-auto rounded-lg border">
-            <table className={cn("w-full text-sm", stage === 3 && "min-w-[760px]")}>
+            <table className="w-full min-w-[980px] text-sm">
               <thead className="bg-muted/40 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 <tr>
                   <th className="px-4 py-3 font-medium normal-case tracking-normal">Vehicle</th>
-                  {stage === 2 ? <>
-                    <th className={cn("px-3 py-3", isFixed && "opacity-40")}>Rate / km</th>
-                    <th className={cn("px-3 py-3", !isFixed && "opacity-40")}>Fixed price / day</th>
-                  </> : <>
-                    <th className="px-3 py-3">Assigned roles</th>
-                    <th className="px-3 py-3">Custom users</th>
-                  </>}
+                  <th className={cn("px-3 py-3", isFixed && "opacity-40")}>Rate / km</th>
+                  <th className={cn("px-3 py-3", !isFixed && "opacity-40")}>Fixed price / day</th>
+                  <th className="px-3 py-3">Assigned roles</th>
+                  <th className="px-3 py-3">Custom users</th>
+                  <th className="px-3 py-3">Status</th>
+                  <th className="px-3 py-3 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {vehicleTypes.filter((v) => v.is_active).map((v) => (
+                {visibleVehicles.map((v) => (
                   <VehicleRow key={v.id} v={v} isFixed={isFixed} rates={ratesBy.get(v.id) || []}
-                    stage={stage}
                     roles={data?.roles || []} links={data?.links || []}
                     allVehicleIds={vehicleTypes.filter((x) => x.is_active).map((x) => x.id)}
                     emps={data?.emps || []} empName={empName}
@@ -222,9 +173,8 @@ export function MoneyInput({ value, onCommit, disabled, suffix, placeholder }: {
 }
 
 /* ---------- one vehicle row ---------- */
-function VehicleRow({ v, isFixed, rates, stage, roles, links, allVehicleIds, emps, empName, overrides, overridesReady, onChanged }: {
+function VehicleRow({ v, isFixed, rates, roles, links, allVehicleIds, emps, empName, overrides, overridesReady, onEdit, onChanged }: {
   v: VehicleType; isFixed: boolean; rates: VehicleRate[]; roles: Role[];
-  stage: 2 | 3;
   links: { profile_id: string; vehicle_type_id: string }[]; allVehicleIds: string[]; emps: Emp[]; empName: Map<string, string>;
   overrides: Override[]; overridesReady: boolean; onEdit: () => void; onChanged: () => void;
 }) {
@@ -261,6 +211,11 @@ function VehicleRow({ v, isFixed, rates, stage, roles, links, allVehicleIds, emp
     onChanged();
   };
 
+  const toggleActive = async (on: boolean) => {
+    const { error } = await supabase.from("vehicle_types" as any).update({ is_active: on }).eq("id", v.id);
+    if (error) toast.error("Could not update vehicle"); else onChanged();
+  };
+
   return (
     <tr className={cn("border-t align-top", !v.is_active && "bg-muted/10 text-muted-foreground")}>
       <td className="px-4 py-3">
@@ -273,7 +228,7 @@ function VehicleRow({ v, isFixed, rates, stage, roles, links, allVehicleIds, emp
         </div>
       </td>
 
-      {stage === 2 && (noTa ? (
+      {noTa ? (
         <td colSpan={2} className="px-3 py-3 text-xs text-muted-foreground">No vehicle used — no TA that day</td>
       ) : (
         <>
@@ -288,17 +243,31 @@ function VehicleRow({ v, isFixed, rates, stage, roles, links, allVehicleIds, emp
             <MoneyInput value={v.fixed_ta_amount} disabled={!isFixed} onCommit={saveFixed} />
           </td>
         </>
-      ))}
+      )}
 
-      {stage === 3 && <td className="px-3 py-3">
+      <td className="px-3 py-3">
         <RolePicker vehicleId={v.id} roles={roles} links={links} allVehicleIds={allVehicleIds} onChanged={onChanged} />
-      </td>}
+      </td>
 
-      {stage === 3 && <td className="px-3 py-3">
+      <td className="px-3 py-3">
         {noTa ? <span className="text-xs text-muted-foreground">—</span> : (
           <CustomUsers vehicle={v} isFixed={isFixed} emps={emps} empName={empName} overrides={overrides} ready={overridesReady} onChanged={onChanged} />
         )}
-      </td>}
+      </td>
+
+      <td className="px-3 py-3">
+        <label className="flex items-center gap-2">
+          <Switch checked={v.is_active} onCheckedChange={toggleActive} aria-label={`${v.name} on or off`} />
+          <span className={cn("text-xs font-medium", v.is_active ? "text-foreground" : "text-muted-foreground")}>{v.is_active ? "Active" : "Off"}</span>
+        </label>
+      </td>
+
+      <td className="px-3 py-3">
+        <div className="flex justify-end gap-1">
+          <Button variant="ghost" size="icon" className="h-8 w-8" aria-label={`Edit ${v.name}`} onClick={onEdit}><Pencil className="h-4 w-4" /></Button>
+          <DeleteVehicle v={v} onChanged={onChanged} />
+        </div>
+      </td>
     </tr>
   );
 }
