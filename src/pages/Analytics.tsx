@@ -14,12 +14,14 @@ const ExpenseReport = lazy(() => import("@/components/reports/ExpenseReport"));
 const LeaveReport = lazy(() => import("@/components/reports/LeaveReport"));
 const LeadReport = lazy(() => import("@/components/reports/LeadReport"));
 const OpportunityReport = lazy(() => import("@/components/reports/OpportunityReport"));
+const QuotationReport = lazy(() => import("@/components/reports/QuotationReport"));
 const TravelExpenseReport = lazy(() => import("@/components/reports/TravelExpenseReport"));
 
 const TABS: { key: ReportTabKey; label: string; configKey?: string }[] = [
   { key: "overview", label: "Overview" },
   { key: "leads", label: "Leads", configKey: "leadReport" },
   { key: "opportunities", label: "Opportunities", configKey: "opportunityReport" },
+  { key: "quotations", label: "Quotations", configKey: "quotationReport" },
   { key: "activities", label: "Activities", configKey: "activityReport" },
   { key: "attendance", label: "Attendance", configKey: "attendanceReport" },
   { key: "leave", label: "Leave", configKey: "leaveReport" },
@@ -102,6 +104,7 @@ function AnalyticsInner() {
             {tab === "activities" && isOn("activities") && <ActivityReport />}
             {tab === "leads" && isOn("leads") && <LeadReport />}
             {tab === "opportunities" && isOn("opportunities") && <OpportunityReport />}
+            {tab === "quotations" && isOn("quotations") && <QuotationReport />}
             {tab === "expenses" && isOn("expenses") && <ExpenseReport />}
             {tab === "travel" && isOn("travel") && <TravelExpenseReport />}
             {tab === "leave" && isOn("leave") && <LeaveReport />}
