@@ -40,8 +40,8 @@ interface PolicyRow {
 }
 type Dist = "same_for_all" | "custom";
 const DA_DISTRIBUTIONS: readonly SegmentedOption<Dist>[] = [
-  { value: "same_for_all", label: "Same for all" },
-  { value: "custom", label: "Custom per user/team" },
+  { value: "same_for_all", label: "Same Policy for all" },
+  { value: "custom", label: "Custom Policy Per User/Team" },
 ];
 
 interface Category { id: string; name: string; receipt_required_above: number | null; auto_approval_limit: number | null; is_active: boolean; }
