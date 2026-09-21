@@ -25,7 +25,7 @@ export default function AdminExpenseManagement() {
             <Receipt className="h-5 w-5 text-primary" aria-hidden="true" />
           </div>
           <div className="min-w-0">
-            <h1 className="truncate text-xl font-bold sm:text-2xl">Expense Master</h1>
+            <h1 className="truncate text-2xl font-bold">Expense Master</h1>
             <p className="truncate text-sm text-muted-foreground">
               Manage expense policies, approvals &amp; team productivity
             </p>

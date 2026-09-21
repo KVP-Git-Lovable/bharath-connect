@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -94,10 +94,13 @@ export default function VehicleTaCard({ method }: Props) {
 
   return (
     <Card className="overflow-hidden border-border/70 shadow-card">
-      <CardHeader className="flex flex-col gap-3 px-5 pb-2 pt-6 sm:flex-row sm:items-center sm:justify-between sm:px-7">
-        <div>
-          <CardTitle className="text-lg">Vehicle TA</CardTitle>
-          <p className="mt-0.5 text-sm text-muted-foreground">Used when the person picks this vehicle on Activities. Same method as above.</p>
+      <CardHeader className="flex flex-col gap-3 space-y-0 border-b border-border/60 bg-muted/30 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-7">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary"><CarIcon className="h-5 w-5" /></span>
+          <div className="min-w-0">
+            <CardTitle className="text-lg">Vehicle TA</CardTitle>
+            <CardDescription className="mt-0.5">Used when the person picks this vehicle on Activities. Same method as above.</CardDescription>
+          </div>
         </div>
         <div className="flex flex-wrap items-center gap-3">
         <label className="flex items-center gap-2 rounded-md border px-3 py-2">
@@ -110,17 +113,16 @@ export default function VehicleTaCard({ method }: Props) {
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-4 px-5 pb-6 pt-2 sm:px-7">
+      <CardContent className="space-y-4 p-5 sm:p-7">
         {vLoading || refData.isLoading ? (
           <div className="flex justify-center py-10"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
         ) : (
           <div className="overflow-x-auto rounded-lg border">
-            <table className="w-full min-w-[980px] text-sm">
+            <table className="w-full min-w-[880px] text-sm">
               <thead className="bg-muted/40 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 <tr>
                   <th className="px-4 py-3 font-medium normal-case tracking-normal">Vehicle</th>
-                  <th className={cn("px-3 py-3", isFixed && "opacity-40")}>Rate / km</th>
-                  <th className={cn("px-3 py-3", !isFixed && "opacity-40")}>Fixed price / day</th>
+                  <th className="px-3 py-3">{isFixed ? "Fixed price / day" : "Rate / km"}</th>
                   <th className="px-3 py-3">Assigned roles</th>
                   <th className="px-3 py-3">Custom users</th>
                   <th className="px-3 py-3">Status</th>
@@ -229,20 +231,19 @@ function VehicleRow({ v, isFixed, rates, roles, links, allVehicleIds, emps, empN
       </td>
 
       {noTa ? (
-        <td colSpan={2} className="px-3 py-3 text-xs text-muted-foreground">No vehicle used — no TA that day</td>
+        <td className="px-3 py-3 text-xs text-muted-foreground">No vehicle used — no TA that day</td>
+      ) : isFixed ? (
+        <td className="px-3 py-3">
+          <MoneyInput value={v.fixed_ta_amount} onCommit={saveFixed} />
+        </td>
       ) : (
-        <>
-          <td className={cn("px-3 py-3", isFixed && "opacity-40")}>
-            <div className="flex items-center gap-1">
-              <MoneyInput value={cur ? cur.per_km_rate : null} disabled={isFixed} suffix="/km" placeholder="Set" onCommit={saveRate} />
-              <RateHistory rates={rates} cur={cur} onChanged={onChanged} />
-            </div>
-            {!cur && !isFixed && <p className="mt-1 text-xs text-warning">Rate not set</p>}
-          </td>
-          <td className={cn("px-3 py-3", !isFixed && "opacity-40")}>
-            <MoneyInput value={v.fixed_ta_amount} disabled={!isFixed} onCommit={saveFixed} />
-          </td>
-        </>
+        <td className="px-3 py-3">
+          <div className="flex items-center gap-1">
+            <MoneyInput value={cur ? cur.per_km_rate : null} suffix="/km" placeholder="Set" onCommit={saveRate} />
+            <RateHistory rates={rates} cur={cur} onChanged={onChanged} />
+          </div>
+          {!cur && <p className="mt-1 text-xs text-warning">Rate not set</p>}
+        </td>
       )}
 
       <td className="px-3 py-3">

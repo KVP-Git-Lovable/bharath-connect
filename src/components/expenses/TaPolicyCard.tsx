@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { SegmentedControl, type SegmentedOption } from "@/components/ui/segmented-control";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
@@ -21,6 +21,15 @@ import type { OverrideEntry } from "./OverrideTable";
 
 type Method = "fixed" | "from_gps";
 type Dist = "same_for_all" | "custom";
+
+const TA_METHODS: readonly SegmentedOption<Method>[] = [
+  { value: "fixed", label: "Fixed Amount" },
+  { value: "from_gps", label: "Variable Amount" },
+];
+const TA_DISTRIBUTIONS: readonly SegmentedOption<Dist>[] = [
+  { value: "same_for_all", label: "Same for all" },
+  { value: "custom", label: "Custom per user/team" },
+];
 
 interface Role { id: string; name: string }
 interface TaRow {
@@ -43,8 +52,11 @@ interface Props {
   onAddOverride: (type: "user" | "team", refId: string, name: string) => Promise<void> | void;
   onUpdateOverride: (id: string, amount: number) => Promise<void> | void;
   onDeleteOverride: (entry: OverrideEntry) => Promise<void> | void;
-  onSave: () => Promise<void>;
-  saving: boolean;
+  /**
+   * Custom rows carry their own copy of ta_type, so they have to be written in
+   * the same save as the config. The page calls back what it registers here.
+   */
+  onRegisterMethodSync: (sync: () => Promise<void>) => void;
 }
 
 const hasTaAmount = (g: any) => Number(g.fixed_ta_amount || 0) > 0 || Number(g.ta_per_km_rate || 0) > 0;
@@ -183,47 +195,53 @@ export default function TaPolicyCard(props: Props) {
     if (dist === "same_for_all") props.onDistChange("custom");
   };
 
-  const save = async () => {
-    await props.onSave();
-    if (rows.length) {
-      await supabase.from("expense_groups" as any).update({ ta_type: method }).in("id", rows.map((r) => r.id));
-    }
-  };
+  const syncRowMethod = useCallback(async () => {
+    if (!rows.length) return;
+    await supabase.from("expense_groups" as any).update({ ta_type: method }).in("id", rows.map((r) => r.id));
+  }, [rows, method]);
+
+  const { onRegisterMethodSync } = props;
+  useEffect(() => { onRegisterMethodSync(syncRowMethod); }, [onRegisterMethodSync, syncRowMethod]);
 
   const takenOverrideIds = overrides.map((o) => o.ref_id);
-  const rowCols = "grid-cols-[1.4fr_1.2fr_1.2fr_1.5fr_2fr_auto]";
+  // Only the amount column for the selected method is shown — the other value is unused.
+  const rowCols = "grid-cols-[1.4fr_1.2fr_1.5fr_2fr_auto]";
+  const amountHeading = isFixed ? "Fixed price / day" : "Rate / km";
 
   return (
     <Card id="ta-policy" className="overflow-hidden border-border/70 shadow-card">
-      <CardContent className="space-y-6 p-5 sm:p-7">
-        <div className="flex items-center justify-between gap-3">
-          <h3 className="flex items-center gap-2 text-xl font-bold"><Car className="h-5 w-5" />Travel Allowance (TA) Policy</h3>
-          <Button onClick={save} disabled={props.saving}>
-            {props.saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}Save
-          </Button>
+      <CardHeader className="flex flex-row items-center gap-3 space-y-0 border-b border-border/60 bg-muted/30 px-5 py-4 sm:px-7">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary"><Car className="h-5 w-5" /></span>
+        <div className="min-w-0">
+          <CardTitle className="text-lg">Travel Allowance (TA) Policy</CardTitle>
+          <CardDescription className="mt-0.5">How travel allowance is calculated, and who it applies to.</CardDescription>
         </div>
+      </CardHeader>
 
+      <CardContent className="space-y-6 p-5 sm:p-7">
         <div className="space-y-2">
-          <Label className="text-sm font-medium">TA Calculation Method</Label>
-          <div className="inline-grid grid-cols-2 overflow-hidden rounded-md border">
-            {([{ v: "fixed", l: "Fixed Amount" }, { v: "from_gps", l: "Variable Amount" }] as const).map((o) => (
-              <button key={o.v} type="button" onClick={() => props.onMethodChange(o.v)}
-                className={cn("px-5 py-2 text-sm font-medium", method === o.v ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground hover:bg-muted/50")}>
-                {o.l}
-              </button>
-            ))}
-          </div>
+          <p className="text-sm font-medium">TA Calculation Method</p>
+          <SegmentedControl
+            idPrefix="ta-method"
+            label="TA calculation method"
+            value={method}
+            onValueChange={props.onMethodChange}
+            options={TA_METHODS}
+          />
           <p className="text-sm text-muted-foreground">
             {isFixed ? "Fixed price per working day. Rate / km is not used." : "TA = GPS km travelled × Rate / km. Fixed price is not used."}
           </p>
         </div>
 
         <div className="space-y-2">
-          <Label className="text-sm font-medium">Distribution</Label>
-          <RadioGroup value={dist} onValueChange={(v) => changeDist(v as Dist)} className="flex flex-wrap gap-6">
-            <div className="flex items-center gap-2"><RadioGroupItem value="same_for_all" id="ta-same" /><Label htmlFor="ta-same" className="font-normal">Same for all</Label></div>
-            <div className="flex items-center gap-2"><RadioGroupItem value="custom" id="ta-custom" /><Label htmlFor="ta-custom" className="font-normal">Custom per user/team</Label></div>
-          </RadioGroup>
+          <p className="text-sm font-medium">Distribution</p>
+          <SegmentedControl
+            idPrefix="ta-dist"
+            label="TA distribution"
+            value={dist}
+            onValueChange={changeDist}
+            options={TA_DISTRIBUTIONS}
+          />
         </div>
 
         <div className="space-y-3">
@@ -235,19 +253,19 @@ export default function TaPolicyCard(props: Props) {
           </div>
 
           <div className="overflow-x-auto rounded-lg border bg-card">
-            <div className="min-w-[960px]">
-              <div className={cn("grid gap-3 px-4 py-3 text-[13px] font-medium text-muted-foreground", rowCols)}>
+            <div className="min-w-[840px]">
+              <div className={cn("grid gap-3 px-4 py-3 text-xs font-medium text-muted-foreground", rowCols)}>
                 <span>Applies to</span>
-                <span className={cn(isFixed && "opacity-40")}>Rate / km</span>
-                <span className={cn(!isFixed && "opacity-40")}>Fixed price / day</span>
+                <span>{amountHeading}</span>
                 <span>Assigned roles</span><span>Custom users</span><span className="w-[150px] text-right">Actions</span>
               </div>
 
               {/* Everyone */}
               <div className={cn("grid items-center gap-3 border-t px-4 py-2.5 text-sm", rowCols, !props.defaultEnabled && "bg-muted/30")}>
                 <div className={cn(!props.defaultEnabled && "opacity-50")}><p className="font-semibold">Everyone</p>{dist === "custom" && <p className="text-xs text-muted-foreground">Default</p>}</div>
-                <div className={cn(isFixed && "opacity-40")}><MoneyInput value={props.defaultRate} disabled={isFixed} suffix="/km" onCommit={props.onDefaultRateChange} /></div>
-                <div className={cn(!isFixed && "opacity-40")}><MoneyInput value={props.defaultFixed} disabled={!isFixed} onCommit={props.onDefaultFixedChange} /></div>
+                <div>{isFixed
+                  ? <MoneyInput value={props.defaultFixed} onCommit={props.onDefaultFixedChange} />
+                  : <MoneyInput value={props.defaultRate} suffix="/km" onCommit={props.onDefaultRateChange} />}</div>
                 <div className="text-muted-foreground">All roles</div>
                 {dist === "same_for_all" ? (
                   <div className="text-muted-foreground">All users</div>
@@ -279,8 +297,9 @@ export default function TaPolicyCard(props: Props) {
               ) : rows.map((r) => (
                 <div key={r.id} className={cn("grid items-center gap-3 border-t px-4 py-2.5 text-sm", rowCols, !r.is_active && "bg-muted/30")}>
                   <p className={cn("truncate font-semibold", !r.is_active && "opacity-50")}>{r.name}</p>
-                  <div className={cn(isFixed && "opacity-40")}><MoneyInput value={r.ta_per_km_rate} disabled={isFixed} suffix="/km" onCommit={(n) => updateRow(r, { ta_per_km_rate: n })} /></div>
-                  <div className={cn(!isFixed && "opacity-40")}><MoneyInput value={r.fixed_ta_amount} disabled={!isFixed} onCommit={(n) => updateRow(r, { fixed_ta_amount: n })} /></div>
+                  <div>{isFixed
+                    ? <MoneyInput value={r.fixed_ta_amount} onCommit={(n) => updateRow(r, { fixed_ta_amount: n })} />
+                    : <MoneyInput value={r.ta_per_km_rate} suffix="/km" onCommit={(n) => updateRow(r, { ta_per_km_rate: n })} />}</div>
                   <RoleSelect roles={roles} value={r.role_ids} onChange={(ids) => updateRow(r, { role_ids: ids })} placeholder="No roles" />
                   <div className="space-y-1.5">
                     {r.members.map((m) => (
@@ -306,15 +325,18 @@ export default function TaPolicyCard(props: Props) {
               {dist === "custom" && draft && (
                 <div className={cn("grid items-center gap-3 border-t bg-warning/5 px-4 py-2.5 text-sm", rowCols)}>
                   <Input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder="Row name" className="h-9" autoFocus />
-                  <div className={cn("flex items-center gap-1", isFixed && "opacity-40")}>
-                    <span className="text-muted-foreground">₹</span>
-                    <Input type="number" min="0" step="0.5" value={draft.rate} disabled={isFixed} onChange={(e) => setDraft({ ...draft, rate: e.target.value })} className="h-9 w-24" />
-                    <span className="text-xs text-muted-foreground">/km</span>
-                  </div>
-                  <div className={cn("flex items-center gap-1", !isFixed && "opacity-40")}>
-                    <span className="text-muted-foreground">₹</span>
-                    <Input type="number" min="0" value={draft.fixed} disabled={!isFixed} onChange={(e) => setDraft({ ...draft, fixed: e.target.value })} className="h-9 w-24" />
-                  </div>
+                  {isFixed ? (
+                    <div className="flex items-center gap-1">
+                      <span className="text-muted-foreground">₹</span>
+                      <Input type="number" min="0" value={draft.fixed} onChange={(e) => setDraft({ ...draft, fixed: e.target.value })} className="h-9 w-24" />
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1">
+                      <span className="text-muted-foreground">₹</span>
+                      <Input type="number" min="0" step="0.5" value={draft.rate} onChange={(e) => setDraft({ ...draft, rate: e.target.value })} className="h-9 w-24" />
+                      <span className="text-xs text-muted-foreground">/km</span>
+                    </div>
+                  )}
                   <RoleSelect roles={roles} value={draft.role_ids} onChange={(ids) => setDraft({ ...draft, role_ids: ids })} placeholder="Select roles" />
                   <p className="text-xs text-muted-foreground">Add users after saving</p>
                   <div className="flex w-[150px] justify-end gap-1.5">

@@ -1,7 +1,7 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { SegmentedControl, type SegmentedOption } from "@/components/ui/segmented-control";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Save, Loader2, Car, Utensils, Receipt, Tags, GitBranch, Scale, Plus, Trash2, Pencil, ChevronDown, ChevronUp, Navigation, Info } from "lucide-react";
@@ -38,6 +38,12 @@ interface PolicyRow {
   max_additional_expense_per_month: number;
   require_bill_above_amount: number;
 }
+type Dist = "same_for_all" | "custom";
+const DA_DISTRIBUTIONS: readonly SegmentedOption<Dist>[] = [
+  { value: "same_for_all", label: "Same for all" },
+  { value: "custom", label: "Custom per user/team" },
+];
+
 interface Category { id: string; name: string; receipt_required_above: number | null; auto_approval_limit: number | null; is_active: boolean; }
 interface Workflow { id: string; name: string; approval_type: string; steps: number; is_default: boolean; is_active: boolean; }
 interface Rule { id: string; rule_name: string; condition_type: string; min_amount: number | null; max_amount: number | null; workflow_id: string; priority: number; is_active: boolean; }
@@ -46,6 +52,11 @@ export default function ExpensePolicyConfig() {
   const queryClient = useQueryClient();
   const [config, setConfig] = useState<ExpenseConfig | null>(null);
   const [policy, setPolicy] = useState<PolicyRow | null>(null);
+  // Last saved values, so unsaved edits can be counted and discarded.
+  const [savedConfig, setSavedConfig] = useState<ExpenseConfig | null>(null);
+  const [savedPolicy, setSavedPolicy] = useState<PolicyRow | null>(null);
+  const taMethodSync = useRef<(() => Promise<void>) | null>(null);
+  const registerTaMethodSync = useCallback((sync: () => Promise<void>) => { taMethodSync.current = sync; }, []);
   const [categories, setCategories] = useState<Category[]>([]);
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [rules, setRules] = useState<Rule[]>([]);
@@ -94,15 +105,19 @@ export default function ExpensePolicyConfig() {
       } as any).select().single();
       cfgRow = created;
     }
-    if (cfgRow) setConfig({
-      id: cfgRow.id, ta_type: cfgRow.ta_type || "from_gps",
-      fixed_ta_amount: Number(cfgRow.fixed_ta_amount || 0),
-      ta_per_km_rate: Number(cfgRow.ta_per_km_rate || 0),
-      fixed_da_amount: Number(cfgRow.fixed_da_amount || 0),
-      da_calculation_basis: cfgRow.da_calculation_basis || "per_day",
-      da_applicable: cfgRow.da_applicable !== false,
-      ta_default_enabled: cfgRow.ta_default_enabled !== false,
-    });
+    if (cfgRow) {
+      const loadedConfig: ExpenseConfig = {
+        id: cfgRow.id, ta_type: cfgRow.ta_type || "from_gps",
+        fixed_ta_amount: Number(cfgRow.fixed_ta_amount || 0),
+        ta_per_km_rate: Number(cfgRow.ta_per_km_rate || 0),
+        fixed_da_amount: Number(cfgRow.fixed_da_amount || 0),
+        da_calculation_basis: cfgRow.da_calculation_basis || "per_day",
+        da_applicable: cfgRow.da_applicable !== false,
+        ta_default_enabled: cfgRow.ta_default_enabled !== false,
+      };
+      setConfig(loadedConfig);
+      setSavedConfig(loadedConfig);
+    }
 
     // policy
     let polRow: any = pol.data;
@@ -110,12 +125,16 @@ export default function ExpensePolicyConfig() {
       const { data: created } = await supabase.from("expense_policy").insert({} as any).select().single();
       polRow = created;
     }
-    if (polRow) setPolicy({
-      id: polRow.id,
-      max_additional_expense_per_day: Number(polRow.max_additional_expense_per_day || 0),
-      max_additional_expense_per_month: Number(polRow.max_additional_expense_per_month || 0),
-      require_bill_above_amount: Number(polRow.require_bill_above_amount ?? 500),
-    });
+    if (polRow) {
+      const loadedPolicy: PolicyRow = {
+        id: polRow.id,
+        max_additional_expense_per_day: Number(polRow.max_additional_expense_per_day || 0),
+        max_additional_expense_per_month: Number(polRow.max_additional_expense_per_month || 0),
+        require_bill_above_amount: Number(polRow.require_bill_above_amount ?? 500),
+      };
+      setPolicy(loadedPolicy);
+      setSavedPolicy(loadedPolicy);
+    }
 
     setCategories((cats.data || []) as Category[]);
     setWorkflows((wfs.data || []) as Workflow[]);
@@ -191,6 +210,20 @@ export default function ExpensePolicyConfig() {
     queryClient.invalidateQueries({ queryKey: ["ta-rate-history"] });
   };
 
+  // Everything else on this page saves on the spot; only config + policy are
+  // held back until Save, so those are the only fields that can be "unsaved".
+  const dirtyCount = useMemo(() => {
+    if (!config || !policy || !savedConfig || !savedPolicy) return 0;
+    const changed = <T extends object>(a: T, b: T) =>
+      (Object.keys(a) as (keyof T)[]).filter((k) => String(k) !== "id" && a[k] !== b[k]).length;
+    return changed(config, savedConfig) + changed(policy, savedPolicy);
+  }, [config, policy, savedConfig, savedPolicy]);
+
+  const discardChanges = () => {
+    setConfig(savedConfig);
+    setPolicy(savedPolicy);
+  };
+
   const saveConfigAndPolicy = async () => {
     if (!config || !policy) return;
     setSaving(true);
@@ -213,8 +246,18 @@ export default function ExpensePolicyConfig() {
         require_bill_above_amount: policy.require_bill_above_amount,
       } as any).eq("id", policy.id),
     ]);
+    if (!cfgRes.error && !polRes.error) {
+      // Custom TA rows store their own ta_type — keep them in step with the config.
+      await taMethodSync.current?.();
+    }
     setSaving(false);
-    if (cfgRes.error || polRes.error) toast.error("Failed to save"); else toast.success("Saved");
+    if (cfgRes.error || polRes.error) {
+      toast.error("Failed to save");
+      return;
+    }
+    setSavedConfig(config);
+    setSavedPolicy(policy);
+    toast.success("Saved");
   };
 
   // Overrides handlers
@@ -312,24 +355,9 @@ export default function ExpensePolicyConfig() {
   }
 
   return (
-    <div className="relative left-1/2 w-[calc(100vw-1.5rem)] max-w-[1536px] -translate-x-1/2 space-y-8 sm:w-[calc(100vw-3rem)]">
-      <div className="flex flex-col gap-3 border-b border-border/70 pb-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h2 className="text-2xl font-bold sm:text-3xl">Policy Configuration</h2>
-          <p className="mt-1 max-w-3xl text-sm text-muted-foreground">Travel &amp; daily allowances, vehicles, petty cash, categories, and approval routing.</p>
-        </div>
-        <Button onClick={saveConfigAndPolicy} disabled={saving} className="w-full sm:w-auto">
-          {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-          Save Policies
-        </Button>
-      </div>
-
-
-      <div className="space-y-3">
-        <div>
-          <h3 className="text-xl font-bold">Allowance policies</h3>
-          <p className="text-sm text-muted-foreground">Travel allowance, vehicles, daily allowance and petty cash advances.</p>
-        </div>
+    <div className="space-y-8 pb-4">
+      <div className="space-y-4">
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Allowance policies</h2>
       {/* Travel Allowance */}
       <TaPolicyCard
         method={config.ta_type}
@@ -346,21 +374,24 @@ export default function ExpensePolicyConfig() {
         onAddOverride={(t, id, name) => addOverride("ta", t, id, name)}
         onUpdateOverride={(id, amt) => updateOverride("ta", id, amt)}
         onDeleteOverride={(e) => deleteOverride("ta", e)}
-        onSave={saveConfigAndPolicy}
-        saving={saving}
+        onRegisterMethodSync={registerTaMethodSync}
       />
       <VehicleTaCard method={config.ta_type} />
 
       {/* DA Policy */}
       <Card className="overflow-hidden border-border/70 shadow-card">
-        <CardHeader className="border-b border-border/60 bg-success/5 px-5 py-5 sm:px-7">
-          <CardTitle className="flex items-center gap-3 text-lg"><span className="flex h-10 w-10 items-center justify-center rounded-md bg-success/10 text-success"><Utensils className="h-5 w-5" /></span><span>Daily Allowance (DA) Policy<span className="mt-0.5 block text-sm font-normal text-muted-foreground">Control daily allowance availability, value, and calculation basis.</span></span></CardTitle>
+        <CardHeader className="flex flex-row items-center gap-3 space-y-0 border-b border-border/60 bg-muted/30 px-5 py-4 sm:px-7">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary"><Utensils className="h-5 w-5" /></span>
+          <div className="min-w-0">
+            <CardTitle className="text-lg">Daily Allowance (DA) Policy</CardTitle>
+            <CardDescription className="mt-0.5">Control daily allowance availability, value, and calculation basis.</CardDescription>
+          </div>
         </CardHeader>
         <CardContent className="space-y-5 p-5 sm:p-7">
           <div className="flex flex-col gap-3 rounded-md border border-border/70 bg-muted/20 p-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <Label className="text-base font-semibold text-foreground">DA applicable</Label>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm font-medium text-foreground">DA applicable</p>
+              <p className="mt-0.5 text-sm text-muted-foreground">
                 If turned off, Daily Allowance is hidden everywhere in the Expenses module.
               </p>
             </div>
@@ -373,10 +404,10 @@ export default function ExpensePolicyConfig() {
 
           {config.da_applicable && (<>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div className="space-y-1"><Label className="text-base font-semibold text-foreground">DA Amount (₹)</Label>
+            <div className="space-y-2"><Label className="block text-sm font-medium text-foreground">DA Amount (₹)</Label>
               <Input type="number" min="0" value={config.fixed_da_amount}
                 onChange={(e) => setConfig({ ...config, fixed_da_amount: Number(e.target.value) })} /></div>
-            <div className="space-y-1"><Label className="text-base font-semibold text-foreground">Calculation Basis</Label>
+            <div className="space-y-2"><Label className="block text-sm font-medium text-foreground">Calculation Basis</Label>
               <Select value={config.da_calculation_basis} onValueChange={(v: any) => setConfig({ ...config, da_calculation_basis: v })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -389,11 +420,15 @@ export default function ExpensePolicyConfig() {
 
 
           <div className="grid gap-3 lg:grid-cols-[minmax(260px,0.8fr)_minmax(360px,1.2fr)] lg:items-center">
-            <div><Label className="text-base font-semibold text-foreground">Distribution</Label><p className="mt-1 text-sm text-muted-foreground">Apply one policy to everyone or define exceptions.</p></div>
-            <RadioGroup value={daDist} onValueChange={(v: any) => setDaDist(v)} className="flex flex-col gap-2 sm:flex-row sm:gap-4">
-              <div className="flex items-center gap-2"><RadioGroupItem value="same_for_all" id="da-same" /><Label htmlFor="da-same" className="text-sm font-medium text-foreground">Same for all</Label></div>
-              <div className="flex items-center gap-2"><RadioGroupItem value="custom" id="da-custom" /><Label htmlFor="da-custom" className="text-sm font-medium text-foreground">Custom per user/team</Label></div>
-            </RadioGroup>
+            <div><p className="text-sm font-medium text-foreground">Distribution</p><p className="mt-0.5 text-sm text-muted-foreground">Apply one policy to everyone or define exceptions.</p></div>
+            <SegmentedControl
+              idPrefix="da-dist"
+              label="DA distribution"
+              value={daDist}
+              onValueChange={(v) => setDaDist(v)}
+              options={DA_DISTRIBUTIONS}
+              className="justify-self-start"
+            />
           </div>
 
           {daDist === "custom" && (
@@ -413,32 +448,38 @@ export default function ExpensePolicyConfig() {
       <PettyCashSection />
       </div>
 
-      <div className="space-y-3 pt-2">
-        <div>
-          <h3 className="text-xl font-bold">Claims and approvals</h3>
-          <p className="text-sm text-muted-foreground">Manage expense categories and route claims through the correct approval process.</p>
-        </div>
+      <div className="space-y-4 pt-2">
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Claims and approvals</h2>
 
       {/* Receipt rule (kept from the old Additional Expenses Policy) */}
       <Card className="overflow-hidden border-border/70 shadow-card">
-        <CardContent className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between sm:px-7">
-          <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-md bg-accent/10 text-accent"><Receipt className="h-5 w-5" /></span>
-            <div>
-              <Label className="text-base font-semibold text-foreground">Bill required above (₹)</Label>
-              <p className="text-sm text-muted-foreground">Claims above this amount must have a bill attached. Saved with “Save Policies”.</p>
-            </div>
+        <CardHeader className="flex flex-row items-center gap-3 space-y-0 border-b border-border/60 bg-muted/30 px-5 py-4 sm:px-7">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary"><Receipt className="h-5 w-5" /></span>
+          <div className="min-w-0">
+            <CardTitle className="text-lg">Receipts</CardTitle>
+            <CardDescription className="mt-0.5">Claims above this amount must have a bill attached. Saved with “Save Policies”.</CardDescription>
           </div>
-          <Input type="number" min="0" value={policy.require_bill_above_amount}
-            onChange={(e) => setPolicy({ ...policy, require_bill_above_amount: Number(e.target.value) })} className="h-10 w-full sm:max-w-[180px]" />
+        </CardHeader>
+        <CardContent className="p-5 sm:p-7">
+          <div className="space-y-2 sm:max-w-[220px]">
+            <Label htmlFor="require-bill-above" className="block text-sm font-medium text-foreground">Bill required above (₹)</Label>
+            <Input id="require-bill-above" type="number" min="0" value={policy.require_bill_above_amount}
+              onChange={(e) => setPolicy({ ...policy, require_bill_above_amount: Number(e.target.value) })} className="h-10" />
+          </div>
         </CardContent>
       </Card>
 
       {/* Categories */}
       <Card className="overflow-hidden border-border/70 shadow-card">
-        <CardHeader className="flex flex-row items-center justify-between gap-3 border-b border-border/60 bg-warning/5 px-5 py-5 sm:px-7">
-          <CardTitle className="flex items-center gap-3 text-lg"><span className="flex h-10 w-10 items-center justify-center rounded-md bg-warning/10 text-warning"><Tags className="h-5 w-5" /></span><span>Expense Categories<span className="mt-0.5 block text-sm font-normal text-muted-foreground">Control receipt and automatic approval rules by category.</span></span></CardTitle>
-          <Button size="sm" onClick={openAddCat}><Plus className="h-4 w-4 mr-1" />Add</Button>
+        <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0 border-b border-border/60 bg-muted/30 px-5 py-4 sm:px-7">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary"><Tags className="h-5 w-5" /></span>
+            <div className="min-w-0">
+              <CardTitle className="text-lg">Expense Categories</CardTitle>
+              <CardDescription className="mt-0.5">Control receipt and automatic approval rules by category.</CardDescription>
+            </div>
+          </div>
+          <Button size="sm" className="shrink-0" onClick={openAddCat}><Plus className="h-4 w-4 mr-1" />Add</Button>
         </CardHeader>
         <CardContent className="overflow-x-auto p-4 sm:p-6">
           <Table>
@@ -468,9 +509,15 @@ export default function ExpensePolicyConfig() {
 
       {/* Approval Workflows */}
       <Card className="overflow-hidden border-border/70 shadow-card">
-        <CardHeader className="flex flex-row items-center justify-between gap-3 border-b border-border/60 bg-primary/5 px-5 py-5 sm:px-7">
-          <CardTitle className="flex items-center gap-3 text-lg"><span className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10 text-primary"><GitBranch className="h-5 w-5" /></span><span>Approval Workflows<span className="mt-0.5 block text-sm font-normal text-muted-foreground">Define the sequence used to review submitted claims.</span></span></CardTitle>
-          <Button size="sm" onClick={openAddWf}><Plus className="h-4 w-4 mr-1" />Add</Button>
+        <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0 border-b border-border/60 bg-muted/30 px-5 py-4 sm:px-7">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary"><GitBranch className="h-5 w-5" /></span>
+            <div className="min-w-0">
+              <CardTitle className="text-lg">Approval Workflows</CardTitle>
+              <CardDescription className="mt-0.5">Define the sequence used to review submitted claims.</CardDescription>
+            </div>
+          </div>
+          <Button size="sm" className="shrink-0" onClick={openAddWf}><Plus className="h-4 w-4 mr-1" />Add</Button>
         </CardHeader>
         <CardContent className="space-y-2 p-4 sm:p-6">
           {workflows.map((wf) => (
@@ -500,9 +547,15 @@ export default function ExpensePolicyConfig() {
 
       {/* Approval Rules */}
       <Card className="overflow-hidden border-border/70 shadow-card">
-        <CardHeader className="flex flex-row items-center justify-between gap-3 border-b border-border/60 bg-info/5 px-5 py-5 sm:px-7">
-          <CardTitle className="flex items-center gap-3 text-lg"><span className="flex h-10 w-10 items-center justify-center rounded-md bg-info/10 text-info"><Scale className="h-5 w-5" /></span><span>Approval Rules<span className="mt-0.5 block text-sm font-normal text-muted-foreground">Match expense amounts to the appropriate workflow.</span></span></CardTitle>
-          <Button size="sm" onClick={() => setShowRuleForm(true)}><Plus className="h-4 w-4 mr-1" />Add Rule</Button>
+        <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0 border-b border-border/60 bg-muted/30 px-5 py-4 sm:px-7">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary"><Scale className="h-5 w-5" /></span>
+            <div className="min-w-0">
+              <CardTitle className="text-lg">Approval Rules</CardTitle>
+              <CardDescription className="mt-0.5">Match expense amounts to the appropriate workflow.</CardDescription>
+            </div>
+          </div>
+          <Button size="sm" className="shrink-0" onClick={() => setShowRuleForm(true)}><Plus className="h-4 w-4 mr-1" />Add Rule</Button>
         </CardHeader>
         <CardContent className="space-y-3 overflow-x-auto p-4 sm:p-6">
           <p className="text-sm text-muted-foreground flex items-start gap-1.5"><Info className="h-3.5 w-3.5 mt-0.5" />Rules are checked in priority order (lowest first). First match wins.</p>
@@ -510,19 +563,19 @@ export default function ExpensePolicyConfig() {
           {showRuleForm && (
             <div className="space-y-4 rounded-md border border-border/70 bg-muted/20 p-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div className="space-y-1"><Label className="text-base font-semibold text-foreground">Rule Name</Label>
+                <div className="space-y-2"><Label className="block text-sm font-medium text-foreground">Rule Name</Label>
                   <Input value={ruleForm.rule_name} onChange={(e) => setRuleForm({ ...ruleForm, rule_name: e.target.value })} /></div>
-                <div className="space-y-1"><Label className="text-base font-semibold text-foreground">Workflow</Label>
+                <div className="space-y-2"><Label className="block text-sm font-medium text-foreground">Workflow</Label>
                   <Select value={ruleForm.workflow_id} onValueChange={(v) => setRuleForm({ ...ruleForm, workflow_id: v })}>
                     <SelectTrigger><SelectValue placeholder="Select workflow" /></SelectTrigger>
                     <SelectContent>{workflows.map((w) => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-1"><Label className="text-base font-semibold text-foreground">Min Amount (₹)</Label>
+                <div className="space-y-2"><Label className="block text-sm font-medium text-foreground">Min Amount (₹)</Label>
                   <Input type="number" value={ruleForm.min_amount} onChange={(e) => setRuleForm({ ...ruleForm, min_amount: e.target.value })} /></div>
-                <div className="space-y-1"><Label className="text-base font-semibold text-foreground">Max Amount (₹)</Label>
+                <div className="space-y-2"><Label className="block text-sm font-medium text-foreground">Max Amount (₹)</Label>
                   <Input type="number" value={ruleForm.max_amount} onChange={(e) => setRuleForm({ ...ruleForm, max_amount: e.target.value })} /></div>
-                <div className="space-y-1"><Label className="text-base font-semibold text-foreground">Priority</Label>
+                <div className="space-y-2"><Label className="block text-sm font-medium text-foreground">Priority</Label>
                   <Input type="number" value={ruleForm.priority} onChange={(e) => setRuleForm({ ...ruleForm, priority: e.target.value })} /></div>
               </div>
               <div className="flex justify-end gap-2">
@@ -558,16 +611,36 @@ export default function ExpensePolicyConfig() {
       </Card>
       </div>
 
+      {/* Unsaved-changes bar — only config and policy edits are deferred to Save. */}
+      {dirtyCount > 0 && (
+        <div className="sticky bottom-0 z-20 -mx-4 border-t bg-background/95 px-4 py-3 shadow-card backdrop-blur-sm sm:mx-0 sm:rounded-lg sm:border sm:px-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm font-medium" role="status">
+              {dirtyCount} unsaved change{dirtyCount === 1 ? "" : "s"}
+            </p>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={discardChanges} disabled={saving} className="flex-1 sm:flex-none">
+                Discard
+              </Button>
+              <Button onClick={saveConfigAndPolicy} disabled={saving} className="flex-1 sm:flex-none">
+                {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                Save Policies
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Category dialog */}
       <Dialog open={catDlgOpen} onOpenChange={setCatDlgOpen}>
         <DialogContent className="sm:max-w-[420px]">
           <DialogHeader><DialogTitle>{editingCat ? "Edit" : "Add"} Category</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            <div className="space-y-1"><Label className="text-base font-semibold text-foreground">Name</Label>
+            <div className="space-y-2"><Label className="block text-sm font-medium text-foreground">Name</Label>
               <Input value={catForm.name} onChange={(e) => setCatForm({ ...catForm, name: e.target.value })} /></div>
-            <div className="space-y-1"><Label className="text-base font-semibold text-foreground">Receipt required above (₹)</Label>
+            <div className="space-y-2"><Label className="block text-sm font-medium text-foreground">Receipt required above (₹)</Label>
               <Input type="number" value={catForm.receipt_required_above} onChange={(e) => setCatForm({ ...catForm, receipt_required_above: e.target.value })} /></div>
-            <div className="space-y-1"><Label className="text-base font-semibold text-foreground">Auto-approval limit (₹)</Label>
+            <div className="space-y-2"><Label className="block text-sm font-medium text-foreground">Auto-approval limit (₹)</Label>
               <Input type="number" value={catForm.auto_approval_limit} onChange={(e) => setCatForm({ ...catForm, auto_approval_limit: e.target.value })} /></div>
           </div>
           <DialogFooter>
@@ -582,9 +655,9 @@ export default function ExpensePolicyConfig() {
         <DialogContent className="sm:max-w-[420px]">
           <DialogHeader><DialogTitle>{editingWf ? "Edit" : "Add"} Workflow</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            <div className="space-y-1"><Label className="text-base font-semibold text-foreground">Name</Label>
+            <div className="space-y-2"><Label className="block text-sm font-medium text-foreground">Name</Label>
               <Input value={wfForm.name} onChange={(e) => setWfForm({ ...wfForm, name: e.target.value })} /></div>
-            <div className="space-y-1"><Label className="text-base font-semibold text-foreground">Type</Label>
+            <div className="space-y-2"><Label className="block text-sm font-medium text-foreground">Type</Label>
               <Select value={wfForm.approval_type} onValueChange={(v) => setWfForm({ ...wfForm, approval_type: v })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -593,11 +666,11 @@ export default function ExpensePolicyConfig() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1"><Label className="text-base font-semibold text-foreground">Steps</Label>
+            <div className="space-y-2"><Label className="block text-sm font-medium text-foreground">Steps</Label>
               <Input type="number" min="1" value={wfForm.steps} onChange={(e) => setWfForm({ ...wfForm, steps: Number(e.target.value) })} /></div>
             <div className="flex items-center gap-2">
               <Switch checked={wfForm.is_default} onCheckedChange={(v) => setWfForm({ ...wfForm, is_default: v })} />
-              <Label className="text-base font-semibold text-foreground">Default workflow</Label>
+              <Label className="block text-sm font-medium text-foreground">Default workflow</Label>
             </div>
           </div>
           <DialogFooter>

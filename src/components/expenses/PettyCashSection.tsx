@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -103,14 +103,15 @@ export default function PettyCashSection() {
 
   return (
     <Card id="petty-cash" className="scroll-mt-28 overflow-hidden border-border/70 shadow-card">
-      <CardHeader className="flex flex-col gap-3 border-b border-border/60 bg-warning/5 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-7">
-        <CardTitle className="flex items-center gap-3 text-lg">
-          <span className="flex h-10 w-10 items-center justify-center rounded-md bg-warning/10 text-warning"><Wallet className="h-5 w-5" /></span>
-          <span>Petty Cash
-            <span className="mt-0.5 block text-sm font-normal text-muted-foreground">Cash given to employees in advance, and how much of it has been used.</span>
-          </span>
-        </CardTitle>
-        <Button onClick={() => setPanel({ kind: "issue" })}><Plus className="mr-1 h-4 w-4" />Issue petty cash</Button>
+      <CardHeader className="flex flex-col gap-3 space-y-0 border-b border-border/60 bg-muted/30 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-7">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary"><Wallet className="h-5 w-5" /></span>
+          <div className="min-w-0">
+            <CardTitle className="text-lg">Petty Cash</CardTitle>
+            <CardDescription className="mt-0.5">Cash given to employees in advance, and how much of it has been used.</CardDescription>
+          </div>
+        </div>
+        <Button className="shrink-0" onClick={() => setPanel({ kind: "issue" })}><Plus className="mr-1 h-4 w-4" />Issue petty cash</Button>
       </CardHeader>
       <CardContent className="space-y-5 p-5 sm:p-7">
         <div className="grid gap-3 sm:grid-cols-3">
