@@ -103,7 +103,7 @@ export default function ActivityTypeMaster() {
         const { data: { user } } = await supabase.auth.getUser();
         const { error } = await supabase
           .from("activity_types_master")
-          .insert({ name: trimmed, is_active: formData.is_active, sort_order: formData.sort_order, details: formData.details.trim() || null, created_by: user?.id });
+          .insert({ name: trimmed, is_active: formData.is_active, sort_order: formData.sort_order, details: formData.details.trim() || null, created_by: user?.id ?? null });
         if (error) throw error;
         toast.success("Activity type created");
       }

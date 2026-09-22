@@ -52,7 +52,7 @@ export function buildLeadRollups(
       productiveCount: list.filter(
         (a) => String(a.status || "").toLowerCase() === "completed" && isProductive(a.outcome),
       ).length,
-      lastActivityDate,
+      lastActivityDate: lastActivityDate ?? null,
       daysSinceLastActivity: lastActivityDate
         ? differenceInCalendarDays(today, parseISO(lastActivityDate))
         : null,

@@ -676,7 +676,7 @@ export default function Activities() {
     setAddingSite(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      const { error } = await supabase.from("project_sites").insert({ site_name: trimmed, created_by: user?.id });
+      const { error } = await supabase.from("project_sites").insert({ site_name: trimmed, created_by: user?.id ?? null });
       if (error) throw error;
       await fetchDropdowns();
       const newSite = sites.find(s => s.site_name === trimmed) || (await supabase.from("project_sites").select("id").eq("site_name", trimmed).maybeSingle()).data;

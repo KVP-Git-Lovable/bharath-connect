@@ -127,7 +127,7 @@ export default function AddressBook() {
         toast.success("Address updated");
       } else {
         const { data: { user } } = await supabase.auth.getUser();
-        const { error } = await supabase.from("master_addresses").insert({ ...payload, created_by: user?.id });
+        const { error } = await supabase.from("master_addresses").insert({ ...payload, created_by: user?.id ?? null });
         if (error) throw error;
         toast.success("Address created");
       }

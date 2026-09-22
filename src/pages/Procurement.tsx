@@ -162,7 +162,7 @@ export default function Procurement() {
       } else {
         const { data, error } = await supabase
           .from("procurement_orders")
-          .insert({ ...orderPayload, created_by: profile?.id })
+          .insert({ ...orderPayload, created_by: profile?.id ?? null })
           .select("id")
           .single();
         if (error) throw error;
@@ -172,7 +172,7 @@ export default function Procurement() {
       const itemRows = validLines.map((l) => {
         const rate = parseFloat(l.rate) || 0;
         const qty = parseFloat(l.qty) || 0;
-        return { procurement_id: orderId, product_id: l.product_id, rate, qty, amount: rate * qty, uom: l.uom || null };
+        return { procurement_id: orderId!, product_id: l.product_id, rate, qty, amount: rate * qty, uom: l.uom || null };
       });
       const { error: itemErr } = await supabase.from("procurement_items").insert(itemRows);
       if (itemErr) throw itemErr;
