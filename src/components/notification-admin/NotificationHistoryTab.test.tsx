@@ -36,7 +36,7 @@ import NotificationHistoryTab from "./NotificationHistoryTab";
 describe("NotificationHistoryTab", () => {
   it("shows stats, rows, paging and a detail sheet", async () => {
     render(<MemoryRouter><NotificationHistoryTab /></MemoryRouter>);
-    expect(screen.getByText("25%")).toBeInTheDocument(); // read rate
+    expect(await screen.findByText("25%")).toBeInTheDocument(); // read rate
     expect(screen.getByText("4")).toBeInTheDocument(); // push problems
     expect(screen.getByText("1–25 of 40")).toBeInTheDocument();
     expect(screen.getAllByText("No device").length).toBeGreaterThan(0);
