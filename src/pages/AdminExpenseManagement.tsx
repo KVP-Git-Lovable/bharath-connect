@@ -1,4 +1,4 @@
-import { Navigate } from "react-router-dom";
+import { Navigate } from "@/lib/router-compat";
 import { useAdminAccess } from "@/hooks/useAdminAccess";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BarChart3, Loader2, Receipt, Settings } from "lucide-react";

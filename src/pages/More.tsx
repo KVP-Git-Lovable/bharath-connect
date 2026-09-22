@@ -21,7 +21,7 @@ import {
   FileBarChart,
   Building2,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "@/lib/router-compat";
 import { NavLink } from "@/components/NavLink";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useProfilePermissions } from "@/hooks/useProfilePermissions";

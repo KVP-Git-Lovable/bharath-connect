@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
+import { Navigate, useNavigate, useSearchParams } from "@/lib/router-compat";
 import { ArrowLeft, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";

@@ -2,7 +2,7 @@ import { useBranding } from "@/hooks/useBranding";
 import { useState, useCallback, useRef, useEffect, useMemo, lazy, Suspense } from "react";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useProfilePermissions } from "@/hooks/useProfilePermissions";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation } from "@/lib/router-compat";
 import { supabase } from "@/integrations/supabase/client";
 import { NotificationBell } from "@/components/NotificationBell";
 import { useQuery } from "@tanstack/react-query";

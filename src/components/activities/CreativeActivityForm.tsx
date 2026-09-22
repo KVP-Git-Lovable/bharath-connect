@@ -2,7 +2,7 @@ import { SignedAvatarImage, SignedImage } from "@/components/ui/signed-image";
 import ActivityGeoStamp from "@/components/activities/ActivityGeoStamp";
 import ActivityEffortSection from "@/components/activities/ActivityEffortSection";
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "@/lib/router-compat";
 
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";

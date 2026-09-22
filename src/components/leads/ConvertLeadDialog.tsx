@@ -7,7 +7,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LeadRow, useConvertLead } from "@/hooks/useLeadsEvents";
 import { useCustomers } from "@/hooks/useCustomers";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "@/lib/router-compat";
 
 export function ConvertLeadDialog({
   open, onOpenChange, lead,

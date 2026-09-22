@@ -2,7 +2,7 @@ import { Bell, CheckCheck } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { useNotifications } from '@/hooks/useNotifications';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from '@/lib/router-compat';
 import { formatDistanceToNow } from 'date-fns';
 import { useState } from 'react';
 import { notificationRoute } from '@/utils/notificationRoute';

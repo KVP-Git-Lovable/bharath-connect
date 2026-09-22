@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 
 import { Button } from "@/components/ui/button";
 import { differenceInCalendarDays, format } from "date-fns";
-import { Link } from "react-router-dom";
+import { Link } from "@/lib/router-compat";
 import { Settings2, Check, X } from "lucide-react";
 import { LeadRow, useLeadStatuses, statusColorClasses } from "@/hooks/useLeadsEvents";
 import {

@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams } from "@/lib/router-compat";
 import { applyReportLink } from "@/components/reports/reportLink";
 import { motion } from "framer-motion";
 import { BarChart3 } from "lucide-react";
