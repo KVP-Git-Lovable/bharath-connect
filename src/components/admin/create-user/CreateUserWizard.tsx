@@ -150,7 +150,7 @@ const CreateUserWizard: React.FC<CreateUserWizardProps> = ({ onSuccess }) => {
       if (formData.phone_number) updatePayload['phone'] = formData.phone_number;
       if (formData.manager_id) updatePayload['reporting_manager_id'] = formData.manager_id;
       if (Object.keys(updatePayload).length > 0) {
-        await supabase.from('users').update(updatePayload).eq('id', userId);
+        await supabase.from('users').update(updatePayload as never).eq('id', userId);
       }
 
       // Update employees table

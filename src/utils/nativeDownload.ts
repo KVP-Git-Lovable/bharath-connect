@@ -208,7 +208,7 @@ export async function downloadPDF(doc: any, filename: string): Promise<void> {
  */
 export async function downloadCSVNative(data: Record<string, any>[], filename: string): Promise<void> {
   if (!data.length) return;
-  const headers = Object.keys(data[0]);
+  const headers = Object.keys(data[0]!);
   const csvRows = [
     headers.join(','),
     ...data.map(row =>

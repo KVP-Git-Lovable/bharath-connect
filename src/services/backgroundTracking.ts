@@ -107,7 +107,7 @@ export async function captureLocation(): Promise<LocationData | null> {
  * Save location to gps_tracking table
  */
 async function saveLocationToDatabase(userId: string, location: LocationData): Promise<void> {
-  const today = new Date().toISOString().split("T")[0];
+  const today = new Date().toISOString().split("T")[0]!;
 
   try {
     await supabase.from("gps_tracking").insert({

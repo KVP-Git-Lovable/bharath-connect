@@ -69,7 +69,7 @@ export default function CategoryMaster() {
         toast.success("Category updated");
       } else {
         const { data: { user } } = await supabase.auth.getUser();
-        const { error } = await supabase.from("master_categories").insert({ ...payload, created_by: user?.id });
+        const { error } = await supabase.from("master_categories").insert({ ...payload, created_by: user?.id ?? null });
         if (error) throw error;
         toast.success("Category created");
       }

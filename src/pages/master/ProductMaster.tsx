@@ -89,7 +89,7 @@ export default function ProductMaster() {
         toast.success("Product updated");
       } else {
         const { data: { user } } = await supabase.auth.getUser();
-        const { error } = await supabase.from("master_products").insert({ ...payload, created_by: user?.id });
+        const { error } = await supabase.from("master_products").insert({ ...payload, created_by: user?.id ?? null });
         if (error) throw error;
         toast.success("Product created");
       }

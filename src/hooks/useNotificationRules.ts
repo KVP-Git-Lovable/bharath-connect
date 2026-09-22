@@ -186,7 +186,7 @@ export async function sendTestNotification(ruleId: string) {
 
 /** Fill a template with sample values, mirroring the database notif_fill(). */
 export function fillSample(template: string, sample: Record<string, string>) {
-  return template.replace(/\{([a-z0-9_]+)\}/gi, (m, key: string) => (key in sample ? sample[key] : m));
+  return template.replace(/\{([a-z0-9_]+)\}/gi, (m, key: string) => (key in sample ? sample[key]! : m));
 }
 
 export const SAMPLE_VALUES: Record<string, string> = {

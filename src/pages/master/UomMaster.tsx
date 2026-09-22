@@ -62,7 +62,7 @@ export default function UomMaster() {
         if (error) throw error;
       } else {
         const { data: { user } } = await supabase.auth.getUser();
-        const { error } = await supabase.from("master_uom").insert({ ...payload, created_by: user?.id });
+        const { error } = await supabase.from("master_uom").insert({ ...payload, created_by: user?.id ?? null });
         if (error) throw error;
       }
     },

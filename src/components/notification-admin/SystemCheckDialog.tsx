@@ -53,9 +53,9 @@ export default function SystemCheckDialog({ open, onOpenChange }: { open: boolea
         supabase.from("notification_rules").select("id, name, notification_channel").order("created_at").limit(50),
         supabase.from("notification_event_types").select("id", { count: "exact", head: true }),
       ]);
-      if (rErr || eErr) return fail("engine", (rErr || eErr)!.message);
+      if (rErr || eErr) { fail("engine", (rErr || eErr)!.message); return; }
       const rule = (rules || []).find((r) => r.notification_channel === "in_app_push") || (rules || [])[0];
-      if (!rule) return fail("engine", "No rules found. Create a rule first, then run the check.");
+      if (!rule) { fail("engine", "No rules found. Create a rule first, then run the check."); return; }
       update("engine", { status: "ok", detail: `${rules!.length} rules, ${evCount ?? 0} events available` });
 
       // 2. Recipient resolution
@@ -67,7 +67,7 @@ export default function SystemCheckDialog({ open, onOpenChange }: { open: boolea
           detail: admins.length ? `${admins.length} active admin(s) found` : "No active admins found",
         });
       } catch (e) {
-        return fail("recipients", (e as Error).message);
+        { fail("recipients", (e as Error).message); return; }
       }
 
       // 3. Create a test notification (sent to you only)
@@ -78,10 +78,10 @@ export default function SystemCheckDialog({ open, onOpenChange }: { open: boolea
         const res = await sendTestNotification(rule.id);
         notificationId = res?.notification_id;
         pushExpected = !!res?.push;
-        if (!notificationId) return fail("send", "The database did not return a notification id");
+        if (!notificationId) { fail("send", "The database did not return a notification id"); return; }
         update("send", { status: "ok", detail: `Using rule "${rule.name}"` });
       } catch (e) {
-        return fail("send", (e as Error).message);
+        { fail("send", (e as Error).message); return; }
       }
 
       // 4. Visible in the bell
@@ -91,7 +91,7 @@ export default function SystemCheckDialog({ open, onOpenChange }: { open: boolea
         .select("id, title, delivery_status")
         .eq("id", notificationId)
         .maybeSingle();
-      if (nErr || !row) return fail("bell", nErr?.message || "Notification not found");
+      if (nErr || !row) { fail("bell", nErr?.message || "Notification not found"); return; }
       update("bell", { status: "ok", detail: row.title });
 
       // 5. Push: wait for notification-push to record the outcome

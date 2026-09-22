@@ -50,7 +50,7 @@ export default function CurrencyMaster() {
 
   const del = async (id: string) => {
     const { error } = await supabase.from("master_currencies" as any).delete().eq("id", id);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     qc.invalidateQueries({ queryKey: ["currencies-admin"] });
     qc.invalidateQueries({ queryKey: ["master-currencies"] });
   };

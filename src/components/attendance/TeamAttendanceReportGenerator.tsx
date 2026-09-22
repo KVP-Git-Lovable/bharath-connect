@@ -130,7 +130,7 @@ export default function TeamAttendanceReportGenerator({ onClose }: Props) {
         'Location': '',
       });
       const ws = XLSX.utils.json_to_sheet(rows);
-      const colWidths = Object.keys(rows[0]).map(k => ({ wch: Math.max(k.length, 14) }));
+      const colWidths = Object.keys(rows[0]!).map(k => ({ wch: Math.max(k.length, 14) }));
       ws['!cols'] = colWidths;
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Attendance Report');

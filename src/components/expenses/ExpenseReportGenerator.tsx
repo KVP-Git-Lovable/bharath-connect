@@ -172,7 +172,7 @@ export default function ExpenseReportGenerator({ isAdmin }: Props) {
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Expense Report');
 
-      const colWidths = Object.keys(rows[0]).map(k => ({
+      const colWidths = Object.keys(rows[0]!).map(k => ({
         wch: Math.max(k.length, ...rows.map(r => String((r as any)[k]).length)) + 2
       }));
       ws['!cols'] = colWidths;

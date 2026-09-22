@@ -160,7 +160,7 @@ async function uploadTable(table: string, rows: AnyRow[]): Promise<"ok" | "retry
         continue;
       }
       consecutiveFailures++;
-      lastError! = error.message;
+      lastError = error.message;
       scheduleRetry();
       return "retry";
     }
@@ -184,7 +184,7 @@ async function flushOnce(): Promise<{ remaining: number }> {
   // session) and the policy's `status = 'open'` guard means a seal aimed at
   // someone else's session simply matches nothing rather than erroring.
   while (queue.seals.length > 0) {
-    const seal = queue.seals[0];
+    const seal = queue.seals[0]!;
     const { id, ...patch } = seal;
     const { error } = await db
       .from("app_usage_sessions")
@@ -193,7 +193,7 @@ async function flushOnce(): Promise<{ remaining: number }> {
       .eq("status", "open");
     if (error && !isPermissionError(error)) {
       consecutiveFailures++;
-      lastError! = error.message;
+      lastError = error.message;
       scheduleRetry();
       return { remaining: size() };
     }

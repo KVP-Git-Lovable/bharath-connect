@@ -26,7 +26,7 @@ export default function HierarchicalPermissionEditor({ permissions, definitions,
   const toggleField = (objectName: string, field: CrudField, value: boolean) => {
     const updated = { ...permissions };
     if (updated[objectName]) {
-      updated[objectName] = { ...updated[objectName], [field]: value };
+      updated[objectName] = { ...updated[objectName]!, [field]: value };
     }
     onChange(updated);
   };
@@ -48,11 +48,11 @@ export default function HierarchicalPermissionEditor({ permissions, definitions,
   const cascadeModuleToggle = (objectName: string, field: CrudField, value: boolean) => {
     const updated = { ...permissions };
     if (updated[objectName]) {
-      updated[objectName] = { ...updated[objectName], [field]: value };
+      updated[objectName] = { ...updated[objectName]!, [field]: value };
     }
     Object.keys(updated).forEach((key) => {
       if (updated[key]!.parentModule === objectName) {
-        updated[key] = { ...updated[key], [field]: value };
+        updated[key] = { ...updated[key]!, [field]: value };
       }
     });
     onChange(updated);

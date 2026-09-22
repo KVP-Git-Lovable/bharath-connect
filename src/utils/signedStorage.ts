@@ -10,8 +10,8 @@ const cache = new Map<string, { url: string; expires: number }>();
 function extractPath(bucket: string, pathOrUrl: string): string {
   const marker = `/${bucket}/`;
   const idx = pathOrUrl.indexOf(marker);
-  if (idx === -1) return pathOrUrl.split("?")[0];
-  return pathOrUrl.slice(idx + marker.length).split("?")[0];
+  if (idx === -1) return pathOrUrl.split("?")[0]!;
+  return pathOrUrl.slice(idx + marker.length).split("?")[0]!;
 }
 
 /**

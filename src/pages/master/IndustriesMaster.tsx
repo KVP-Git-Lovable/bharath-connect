@@ -54,7 +54,7 @@ export default function IndustriesMaster() {
       if (error.code === "23503") {
         await supabase.from("master_industries" as any).update({ is_active: false }).eq("id", id);
         toast.success("In use — deactivated instead");
-      } else return toast.error(error.message);
+      } else { toast.error(error.message); return; }
     }
     qc.invalidateQueries({ queryKey: ["industries-admin"] });
     qc.invalidateQueries({ queryKey: ["industries"] });

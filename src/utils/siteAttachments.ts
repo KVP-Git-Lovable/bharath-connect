@@ -20,7 +20,7 @@ export function attachmentName(stored: string): string {
 }
 
 export function attachmentPath(stored: string): string {
-  return stored.split("|")[0];
+  return stored.split("|")[0]!;
 }
 
 export async function getSiteAttachmentUrl(stored: string): Promise<string | null> {

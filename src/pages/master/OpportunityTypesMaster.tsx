@@ -50,7 +50,7 @@ export default function OpportunityTypesMaster() {
 
   const del = async (id: string) => {
     const { error } = await supabase.from("opportunity_types").delete().eq("id", id);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     qc.invalidateQueries({ queryKey: ["opp-types-admin"] });
     qc.invalidateQueries({ queryKey: ["opp-types"] });
   };
