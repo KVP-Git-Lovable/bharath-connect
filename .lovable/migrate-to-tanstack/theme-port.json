@@ -1,0 +1,19 @@
+{
+  "customizations": [
+    { "token": "--background/--foreground/--card/--popover/--primary/--secondary/--muted/--accent/--destructive/--border/--input/--ring (Navy palette HSL values)", "source": "src/index.css", "reappliedIn": "src/styles.css" },
+    { "token": "--accent-gold, --accent-gold-foreground, --accent-bronze, --accent-bronze-foreground", "source": "src/index.css", "reappliedIn": "src/styles.css" },
+    { "token": "--success, --warning, --info (+foregrounds)", "source": "src/index.css", "reappliedIn": "src/styles.css" },
+    { "token": "--present, --absent, --leave, --half-day-start, --half-day-end, --holiday, --week-off", "source": "src/index.css", "reappliedIn": "src/styles.css" },
+    { "token": "--gradient-hero, --gradient-accent, --gradient-card", "source": "src/index.css", "reappliedIn": "src/styles.css" },
+    { "token": "--shadow-card, --shadow-elevated, --shadow-button, --shadow-hero, --shadow-bottom-nav", "source": "src/index.css", "reappliedIn": "src/styles.css" },
+    { "token": "--radius 0.75rem + sm/md/lg radius scale", "source": "src/index.css + tailwind.config.ts", "reappliedIn": "src/styles.css" },
+    { "token": "--sidebar-background et al (sidebar palette, mapped to --color-sidebar*)", "source": "src/index.css", "reappliedIn": "src/styles.css" },
+    { "token": ".dark full palette overrides", "source": "src/index.css", "reappliedIn": "src/styles.css" },
+    { "token": "Inter font import + --font-sans", "source": "src/index.css + tailwind.config.ts", "reappliedIn": "src/styles.css" },
+    { "token": "keyframes/animations: accordion-down, accordion-up, fade-in, slide-up, pulse-dot", "source": "tailwind.config.ts", "reappliedIn": "src/styles.css" },
+    { "token": "container config (centered, 2rem padding, 1400px cap)", "source": "tailwind.config.ts", "reappliedIn": "src/styles.css (@utility container)" },
+    { "token": "utilities: shadow-card/elevated/button/hero/bottom-nav, gradient-hero/accent/card, bg-gradient-primary, no-scrollbar, scrollbar-thin, safe-top/safe-bottom/safe-top-8/safe-top-10", "source": "src/index.css", "reappliedIn": "src/styles.css" },
+    { "token": "base layer: border-color reset, html/body/#root sizing, body bg/fg/antialiasing", "source": "src/index.css", "reappliedIn": "src/styles.css" },
+    { "token": "mobile.css (iOS zoom guard, safe-area padding, print rules)", "source": "src/styles/mobile.css (imported by main.tsx)", "reappliedIn": "src/styles.css via @import ./styles/mobile.css" }
+  ]
+}
