@@ -179,8 +179,7 @@ function MilestoneCard({
     setExpanded(true);
     setInlineDraft({
       name: "",
-      start_date!!: m.start_date || new Date().toISOString().split("T")[0],
-      end_date: m.end_date || "",
+      start_date: (m.start_date || new Date().toISOString().split("T")[0])!,      end_date: m.end_date || "",
       status: "not_started",
     });
   };

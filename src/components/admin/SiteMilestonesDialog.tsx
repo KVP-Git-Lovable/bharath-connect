@@ -80,8 +80,7 @@ interface FormState {
 
 const emptyForm: FormState = {
   name: "",
-  start_date!!: new Date().toISOString().split("T")[0],
-  end_date: "",
+  start_date: (new Date().toISOString().split("T")[0])!,  end_date: "",
   actual_start_date: "",
   actual_end_date: "",
   percent_complete: 0,

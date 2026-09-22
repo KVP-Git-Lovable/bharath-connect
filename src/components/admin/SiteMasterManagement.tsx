@@ -92,8 +92,7 @@ interface FormState {
 const emptyForm: FormState = {
   site_name: "",
   description: "",
-  start_date!!: new Date().toISOString().split("T")[0],
-  end_date: "",
+  start_date: (new Date().toISOString().split("T")[0])!,  end_date: "",
   status: "planned",
 };
 
