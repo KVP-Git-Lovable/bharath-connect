@@ -301,7 +301,7 @@ export default function SiteHubSheet({ site, open, onClose, onEdit, onStatusChan
                   ].map(([v, l]) => (
                     <TabsTrigger
                       key={v}
-                      value!={v}
+                      value={(v)!}
                       className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-3 pb-2.5 whitespace-nowrap"
                     >
                       {l}

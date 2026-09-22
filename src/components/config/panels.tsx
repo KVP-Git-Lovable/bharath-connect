@@ -139,10 +139,10 @@ function LegacyModulePanel({ module, tab }: { module: string; tab: Tab }) {
             </div>
           </ConfigSection>
           <ConfigSection title="Rating badge thresholds (min score)">
-            <ConfigNumberRow label="Preferred Vendor" value!={thresholds['preferred']} onChange={(v) => setThreshold("preferred", v)} />
-            <ConfigNumberRow label="Reliable" value!={thresholds['reliable']} onChange={(v) => setThreshold("reliable", v)} />
-            <ConfigNumberRow label="Needs Improvement" value!={thresholds['needsImprovement']} onChange={(v) => setThreshold("needsImprovement", v)} />
-            <ConfigNumberRow label="Poor" value!={thresholds['poor']} onChange={(v) => setThreshold("poor", v)} />
+            <ConfigNumberRow label="Preferred Vendor" value={(thresholds['preferred'])!} onChange={(v) => setThreshold("preferred", v)} />
+            <ConfigNumberRow label="Reliable" value={(thresholds['reliable'])!} onChange={(v) => setThreshold("reliable", v)} />
+            <ConfigNumberRow label="Needs Improvement" value={(thresholds['needsImprovement'])!} onChange={(v) => setThreshold("needsImprovement", v)} />
+            <ConfigNumberRow label="Poor" value={(thresholds['poor'])!} onChange={(v) => setThreshold("poor", v)} />
           </ConfigSection>
         </div>
       );
