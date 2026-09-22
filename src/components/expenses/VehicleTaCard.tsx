@@ -11,7 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  Bike, Bus, Car as CarIcon, Check, ChevronDown, History, Loader2, MapPinOff, Pencil, Plus, Trash2, Truck, X, Globe,
+  Bike, Bus, Car as CarIcon, Check, ChevronDown, History, Loader2, MapPinOff, Pencil, Plus, Trash2, Truck, X, Users,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -37,9 +37,29 @@ interface Override { id: string; vehicle_type_id: string; user_id: string; per_k
 
 interface Props {
   method: Method;
+  onMethodChange: (method: Method) => void;
+  defaultRate: number;
+  defaultFixed: number;
+  onDefaultRateChange: (rate: number) => void;
+  onDefaultFixedChange: (amount: number) => void;
 }
 
-export default function VehicleTaCard({ method }: Props) {
+type VehicleStage = "types" | "rates" | "assignments";
+
+const STAGES: { value: VehicleStage; label: string; description: string }[] = [
+  { value: "types", label: "Vehicle Types", description: "Create and maintain vehicles" },
+  { value: "rates", label: "Default & Rates", description: "Set default and vehicle pricing" },
+  { value: "assignments", label: "Assignments", description: "Control role and user access" },
+];
+
+export default function VehicleTaCard({
+  method,
+  onMethodChange,
+  defaultRate,
+  defaultFixed,
+  onDefaultRateChange,
+  onDefaultFixedChange,
+}: Props) {
   const qc = useQueryClient();
   const { vehicleTypes, loading: vLoading, refetch: refetchVehicles } = useVehicleTypes(false);
   const refData = useQuery({
@@ -83,6 +103,7 @@ export default function VehicleTaCard({ method }: Props) {
   const empName = useMemo(() => new Map((data?.emps || []).map((e) => [e.id, e.name])), [data?.emps]);
 
   const [vehicleDialog, setVehicleDialog] = useState<{ open: boolean; editing: VehicleType | null }>({ open: false, editing: null });
+  const [stage, setStage] = useState<VehicleStage>("rates");
   // Header switch: off = active vehicles only; on = inactive vehicles shown as well (natural order, no active-first sorting).
   const [showInactive, setShowInactive] = useState(false);
   const visibleVehicles = useMemo(
@@ -92,55 +113,125 @@ export default function VehicleTaCard({ method }: Props) {
 
   const isFixed = method === "fixed";
 
+  const activeVehicleIds = vehicleTypes.filter((vehicle) => vehicle.is_active).map((vehicle) => vehicle.id);
+
   return (
     <Card className="overflow-hidden border-border/70 shadow-card">
       <CardHeader className="flex flex-col gap-3 space-y-0 border-b border-border/60 bg-muted/30 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-7">
         <div className="flex min-w-0 items-center gap-3">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary"><CarIcon className="h-5 w-5" /></span>
           <div className="min-w-0">
-            <CardTitle className="text-lg">Vehicle TA</CardTitle>
-            <CardDescription className="mt-0.5">Used when the person picks this vehicle on Activities. Same method as above.</CardDescription>
+            <CardTitle className="text-lg">Vehicle Master</CardTitle>
+            <CardDescription className="mt-0.5">Manage vehicle types, pricing, and who can use them.</CardDescription>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-        <label className="flex items-center gap-2 rounded-md border px-3 py-2">
-          <Switch checked={showInactive} onCheckedChange={setShowInactive} aria-label="Include inactive vehicles" />
-          <span className="text-sm font-medium">Inactive</span>
-        </label>
-        <Button variant="outline" onClick={() => setVehicleDialog({ open: true, editing: null })}>
-          <Plus className="mr-1 h-4 w-4" />Add vehicle
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="flex items-center gap-2 rounded-md border px-3 py-2">
+            <Switch checked={showInactive} onCheckedChange={setShowInactive} aria-label="Include inactive vehicles" />
+            <span className="text-sm font-medium">Inactive</span>
+          </label>
+          <Button variant="outline" onClick={() => setVehicleDialog({ open: true, editing: null })}>
+            <Plus className="mr-1 h-4 w-4" />Add vehicle
+          </Button>
         </div>
       </CardHeader>
 
       <CardContent className="space-y-4 p-5 sm:p-7">
+        <div className="grid gap-2 rounded-md border bg-muted/20 p-1 sm:grid-cols-3">
+          {STAGES.map((item, index) => (
+            <Button
+              key={item.value}
+              type="button"
+              variant={stage === item.value ? "default" : "ghost"}
+              className="h-auto min-h-14 justify-start gap-3 px-3 py-2 text-left"
+              onClick={() => setStage(item.value)}
+            >
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-sm border border-current/20 text-xs font-semibold">{index + 1}</span>
+              <span className="min-w-0">
+                <span className="block text-sm font-semibold">{item.label}</span>
+                <span className="block truncate text-xs opacity-75">{item.description}</span>
+              </span>
+            </Button>
+          ))}
+        </div>
+
         {vLoading || refData.isLoading ? (
           <div className="flex justify-center py-10"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+        ) : stage === "types" ? (
+          <div className="space-y-2">
+            {visibleVehicles.map((vehicle) => {
+              const Icon = iconFor(vehicle);
+              return (
+                <div key={vehicle.id} className="flex flex-col gap-3 rounded-md border px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground"><Icon className="h-4 w-4" /></span>
+                    <div className="min-w-0">
+                      <p className="font-semibold text-foreground">{vehicle.name}</p>
+                      <p className="text-xs text-muted-foreground">{vehicle.is_no_vehicle ? "No travel allowance" : "Travel allowance applies"}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between gap-2 sm:justify-end">
+                    <VehicleStatus vehicle={vehicle} onChanged={reload} />
+                    <Button variant="ghost" size="icon" aria-label={`Edit ${vehicle.name}`} onClick={() => setVehicleDialog({ open: true, editing: vehicle })}><Pencil className="h-4 w-4" /></Button>
+                    <DeleteVehicle v={vehicle} onChanged={reload} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : stage === "rates" ? (
+          <div className="space-y-5">
+            <div className="overflow-hidden rounded-md border">
+              <div className="flex flex-col gap-3 border-b bg-muted/20 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h3 className="text-sm font-semibold uppercase text-muted-foreground">Default</h3>
+                  <p className="mt-0.5 text-xs text-muted-foreground">Applied when no vehicle-specific or user-specific amount is set.</p>
+                </div>
+                <div className="grid grid-cols-2 rounded-md border bg-muted p-1" aria-label="TA calculation method">
+                  <Button type="button" size="sm" variant={isFixed ? "default" : "ghost"} onClick={() => onMethodChange("fixed")}>Fixed</Button>
+                  <Button type="button" size="sm" variant={!isFixed ? "default" : "ghost"} onClick={() => onMethodChange("from_gps")}>Variable</Button>
+                </div>
+              </div>
+              <div className="grid gap-3 p-4 sm:grid-cols-[1fr_1fr_1fr_1fr_auto] sm:items-end">
+                <div><p className="mb-2 text-xs font-semibold text-muted-foreground">Rate / km</p><MoneyInput value={defaultRate} disabled={isFixed} suffix="/km" onCommit={onDefaultRateChange} /></div>
+                <div><p className="mb-2 text-xs font-semibold text-muted-foreground">Fixed price / day</p><MoneyInput value={defaultFixed} disabled={!isFixed} suffix="/day" onCommit={onDefaultFixedChange} /></div>
+                <div><p className="mb-2 text-xs font-semibold text-muted-foreground">Assigned roles</p><span className="inline-flex rounded-sm bg-primary/10 px-2 py-1 text-xs font-semibold text-primary">All roles</span></div>
+                <div><p className="mb-2 text-xs font-semibold text-muted-foreground">Custom users</p><span className="text-sm text-muted-foreground">None</span></div>
+                <div><p className="mb-2 text-xs font-semibold text-muted-foreground">Actions</p><span className="inline-flex h-9 items-center text-xs text-muted-foreground">Default</span></div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between gap-3">
+              <div><h3 className="text-sm font-semibold">Vehicle rates</h3><p className="text-xs text-muted-foreground">Add another row by creating a vehicle, then configure its amount below.</p></div>
+              <Button variant="outline" size="sm" onClick={() => setVehicleDialog({ open: true, editing: null })}><Plus className="mr-1 h-4 w-4" />Add new row</Button>
+            </div>
+            <div className="rounded-md border md:overflow-x-auto">
+              <table className="w-full text-sm md:min-w-[940px]">
+                <thead className="hidden bg-muted/40 text-left text-xs font-semibold text-muted-foreground md:table-header-group">
+                  <tr><th className="px-4 py-3">Vehicle</th><th className="px-3 py-3">Rate / km</th><th className="px-3 py-3">Fixed price / day</th><th className="px-3 py-3">Assigned roles</th><th className="px-3 py-3">Custom users</th><th className="px-3 py-3 text-right">Actions</th></tr>
+                </thead>
+                <tbody>
+                  {visibleVehicles.map((v) => <VehiclePricingRow key={v.id} v={v} rates={ratesBy.get(v.id) || []} isFixed={isFixed} roles={data?.roles || []} links={data?.links || []} allVehicleIds={activeVehicleIds} emps={data?.emps || []} empName={empName} overrides={(data?.overrides || []).filter((o) => o.vehicle_type_id === v.id)} overridesReady={!!data?.overridesReady} onEdit={() => setVehicleDialog({ open: true, editing: v })} onChanged={reload} />)}
+                </tbody>
+              </table>
+            </div>
+            <Button variant="outline" className="w-full border-dashed" onClick={() => setVehicleDialog({ open: true, editing: null })}><Plus className="mr-1 h-4 w-4" />Add another vehicle row</Button>
+          </div>
         ) : (
-          <div className="overflow-x-auto rounded-lg border">
-            <table className="w-full min-w-[880px] text-sm">
-              <thead className="bg-muted/40 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                <tr>
-                  <th className="px-4 py-3 font-medium normal-case tracking-normal">Vehicle</th>
-                  <th className="px-3 py-3">{isFixed ? "Fixed price / day" : "Rate / km"}</th>
-                  <th className="px-3 py-3">Assigned roles</th>
-                  <th className="px-3 py-3">Custom users</th>
-                  <th className="px-3 py-3">Status</th>
-                  <th className="px-3 py-3 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {visibleVehicles.map((v) => (
-                  <VehicleRow key={v.id} v={v} isFixed={isFixed} rates={ratesBy.get(v.id) || []}
-                    roles={data?.roles || []} links={data?.links || []}
-                    allVehicleIds={vehicleTypes.filter((x) => x.is_active).map((x) => x.id)}
-                    emps={data?.emps || []} empName={empName}
-                    overrides={(data?.overrides || []).filter((o) => o.vehicle_type_id === v.id)}
-                    overridesReady={!!data?.overridesReady}
-                    onEdit={() => setVehicleDialog({ open: true, editing: v })} onChanged={reload} />
-                ))}
-              </tbody>
-            </table>
+          <div className="space-y-4">
+            <div><h3 className="text-sm font-semibold">Role and user assignments</h3><p className="text-xs text-muted-foreground">Choose which roles can use each vehicle, then add individual pricing exceptions where needed.</p></div>
+            <div className="rounded-md border md:overflow-x-auto">
+              <table className="w-full text-sm md:min-w-[720px]">
+                <thead className="hidden bg-muted/40 text-left text-xs font-semibold text-muted-foreground md:table-header-group"><tr><th className="px-4 py-3">Vehicle</th><th className="px-3 py-3">Assigned roles</th><th className="px-3 py-3">Custom users</th><th className="px-3 py-3">Access</th></tr></thead>
+                <tbody>{visibleVehicles.map((v) => {
+                  const allowed = (data?.roles || []).filter((r) => {
+                    const roleLinks = (data?.links || []).filter((link) => link.profile_id === r.id);
+                    return roleLinks.length === 0 || roleLinks.some((link) => link.vehicle_type_id === v.id);
+                  });
+                  return <tr key={v.id} className="block border-t p-4 md:table-row md:p-0"><td className="block py-2 font-semibold md:table-cell md:px-4 md:py-3">{v.name}</td><td className="block py-2 md:table-cell md:px-3 md:py-3"><span className="mb-1 block text-xs font-semibold text-muted-foreground md:hidden">Assigned roles</span><RolePicker vehicleId={v.id} roles={data?.roles || []} links={data?.links || []} allVehicleIds={activeVehicleIds} onChanged={reload} /></td><td className="block py-2 md:table-cell md:px-3 md:py-3"><span className="mb-1 block text-xs font-semibold text-muted-foreground md:hidden">Custom users</span>{v.is_no_vehicle ? <span className="text-muted-foreground">—</span> : <CustomUsers vehicle={v} isFixed={isFixed} emps={data?.emps || []} empName={empName} overrides={(data?.overrides || []).filter((o) => o.vehicle_type_id === v.id)} ready={!!data?.overridesReady} onChanged={reload} />}</td><td className="block py-2 md:table-cell md:px-3 md:py-3"><span className="mb-1 block text-xs font-semibold text-muted-foreground md:hidden">Access</span><span className="inline-flex items-center gap-1 rounded-sm bg-muted px-2 py-1 text-xs font-medium"><Users className="h-3 w-3" />{allowed.length === (data?.roles || []).length ? "All roles" : "Restricted"}</span></td></tr>;
+                })}</tbody>
+              </table>
+            </div>
           </div>
         )}
 
@@ -149,6 +240,14 @@ export default function VehicleTaCard({ method }: Props) {
       <VehicleDialog state={vehicleDialog} vehicles={vehicleTypes} onClose={() => setVehicleDialog({ open: false, editing: null })} onChanged={reload} />
     </Card>
   );
+}
+
+function VehicleStatus({ vehicle, onChanged }: { vehicle: VehicleType; onChanged: () => void }) {
+  const toggle = async (active: boolean) => {
+    const { error } = await supabase.from("vehicle_types" as any).update({ is_active: active }).eq("id", vehicle.id);
+    if (error) toast.error("Could not update vehicle"); else onChanged();
+  };
+  return <label className="flex items-center gap-2"><Switch checked={vehicle.is_active} onCheckedChange={toggle} aria-label={`${vehicle.name} active`} /><span className="text-xs font-medium">{vehicle.is_active ? "Active" : "Inactive"}</span></label>;
 }
 
 /* ---------- small inline money editor ---------- */
@@ -175,7 +274,7 @@ export function MoneyInput({ value, onCommit, disabled, suffix, placeholder }: {
 }
 
 /* ---------- one vehicle row ---------- */
-function VehicleRow({ v, isFixed, rates, roles, links, allVehicleIds, emps, empName, overrides, overridesReady, onEdit, onChanged }: {
+function VehiclePricingRow({ v, isFixed, rates, roles, links, allVehicleIds, emps, empName, overrides, overridesReady, onEdit, onChanged }: {
   v: VehicleType; isFixed: boolean; rates: VehicleRate[]; roles: Role[];
   links: { profile_id: string; vehicle_type_id: string }[]; allVehicleIds: string[]; emps: Emp[]; empName: Map<string, string>;
   overrides: Override[]; overridesReady: boolean; onEdit: () => void; onChanged: () => void;
@@ -213,14 +312,9 @@ function VehicleRow({ v, isFixed, rates, roles, links, allVehicleIds, emps, empN
     onChanged();
   };
 
-  const toggleActive = async (on: boolean) => {
-    const { error } = await supabase.from("vehicle_types" as any).update({ is_active: on }).eq("id", v.id);
-    if (error) toast.error("Could not update vehicle"); else onChanged();
-  };
-
   return (
-    <tr className={cn("border-t align-top", !v.is_active && "bg-muted/10 text-muted-foreground")}>
-      <td className="px-4 py-3">
+    <tr className={cn("block border-t p-4 align-top md:table-row md:p-0", !v.is_active && "bg-muted/10 text-muted-foreground")}>
+      <td className="block py-2 md:table-cell md:px-4 md:py-3">
         <div className="flex items-center gap-3">
           <span className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-md",
             noTa || !v.is_active ? "bg-muted text-muted-foreground" : "bg-info/10 text-info")}><Icon className="h-4 w-4" /></span>
@@ -230,40 +324,36 @@ function VehicleRow({ v, isFixed, rates, roles, links, allVehicleIds, emps, empN
         </div>
       </td>
 
-      {noTa ? (
-        <td className="px-3 py-3 text-xs text-muted-foreground">No vehicle used — no TA that day</td>
-      ) : isFixed ? (
-        <td className="px-3 py-3">
-          <MoneyInput value={v.fixed_ta_amount} onCommit={saveFixed} />
-        </td>
-      ) : (
-        <td className="px-3 py-3">
+      <td className="block py-2 md:table-cell md:px-3 md:py-3">
+        <span className="mb-1 block text-xs font-semibold text-muted-foreground md:hidden">Rate / km</span>
+        {noTa ? <span className="text-xs text-muted-foreground">No TA</span> : (
           <div className="flex items-center gap-1">
-            <MoneyInput value={cur ? cur.per_km_rate : null} suffix="/km" placeholder="Set" onCommit={saveRate} />
+            <MoneyInput value={cur ? cur.per_km_rate : null} disabled={isFixed} suffix="/km" placeholder="Set" onCommit={saveRate} />
             <RateHistory rates={rates} cur={cur} onChanged={onChanged} />
           </div>
-          {!cur && <p className="mt-1 text-xs text-warning">Rate not set</p>}
-        </td>
-      )}
+        )}
+        {!noTa && !cur && <p className="mt-1 text-xs text-warning">Rate not set</p>}
+      </td>
 
-      <td className="px-3 py-3">
+      <td className="block py-2 md:table-cell md:px-3 md:py-3">
+        <span className="mb-1 block text-xs font-semibold text-muted-foreground md:hidden">Fixed price / day</span>
+        {noTa ? <span className="text-xs text-muted-foreground">No TA</span> : <MoneyInput value={v.fixed_ta_amount} disabled={!isFixed} suffix="/day" onCommit={saveFixed} />}
+      </td>
+
+      <td className="block py-2 md:table-cell md:px-3 md:py-3">
+        <span className="mb-1 block text-xs font-semibold text-muted-foreground md:hidden">Assigned roles</span>
         <RolePicker vehicleId={v.id} roles={roles} links={links} allVehicleIds={allVehicleIds} onChanged={onChanged} />
       </td>
 
-      <td className="px-3 py-3">
+      <td className="block py-2 md:table-cell md:px-3 md:py-3">
+        <span className="mb-1 block text-xs font-semibold text-muted-foreground md:hidden">Custom users</span>
         {noTa ? <span className="text-xs text-muted-foreground">—</span> : (
           <CustomUsers vehicle={v} isFixed={isFixed} emps={emps} empName={empName} overrides={overrides} ready={overridesReady} onChanged={onChanged} />
         )}
       </td>
 
-      <td className="px-3 py-3">
-        <label className="flex items-center gap-2">
-          <Switch checked={v.is_active} onCheckedChange={toggleActive} aria-label={`${v.name} on or off`} />
-          <span className={cn("text-xs font-medium", v.is_active ? "text-foreground" : "text-muted-foreground")}>{v.is_active ? "Active" : "Off"}</span>
-        </label>
-      </td>
-
-      <td className="px-3 py-3">
+      <td className="block py-2 md:table-cell md:px-3 md:py-3">
+        <span className="mb-1 block text-xs font-semibold text-muted-foreground md:hidden">Actions</span>
         <div className="flex justify-end gap-1">
           <Button variant="ghost" size="icon" className="h-8 w-8" aria-label={`Edit ${v.name}`} onClick={onEdit}><Pencil className="h-4 w-4" /></Button>
           <DeleteVehicle v={v} onChanged={onChanged} />

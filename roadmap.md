@@ -6,3 +6,4 @@
   - [x] Edge function TS errors (unknown catch types, client generics, PDF buffer, magic-link API)
 - [x] Modernize `/admin/expenses` UI only, remove duplicate navigation, and preserve all expense behavior
 - [x] Prepare a revised frontend-only Expense Master UI plan and visual options from the supplied references; no backend changes
+- [x] Implement the approved Enterprise Vehicle Master UI in Expense Configuration only; no backend changes
