@@ -7,6 +7,7 @@ const h = vi.hoisted(() => ({
   explain: vi.fn(),
   update: vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ error: null }) })),
   expense: null as any,
+  vehicles: [] as any[],
 }));
 
 vi.mock("@/utils/activityTravel", () => ({
@@ -19,6 +20,9 @@ vi.mock("@/integrations/supabase/client", () => ({ supabase: { from: () => ({ up
 vi.mock("@/hooks/useTaRates", () => ({ useTaRates: () => ({ rateFor: () => 5 }) }));
 vi.mock("@/hooks/useActivityTravelExpense", () => ({ useActivityTravelExpense: () => ({ data: h.expense }) }));
 vi.mock("@/utils/signedStorage", () => ({ resolveSignedUrl: vi.fn() }));
+vi.mock("@/hooks/useVehicleTypes", () => ({
+  useVehicleTypes: () => ({ vehicleTypes: h.vehicles, loading: false, refetch: vi.fn() }),
+}));
 
 import ActivityEffortSection from "./ActivityEffortSection";
 
@@ -30,10 +34,11 @@ const activity = {
   manual_distance_km: null, manual_distance_note: null, manual_distance_attachments: [],
 } as never;
 
-const renderIt = () => render(<MemoryRouter><ActivityEffortSection activity={activity} /></MemoryRouter>);
+const renderIt = (extra: Record<string, unknown> = {}) =>
+  render(<MemoryRouter><ActivityEffortSection activity={{ ...(activity as object), ...extra } as never} /></MemoryRouter>);
 
 describe("ActivityEffortSection travel", () => {
-  beforeEach(() => { h.compute.mockReset(); h.explain.mockReset(); h.expense = null; });
+  beforeEach(() => { h.compute.mockReset(); h.explain.mockReset(); h.expense = null; h.vehicles = []; });
 
   it("shows recalculated values immediately, even without a parent refresh", async () => {
     h.compute.mockResolvedValue({ travel_distance_km: 8.6, travel_time_mins: 25, travel_from_type: "attendance", travel_from_activity_id: null, travel_from_at: "x" });
@@ -73,5 +78,42 @@ describe("ActivityEffortSection travel", () => {
     renderIt();
     await waitFor(() => expect(screen.getByText("₹0")).toBeInTheDocument());
     expect(screen.getByText("No vehicle used")).toBeInTheDocument();
+  });
+
+  it("asks for the fare, not the meter reading, when the vehicle is public transport", async () => {
+    h.vehicles = [{ id: "v-cab", name: "Cab", is_fare_based: true }];
+    h.expense = { method: "from_gps", vehicle_id: "v-cab", vehicle_name: "Cab", vehicle_source: "activity", is_no_vehicle: false, km: 6, rate: 0, rate_source: "vehicle", amount: 0 };
+    h.compute.mockResolvedValue(null);
+    h.explain.mockResolvedValue("x");
+    renderIt({ vehicle_type_id: "v-cab" });
+
+    await waitFor(() => expect(screen.getByText(/Fare paid for this trip/)).toBeInTheDocument());
+    expect(screen.queryByText(/enter meter reading distance/)).not.toBeInTheDocument();
+    expect(screen.getByText(/Ticket \/ meter \/ invoice/)).toBeInTheDocument();
+  });
+
+  it("keeps the meter-reading flow for a normal vehicle", async () => {
+    h.vehicles = [{ id: "v1", name: "Car", is_fare_based: false }];
+    h.expense = { method: "from_gps", vehicle_id: "v1", vehicle_name: "Car", vehicle_source: "activity", is_no_vehicle: false, km: 8.6, rate: 25, rate_source: "vehicle", amount: 215 };
+    h.compute.mockResolvedValue(null);
+    h.explain.mockResolvedValue("x");
+    renderIt({ vehicle_type_id: "v1" });
+
+    await waitFor(() => expect(screen.getByText(/enter meter reading distance/)).toBeInTheDocument());
+    expect(screen.queryByText(/Fare paid for this trip/)).not.toBeInTheDocument();
+  });
+
+  it("shows the fare the employee paid instead of km x rate", async () => {
+    h.vehicles = [{ id: "v-bus", name: "Bus", is_fare_based: true }];
+    h.expense = { method: "from_gps", vehicle_id: "v-bus", vehicle_name: "Bus", vehicle_source: "activity", is_no_vehicle: false, km: 12, rate: 7, rate_source: "vehicle", amount: 84 };
+    h.compute.mockResolvedValue(null);
+    h.explain.mockResolvedValue("x");
+    renderIt({ vehicle_type_id: "v-bus", manual_fare_amount: 45 });
+
+    // 12 km x Rs 7 would be Rs 84; the fare must win.
+    // Shown twice: the headline amount and the breakdown row.
+    await waitFor(() => expect(screen.getAllByText("₹45").length).toBeGreaterThan(0));
+    expect(screen.queryByText("₹84")).not.toBeInTheDocument();
+    expect(screen.getByText(/Fare paid · Bus/)).toBeInTheDocument();
   });
 });

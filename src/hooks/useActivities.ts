@@ -92,6 +92,8 @@ export interface Activity {
   manual_distance_km?: number | null;
   manual_distance_note?: string | null;
   manual_distance_attachments?: { url: string; name: string; at: string }[];
+  /** Fare paid for public transport on this leg (bus, cab). */
+  manual_fare_amount?: number | null;
   vehicle_type_id?: string | null;
 
 
@@ -419,6 +421,7 @@ export function useActivities() {
       'status_history', 'photo_urls',
       'travel_distance_km', 'travel_time_mins', 'travel_from_type', 'travel_from_activity_id',
       'travel_from_at', 'manual_distance_km', 'manual_distance_note', 'manual_distance_attachments',
+      'manual_fare_amount',
       'vehicle_type_id',
 
     ];

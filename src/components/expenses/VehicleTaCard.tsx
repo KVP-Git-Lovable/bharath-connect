@@ -282,6 +282,9 @@ function VehiclePricingRow({ v, isFixed, rates, roles, links, allVehicleIds, emp
   const Icon = iconFor(v);
   const cur = activeRate(rates);
   const noTa = v.is_no_vehicle;
+  // Public transport: the fare is entered on the activity, so rate/km and
+  // fixed price do not apply.
+  const fareBased = v.is_fare_based && !noTa;
 
   const saveRate = async (n: number) => {
     const t = today();
@@ -326,18 +329,18 @@ function VehiclePricingRow({ v, isFixed, rates, roles, links, allVehicleIds, emp
 
       <td className="block py-2 md:table-cell md:px-3 md:py-3">
         <span className="mb-1 block text-xs font-semibold text-muted-foreground md:hidden">Rate / km</span>
-        {noTa ? <span className="text-xs text-muted-foreground">No TA</span> : (
+        {noTa ? <span className="text-xs text-muted-foreground">No TA</span> : fareBased ? <span className="text-xs text-muted-foreground">Fare entered per trip</span> : (
           <div className="flex items-center gap-1">
             <MoneyInput value={cur ? cur.per_km_rate : null} disabled={isFixed} suffix="/km" placeholder="Set" onCommit={saveRate} />
             <RateHistory rates={rates} cur={cur} onChanged={onChanged} />
           </div>
         )}
-        {!noTa && !cur && <p className="mt-1 text-xs text-warning">Rate not set</p>}
+        {!noTa && !fareBased && !cur && <p className="mt-1 text-xs text-warning">Rate not set</p>}
       </td>
 
       <td className="block py-2 md:table-cell md:px-3 md:py-3">
         <span className="mb-1 block text-xs font-semibold text-muted-foreground md:hidden">Fixed price / day</span>
-        {noTa ? <span className="text-xs text-muted-foreground">No TA</span> : <MoneyInput value={v.fixed_ta_amount} disabled={!isFixed} suffix="/day" onCommit={saveFixed} />}
+        {noTa || fareBased ? <span className="text-xs text-muted-foreground">{noTa ? "No TA" : "—"}</span> : <MoneyInput value={v.fixed_ta_amount} disabled={!isFixed} suffix="/day" onCommit={saveFixed} />}
       </td>
 
       <td className="block py-2 md:table-cell md:px-3 md:py-3">
@@ -648,14 +651,26 @@ function DeleteVehicle({ v, onChanged }: { v: VehicleType; onChanged: () => void
   );
 }
 
+/** Turns the "column does not exist" error into something an admin can act on. */
+function missingFareColumn(error: { message?: string }) {
+  return /is_fare_based/.test(error?.message || "")
+    ? new Error("Apply the 2026-09-22 public transport migration to use fare-based vehicles")
+    : error;
+}
+
 function VehicleDialog({ state, vehicles, onClose, onChanged }: {
   state: { open: boolean; editing: VehicleType | null }; vehicles: VehicleType[]; onClose: () => void; onChanged: () => void;
 }) {
   const { open, editing } = state;
-  const [f, setF] = useState({ name: "", icon: "car", perKm: true, rate: "", fixed: "" });
+  const [f, setF] = useState({ name: "", icon: "car", perKm: true, fareBased: false, rate: "", fixed: "" });
   const [saving, setSaving] = useState(false);
   useEffect(() => {
-    if (open) setF({ name: editing?.name || "", icon: editing?.icon || "car", perKm: editing ? !editing.is_no_vehicle : true, rate: "", fixed: "" });
+    if (open) setF({
+      name: editing?.name || "", icon: editing?.icon || "car",
+      perKm: editing ? !editing.is_no_vehicle : true,
+      fareBased: editing?.is_fare_based ?? false,
+      rate: "", fixed: "",
+    });
   }, [open, editing]);
 
   const save = async () => {
@@ -664,16 +679,17 @@ function VehicleDialog({ state, vehicles, onClose, onChanged }: {
     if (vehicles.some((v) => v.name.toLowerCase() === name.toLowerCase() && v.id !== editing?.id)) { toast.error("A vehicle with this name already exists"); return; }
     setSaving(true);
     try {
-      const base = { name, icon: f.icon, is_no_vehicle: !f.perKm };
+      const fareBased = f.perKm && f.fareBased;
+      const base = { name, icon: f.icon, is_no_vehicle: !f.perKm, is_fare_based: fareBased };
       if (editing) {
         const { error } = await supabase.from("vehicle_types" as any).update(base).eq("id", editing.id);
-        if (error) throw error;
+        if (error) throw missingFareColumn(error);
       } else {
         const insert: any = { ...base, is_active: true, sort_order: Math.max(0, ...vehicles.map((v) => v.sort_order)) + 1 };
-        if (f.perKm && f.fixed !== "") insert.fixed_ta_amount = Number(f.fixed);
+        if (f.perKm && !fareBased && f.fixed !== "") insert.fixed_ta_amount = Number(f.fixed);
         const { data, error } = await supabase.from("vehicle_types" as any).insert(insert).select("id").single();
-        if (error) throw error;
-        if (f.perKm && f.rate !== "" && Number(f.rate) > 0) {
+        if (error) throw missingFareColumn(error);
+        if (f.perKm && !fareBased && f.rate !== "" && Number(f.rate) > 0) {
           const { error: rErr } = await supabase.from("vehicle_rate_history" as any)
             .insert({ vehicle_type_id: (data as any).id, per_km_rate: Number(f.rate), effective_from: today() } as any);
           if (rErr) throw rErr;
@@ -711,7 +727,23 @@ function VehicleDialog({ state, vehicles, onClose, onChanged }: {
               ))}
             </div>
           </div>
-          {!editing && f.perKm && (
+          {f.perKm && (
+            <div className="flex items-start justify-between gap-3 rounded-md border border-border/70 bg-muted/20 p-3">
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-foreground">Public transport (fare based)</p>
+                <p className="mt-0.5 text-sm text-muted-foreground">
+                  For bus, cab and similar. The employee enters the fare they paid and attaches the
+                  meter or ticket, instead of earning rate per km.
+                </p>
+              </div>
+              <Switch
+                checked={f.fareBased}
+                onCheckedChange={(v) => setF({ ...f, fareBased: v })}
+                aria-label="Public transport, fare based"
+              />
+            </div>
+          )}
+          {!editing && f.perKm && !f.fareBased && (
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5"><Label>Rate (₹/km)</Label><Input type="number" min="0" step="0.5" value={f.rate} onChange={(e) => setF({ ...f, rate: e.target.value })} placeholder="e.g. 12" /></div>
               <div className="space-y-1.5"><Label>Fixed price (₹/day)</Label><Input type="number" min="0" value={f.fixed} onChange={(e) => setF({ ...f, fixed: e.target.value })} placeholder="e.g. 500" /></div>

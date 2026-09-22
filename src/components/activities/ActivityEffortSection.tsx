@@ -18,6 +18,7 @@ import {
 } from "@/utils/activityTravel";
 import { resolveSignedUrl } from "@/utils/signedStorage";
 import { useTaRates } from "@/hooks/useTaRates";
+import { useVehicleTypes } from "@/hooks/useVehicleTypes";
 import { useActivityTravelExpense, type ActivityTravelExpense } from "@/hooks/useActivityTravelExpense";
 import type { Activity } from "@/hooks/useActivities";
 
@@ -70,11 +71,13 @@ function vehicleIcon(name: string | null, noVehicle: boolean) {
   return CarIcon;
 }
 
-function TravelExpenseTile({ exp, km }: { exp: ActivityTravelExpense; km: number | null }) {
+function TravelExpenseTile({ exp, km, fare }: { exp: ActivityTravelExpense; km: number | null; fare: number | null }) {
   const vehicle = exp.vehicle_name || "No vehicle";
   const VIcon = vehicleIcon(exp.vehicle_name, exp.is_no_vehicle);
   const fixed = exp.method === "fixed";
-  const amount = exp.is_no_vehicle ? 0 : fixed ? exp.rate : km != null ? Math.round(km * exp.rate * 100) / 100 : null;
+  const amount = fare != null
+    ? fare
+    : exp.is_no_vehicle ? 0 : fixed ? exp.rate : km != null ? Math.round(km * exp.rate * 100) / 100 : null;
   const source = SOURCE_LABEL[exp.rate_source]?.(vehicle) ?? "";
   const vehicleWhen = exp.vehicle_source === "activity" ? "saved when this activity was checked in"
     : exp.vehicle_source === "day" ? "the vehicle recorded for this day" : "no vehicle was chosen";
@@ -95,7 +98,9 @@ function TravelExpenseTile({ exp, km }: { exp: ActivityTravelExpense; km: number
         </span>
       </div>
       <div className="mt-1.5 space-y-0.5 border-t border-dashed border-amber-300 pt-1.5 text-[11px]">
-        {exp.is_no_vehicle ? (
+        {fare != null ? (
+          <p className="flex justify-between"><span className="text-muted-foreground">Fare paid · {vehicle}</span><span className="font-semibold">{inr(fare)}</span></p>
+        ) : exp.is_no_vehicle ? (
           <p className="flex justify-between"><span className="text-muted-foreground">No vehicle used</span><span className="font-semibold">no TA</span></p>
         ) : fixed ? (
           <>
@@ -129,6 +134,15 @@ export default function ActivityEffortSection({
   const { rateFor } = useTaRates();
   const { data: expense } = useActivityTravelExpense(activity.id);
   const existingProofs = (activity.manual_distance_attachments || []) as TravelProofEntry[];
+
+  // Public transport (bus, cab): the employee paid a fare, so there is no
+  // rate per km to apply. Falls back to the normal km flow when the vehicle is
+  // not marked fare based, or before the 2026-09-22 migration is applied.
+  const { vehicleTypes } = useVehicleTypes(false);
+  const fareBased = !!vehicleTypes.find((v) => v.id === activity.vehicle_type_id)?.is_fare_based;
+  const [fare, setFare] = useState(
+    activity.manual_fare_amount != null ? String(activity.manual_fare_amount) : ""
+  );
 
   const [manualKm, setManualKm] = useState(
     activity.manual_distance_km != null ? String(activity.manual_distance_km) : ""
@@ -286,6 +300,16 @@ export default function ActivityEffortSection({
       toast.error("Attach at least one proof for the manually entered distance");
       return;
     }
+    const fareAmount = fare.trim() === "" ? null : Number(fare);
+    if (fareAmount != null && (!Number.isFinite(fareAmount) || fareAmount < 0)) {
+      toast.error("Enter a valid fare");
+      return;
+    }
+    // A fare is a reimbursement claim, so it needs the ticket or meter photo.
+    if (fareAmount != null && proofs.length === 0) {
+      toast.error("Attach the ticket, meter reading or invoice for the fare");
+      return;
+    }
     setSaving(true);
     try {
       const { error } = await supabase
@@ -294,9 +318,14 @@ export default function ActivityEffortSection({
           manual_distance_km: km,
           manual_distance_note: note.trim() || null,
           manual_distance_attachments: proofs as any,
+          ...(fareBased ? { manual_fare_amount: fareAmount } : {}),
         })
         .eq("id", activity.id);
-      if (error) throw error;
+      if (error) {
+        throw /manual_fare_amount/.test(error.message)
+          ? new Error("Apply the 2026-09-22 public transport migration to save fares")
+          : error;
+      }
       toast.success("Effort details saved");
       onSaved?.();
     } catch (e: any) {
@@ -335,7 +364,7 @@ export default function ActivityEffortSection({
           value={meetingMins != null ? `${meetingMins} min` : "—"}
         />
         {expense ? (
-          <TravelExpenseTile exp={expense} km={effectiveKm} />
+          <TravelExpenseTile exp={expense} km={effectiveKm} fare={activity.manual_fare_amount != null ? Number(activity.manual_fare_amount) : null} />
         ) : (
           <Field
             icon={<IndianRupee className="h-3 w-3" />}
@@ -383,20 +412,41 @@ export default function ActivityEffortSection({
 
       {/* Manual (contested) distance */}
       <div className="space-y-2 rounded-lg border border-dashed p-2.5">
-        <Label className="flex items-center gap-1.5 text-xs">
-          <Gauge className="h-3.5 w-3.5" /> If inaccurate — enter meter reading distance (KM)
-          <Help text="Use this only when the automatic distance is wrong. At least one proof attachment is mandatory." />
-        </Label>
-        <Input
-          type="number"
-          inputMode="decimal"
-          min={0}
-          step="0.1"
-          value={manualKm}
-          onChange={(e) => setManualKm(e.target.value)}
-          placeholder="e.g. 18.4"
-          className="h-9 text-sm"
-        />
+        {fareBased ? (
+          <>
+            <Label className="flex items-center gap-1.5 text-xs">
+              <IndianRupee className="h-3.5 w-3.5" /> Fare paid for this trip (₹)
+              <Help text="Public transport is reimbursed at what you actually paid, not per km. Attach the ticket, meter reading or invoice below." />
+            </Label>
+            <Input
+              type="number"
+              inputMode="decimal"
+              min={0}
+              step="1"
+              value={fare}
+              onChange={(e) => setFare(e.target.value)}
+              placeholder="e.g. 180"
+              className="h-9 text-sm"
+            />
+          </>
+        ) : (
+          <>
+            <Label className="flex items-center gap-1.5 text-xs">
+              <Gauge className="h-3.5 w-3.5" /> If inaccurate — enter meter reading distance (KM)
+              <Help text="Use this only when the automatic distance is wrong. At least one proof attachment is mandatory." />
+            </Label>
+            <Input
+              type="number"
+              inputMode="decimal"
+              min={0}
+              step="0.1"
+              value={manualKm}
+              onChange={(e) => setManualKm(e.target.value)}
+              placeholder="e.g. 18.4"
+              className="h-9 text-sm"
+            />
+          </>
+        )}
         <Textarea
           rows={2}
           value={note}
@@ -408,7 +458,8 @@ export default function ActivityEffortSection({
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
             <p className="text-[11px] font-medium text-muted-foreground">
-              Proof attachments {manualKm.trim() !== "" && <span className="text-destructive">*</span>}
+              {fareBased ? "Ticket / meter / invoice" : "Proof attachments"}{" "}
+              {(fareBased ? fare.trim() !== "" : manualKm.trim() !== "") && <span className="text-destructive">*</span>}
             </p>
             <Button
               type="button"

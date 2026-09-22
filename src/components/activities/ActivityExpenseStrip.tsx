@@ -17,6 +17,7 @@ interface Props {
     id: string;
     travel_distance_km?: number | null;
     manual_distance_km?: number | null;
+    manual_fare_amount?: number | null;
     travel_time_mins?: number | null;
     start_time?: string | null;
     end_time?: string | null;
@@ -47,15 +48,20 @@ export function ActivityExpenseStrip({ activity, className = "" }: Props) {
   const travelMins = activity.travel_time_mins != null ? Number(activity.travel_time_mins) : null;
 
   const fixed = expense?.method === "fixed";
-  const amount = expense
-    ? expense.is_no_vehicle
-      ? 0
-      : fixed
-        ? expense.rate
-        : km != null
-          ? Math.round(km * expense.rate * 100) / 100
-          : null
-    : null;
+  // A public transport fare is what the employee paid, so it wins over the
+  // km x rate the server calculated.
+  const fareAmount = activity.manual_fare_amount != null ? Number(activity.manual_fare_amount) : null;
+  const amount = fareAmount != null
+    ? fareAmount
+    : expense
+      ? expense.is_no_vehicle
+        ? 0
+        : fixed
+          ? expense.rate
+          : km != null
+            ? Math.round(km * expense.rate * 100) / 100
+            : null
+      : null;
 
   // Nothing measured yet — keep the card clean.
   if (km == null && travelMins == null && meetingMins == null && amount == null) return null;
@@ -98,7 +104,9 @@ export function ActivityExpenseStrip({ activity, className = "" }: Props) {
         </span>
       </div>
 
-      {expense && !expense.is_no_vehicle && (
+      {fareAmount != null ? (
+        <p className="mt-0.5 text-right text-[10px] text-muted-foreground">Fare paid</p>
+      ) : expense && !expense.is_no_vehicle && (
         <p className="mt-0.5 text-right text-[10px] text-muted-foreground">
           {fixed ? "Fixed per day" : km != null ? `${km} km × ${inr(expense.rate)}/km` : `${inr(expense.rate)}/km`}
         </p>

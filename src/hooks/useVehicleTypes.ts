@@ -10,6 +10,11 @@ export interface VehicleType {
   sort_order: number;
   /** Fixed TA per day for this vehicle (added 2026-09-17; 0 until the migration is applied). */
   fixed_ta_amount: number;
+  /**
+   * Public transport: the employee enters the fare they paid instead of
+   * earning km x rate. False until the 2026-09-22 migration is applied.
+   */
+  is_fare_based: boolean;
 }
 
 export async function fetchVehicleTypes(): Promise<VehicleType[]> {
@@ -18,7 +23,11 @@ export async function fetchVehicleTypes(): Promise<VehicleType[]> {
     .select("*")
     .order("sort_order");
   if (error) throw error;
-  return ((data || []) as any[]).map((v) => ({ ...v, fixed_ta_amount: Number(v.fixed_ta_amount || 0) })) as VehicleType[];
+  return ((data || []) as any[]).map((v) => ({
+    ...v,
+    fixed_ta_amount: Number(v.fixed_ta_amount || 0),
+    is_fare_based: v.is_fare_based === true,
+  })) as VehicleType[];
 }
 
 export function useVehicleTypes(activeOnly = true) {

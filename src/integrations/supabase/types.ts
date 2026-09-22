@@ -83,6 +83,7 @@ export type Database = {
           manual_distance_attachments: Json
           manual_distance_km: number | null
           manual_distance_note: string | null
+          manual_fare_amount: number | null
           milestone_id: string | null
           next_follow_up_date: string | null
           opportunity_id: string | null
@@ -135,6 +136,7 @@ export type Database = {
           manual_distance_attachments?: Json
           manual_distance_km?: number | null
           manual_distance_note?: string | null
+          manual_fare_amount?: number | null
           milestone_id?: string | null
           next_follow_up_date?: string | null
           opportunity_id?: string | null
@@ -187,6 +189,7 @@ export type Database = {
           manual_distance_attachments?: Json
           manual_distance_km?: number | null
           manual_distance_note?: string | null
+          manual_fare_amount?: number | null
           milestone_id?: string | null
           next_follow_up_date?: string | null
           opportunity_id?: string | null
@@ -6573,6 +6576,7 @@ export type Database = {
           icon: string | null
           id: string
           is_active: boolean
+          is_fare_based: boolean
           is_no_vehicle: boolean
           name: string
           sort_order: number
@@ -6584,6 +6588,7 @@ export type Database = {
           icon?: string | null
           id?: string
           is_active?: boolean
+          is_fare_based?: boolean
           is_no_vehicle?: boolean
           name: string
           sort_order?: number
@@ -6595,6 +6600,7 @@ export type Database = {
           icon?: string | null
           id?: string
           is_active?: boolean
+          is_fare_based?: boolean
           is_no_vehicle?: boolean
           name?: string
           sort_order?: number
