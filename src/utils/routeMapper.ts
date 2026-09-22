@@ -56,11 +56,11 @@ export async function getRouteForTrack(points: RouteCoordinate[]): Promise<[numb
         routedSegments.push(...route.coordinates.slice(0, -1));
       } else {
         // Fallback to straight line if routing fails
-        routedSegments.push([points[i].longitude, points[i].latitude]);
+        routedSegments.push([points[i]!.longitude, points[i]!.latitude]);
       }
     }
     // Add the final point
-    routedSegments.push([points[points.length - 1].longitude, points[points.length - 1].latitude]);
+    routedSegments.push([points[points.length - 1]!.longitude, points[points.length - 1]!.latitude]);
     return routedSegments;
   }
 
@@ -74,10 +74,10 @@ export async function getRouteForTrack(points: RouteCoordinate[]): Promise<[numb
     if (route) {
       routedSegments.push(...route.coordinates.slice(0, -1));
     } else {
-      routedSegments.push([sampledPoints[i].longitude, sampledPoints[i].latitude]);
+      routedSegments.push([sampledPoints[i]!.longitude, sampledPoints[i]!.latitude]);
     }
   }
-  routedSegments.push([sampledPoints[sampledPoints.length - 1].longitude, sampledPoints[sampledPoints.length - 1].latitude]);
+  routedSegments.push([sampledPoints[sampledPoints.length - 1]!.longitude, sampledPoints[sampledPoints.length - 1]!.latitude]);
 
   return routedSegments;
 }

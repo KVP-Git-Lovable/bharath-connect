@@ -76,7 +76,7 @@ export default function ViewBar({
   const CurrentIcon = DISPLAY_OPTIONS.find((d) => d.value === display)?.icon ?? Table2;
 
   return (
-    <div className="flex flex-col gap-3 rounded-xl border border-border bg-card px-3 py-2 shadow-sm lg:flex-row lg:items-center lg:justify-between">
+    <div className="flex flex-col gap-3 rounded-xl border border-border bg-card px-3 py-2 shadow-xs lg:flex-row lg:items-center lg:justify-between">
       <div className="flex min-w-0 items-center gap-2">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -106,7 +106,7 @@ export default function ViewBar({
                   type="button"
                   title={v.is_default ? "Unpin this view" : "Pin as default view"}
                   aria-label={v.is_default ? "Unpin this view" : "Pin as default view"}
-                  className="rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-primary"
+                  className="rounded-sm p-0.5 text-muted-foreground hover:bg-muted hover:text-primary"
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();

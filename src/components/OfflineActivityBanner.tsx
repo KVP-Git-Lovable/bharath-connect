@@ -48,7 +48,7 @@ export default function OfflineActivityBanner() {
   }
 
   return (
-    <div className={`${bg} text-white text-xs px-3 py-1.5 flex items-center justify-center gap-2 shadow-sm`}>
+    <div className={`${bg} text-white text-xs px-3 py-1.5 flex items-center justify-center gap-2 shadow-xs`}>
       {content}
     </div>
   );

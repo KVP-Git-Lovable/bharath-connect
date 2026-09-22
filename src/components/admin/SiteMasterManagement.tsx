@@ -114,7 +114,7 @@ function UserMultiSelect({
             <ChevronsUpDown className="h-4 w-4 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+        <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
           <Command>
             <CommandInput placeholder="Search users..." />
             <CommandList>
@@ -174,8 +174,8 @@ export default function SiteMasterManagement() {
     (data || []).forEach((m: any) => {
       if (m.parent_id) return;
       if (!acc[m.site_id]) acc[m.site_id] = { sum: 0, count: 0 };
-      acc[m.site_id].sum += m.percent_complete ?? 0;
-      acc[m.site_id].count += 1;
+      acc[m.site_id]!.sum += m.percent_complete ?? 0;
+      acc[m.site_id]!.count += 1;
     });
     const stats: Record<string, { avg: number; count: number }> = {};
     Object.entries(acc).forEach(([id, v]) => {
@@ -194,7 +194,7 @@ export default function SiteMasterManagement() {
     const map: Record<string, string[]> = {};
     (data || []).forEach((a: any) => {
       if (!map[a.site_id]) map[a.site_id] = [];
-      map[a.site_id].push(a.user_id);
+      map[a.site_id]!.push(a.user_id);
     });
     setSiteAssignments(map);
   }, []);

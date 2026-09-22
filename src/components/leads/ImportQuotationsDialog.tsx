@@ -58,8 +58,8 @@ export default function ImportQuotationsDialog({ open, onOpenChange, onImported 
         let leadId = group.existingLeadId;
         if (!leadId) {
           const lastRow = group.rows[group.rows.length - 1];
-          const followedByUser = resolveUser(users, lastRow.followed_by_raw);
-          const status = resolveStatus(statuses, lastRow.status_raw);
+          const followedByUser = resolveUser(users, lastRow!.followed_by_raw);
+          const status = resolveStatus(statuses, lastRow!.status_raw);
           const { data: newLead, error: leadErr } = await supabase
             .from("leads")
             .insert({

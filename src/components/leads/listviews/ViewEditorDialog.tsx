@@ -54,7 +54,7 @@ function MultiPicker({
         <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search..." className="h-8 text-sm mb-2" />
         <div className="max-h-56 overflow-y-auto space-y-0.5">
           {shown.map((o) => (
-            <label key={o.value} className="flex items-center gap-2 text-sm py-1 px-1 rounded hover:bg-muted cursor-pointer">
+            <label key={o.value} className="flex items-center gap-2 text-sm py-1 px-1 rounded-sm hover:bg-muted cursor-pointer">
               <Checkbox checked={values.includes(o.value)} onCheckedChange={() => toggle(o.value)} />
               <span className="truncate">{o.label}</span>
             </label>
@@ -94,7 +94,7 @@ function FieldSelect({ value, onChange }: { value: string; onChange: (key: strin
             <button
               key={f.key}
               type="button"
-              className={`w-full text-left px-2 py-1.5 text-sm rounded truncate ${
+              className={`w-full text-left px-2 py-1.5 text-sm rounded-sm truncate ${
                 f.key === value ? "bg-primary text-primary-foreground" : "hover:bg-muted"
               }`}
               onClick={() => { onChange(f.key); setOpen(false); setQ(""); }}
@@ -349,7 +349,7 @@ export default function ViewEditorDialog({ open, onOpenChange, view, onSave, pic
                         value={c.field}
                         onChange={(v) => {
                           const nd = fieldDef(v);
-                          const defaultOp = OPERATORS[nd?.type ?? "text"][0].value;
+                          const defaultOp = OPERATORS[nd?.type ?? "text"][0]!.value;
                           updateCond(i, { field: v, operator: defaultOp, value: "", value2: "", values: [] });
                         }}
                       />

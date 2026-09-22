@@ -158,11 +158,11 @@ export default function SubscriptionEditorDialog({
     };
     // Snapshot the chosen saved report's filters/columns/charts for recipients.
     if (form.savedReportId === "none" || (subscription && subscription.module !== form.module && form.savedReportId === "keep")) {
-      values.report_config = {};
-      values.saved_report_name = null;
+      values['report_config'] = {};
+      values['saved_report_name'] = null;
     } else if (saved) {
-      values.report_config = saved.config ?? {};
-      values.saved_report_name = saved.name;
+      values['report_config'] = saved.config ?? {};
+      values['saved_report_name'] = saved.name;
     }
     try {
       await save.mutateAsync({ id: subscription?.id, values: values as never });
@@ -313,7 +313,7 @@ export default function SubscriptionEditorDialog({
                 </div>
                 <div className="max-h-44 overflow-y-auto p-1">
                   {filteredPeople.map((u) => (
-                    <label key={u.id} className="flex items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-muted/50 cursor-pointer">
+                    <label key={u.id} className="flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-muted/50 cursor-pointer">
                       <Checkbox checked={form.recipient_user_ids.includes(u.id)} onCheckedChange={() => togglePerson(u.id)} />
                       {u.name}
                     </label>

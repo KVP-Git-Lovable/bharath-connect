@@ -176,7 +176,7 @@ export async function generateReportPdf(args: GenerateReportPdfArgs): Promise<vo
   const colWidths = args.columns.map((c) => (c.width / totalWeight) * usableW);
   args.columns.forEach((_, i) => {
     colX.push(acc);
-    acc += colWidths[i];
+    acc += colWidths[i]!;
   });
 
   const drawHeader = () => {
@@ -186,7 +186,7 @@ export async function generateReportPdf(args: GenerateReportPdfArgs): Promise<vo
     doc.setFontSize(8);
     doc.setTextColor(255, 255, 255);
     args.columns.forEach((c, i) => {
-      const cx = c.align === "right" ? colX[i] + colWidths[i] - 2 : colX[i] + 2;
+      const cx = c.align === "right" ? colX[i]! + colWidths[i]! - 2 : colX[i]! + 2;
       doc.text(pdfText(c.header), cx, y + 4.7, { align: c.align === "right" ? "right" : "left" });
     });
     y += 7;
@@ -201,7 +201,7 @@ export async function generateReportPdf(args: GenerateReportPdfArgs): Promise<vo
   args.rows.forEach((row, idx) => {
     // compute row height based on wrapped cells
     const wrapped = row.map((cell, i) =>
-      doc.splitTextToSize(pdfText(cell), colWidths[i] - 3)
+      doc.splitTextToSize(pdfText(cell), colWidths[i]! - 3)
     );
     const rowLines = Math.max(...wrapped.map((w) => w.length), 1);
     const rowH = rowLines * 4 + 2;
@@ -221,8 +221,8 @@ export async function generateReportPdf(args: GenerateReportPdfArgs): Promise<vo
     }
 
     wrapped.forEach((cellLines, i) => {
-      const align = args.columns[i].align;
-      const cx = align === "right" ? colX[i] + colWidths[i] - 2 : colX[i] + 2;
+      const align = args.columns[i]!.align;
+      const cx = align === "right" ? colX[i]! + colWidths[i]! - 2 : colX[i]! + 2;
       doc.text(cellLines, cx, y + 4, { align: align === "right" ? "right" : "left" });
     });
     y += rowH;

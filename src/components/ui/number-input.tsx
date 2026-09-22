@@ -6,7 +6,7 @@ type BaseProps = Omit<React.ComponentProps<typeof Input>, "value" | "onChange" |
 export interface NumberInputProps extends BaseProps {
   value: number | null | undefined;
   onValueChange: (value: number) => void;
-  /** Value applied on blur if the field is left empty. Defaults to 0. */
+  /** Value applied on blur-sm if the field is left empty. Defaults to 0. */
   emptyValue?: number;
   allowDecimal?: boolean;
 }

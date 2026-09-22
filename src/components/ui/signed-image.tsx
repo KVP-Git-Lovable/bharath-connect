@@ -24,7 +24,7 @@ export function useSignedStorageUrl(bucket: string, value?: string | null) {
   return url;
 }
 
-interface SignedAvatarImageProps extends React.ComponentPropsWithoutRef<typeof AvatarImage> {
+interface SignedAvatarImageProps extends Omit<React.ComponentPropsWithoutRef<typeof AvatarImage>, "src"> {
   src?: string | null;
   bucket?: string;
 }
@@ -36,7 +36,7 @@ export function SignedAvatarImage({ src, bucket = "employee-photos", ...props }:
   return <AvatarImage {...props} src={signed} />;
 }
 
-interface SignedImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
+interface SignedImageProps extends Omit<React.ImgHTMLAttributes<HTMLImageElement>, "src"> {
   src?: string | null;
   bucket?: string;
 }
@@ -48,7 +48,7 @@ export function SignedImage({ src, bucket = "employee-photos", ...props }: Signe
   return <img {...props} src={signed} />;
 }
 
-interface SignedAudioProps extends React.AudioHTMLAttributes<HTMLAudioElement> {
+interface SignedAudioProps extends Omit<React.AudioHTMLAttributes<HTMLAudioElement>, "src"> {
   src?: string | null;
   bucket?: string;
 }

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "@/lib/router-compat";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -249,7 +249,7 @@ export default function LeadDetail() {
                         setOwnerSearch("");
                         await save.mutateAsync({ id: lead.id, owner_id: u.id });
                       }}
-                      className={`flex w-full items-center rounded px-2 py-1.5 text-left text-sm hover:bg-muted ${u.id === (lead as any).owner_id ? "font-semibold text-primary" : ""}`}
+                      className={`flex w-full items-center rounded-sm px-2 py-1.5 text-left text-sm hover:bg-muted ${u.id === (lead as any).owner_id ? "font-semibold text-primary" : ""}`}
                     >
                       {u.name}
                     </button>

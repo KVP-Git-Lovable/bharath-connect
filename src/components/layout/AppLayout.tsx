@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Outlet, useNavigate } from "react-router-dom";
+import { Outlet, useNavigate } from "@/lib/router-compat";
 import { useQueryClient } from "@tanstack/react-query";
 import { AppHeader } from "./AppHeader";
 import { BottomNav } from "./BottomNav";

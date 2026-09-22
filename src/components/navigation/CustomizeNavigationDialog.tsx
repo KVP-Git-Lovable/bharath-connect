@@ -113,7 +113,7 @@ export default function CustomizeNavigationDialog({ open, onClose, allItems, pre
               <p className="text-sm font-semibold">{group.name}</p>
               <div className="flex items-center gap-1">
                 <span className="text-xs text-muted-foreground">{group.items.length} items</span>
-                <button onClick={() => deleteGroup(group.id)} className="p-1 hover:bg-destructive/10 rounded">
+                <button onClick={() => deleteGroup(group.id)} className="p-1 hover:bg-destructive/10 rounded-sm">
                   <X className="h-3.5 w-3.5 text-destructive" />
                 </button>
               </div>
@@ -161,14 +161,14 @@ export default function CustomizeNavigationDialog({ open, onClose, allItems, pre
                     <button
                       onClick={() => moveItem(index, -1)}
                       disabled={index === 0}
-                      className="p-1 rounded hover:bg-muted disabled:opacity-30"
+                      className="p-1 rounded-sm hover:bg-muted disabled:opacity-30"
                     >
                       <ChevronUp className="h-4 w-4" />
                     </button>
                     <button
                       onClick={() => moveItem(index, 1)}
                       disabled={index === itemOrder.length - 1}
-                      className="p-1 rounded hover:bg-muted disabled:opacity-30"
+                      className="p-1 rounded-sm hover:bg-muted disabled:opacity-30"
                     >
                       <ChevronDown className="h-4 w-4" />
                     </button>

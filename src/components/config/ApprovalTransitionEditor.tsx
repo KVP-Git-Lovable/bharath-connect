@@ -36,7 +36,7 @@ function RolePicker({
         {roles.map((r) => {
           const active = selected.includes(r.name);
           return (
-            <button type="button" key={r.id} onClick={() => toggle(r.name)} className="focus:outline-none">
+            <button type="button" key={r.id} onClick={() => toggle(r.name)} className="focus:outline-hidden">
               <Badge variant={active ? "default" : "outline"} className="cursor-pointer">
                 {active && <Checkbox checked className="mr-1 h-3 w-3 pointer-events-none" />}
                 {r.name}

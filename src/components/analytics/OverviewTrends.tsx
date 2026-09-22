@@ -81,7 +81,7 @@ function TrendCard({ spec }: { spec: CardSpec }) {
                 cursor={{ stroke: spec.color, strokeWidth: 1, opacity: 0.4 }}
                 content={({ active, payload }) => {
                   if (!active || !payload?.length) return null;
-                  const p = payload[0].payload as WeekPoint;
+                  const p = payload[0]!.payload as WeekPoint;
                   return (
                     <div className="rounded-lg border bg-background px-2.5 py-1.5 text-xs shadow-md">
                       <p className="font-semibold">{p.week}</p>

@@ -47,24 +47,24 @@ export async function flushActivityQueue(force = false): Promise<void> {
     for (let i = 0; i < pending.length; i++) {
       const item = pending[i];
       setState({ progress: { current: i + 1, total: pending.length } });
-      await updateQueueItem(item.client_uuid, { status: "syncing", error: null });
+      await updateQueueItem(item!.client_uuid, { status: "syncing", error: null });
       try {
         // Upload audio if present
-        const payload = { ...item.payload };
-        if (item.audio) {
-          const fileName = `${item.optimistic_user_id}/${item.created_at}.${item.audio.fileExtension}`;
+        const payload = { ...item!.payload };
+        if (item!.audio) {
+          const fileName = `${item!.optimistic_user_id}/${item!.created_at}.${item!.audio.fileExtension}`;
           const { error: upErr } = await supabase.storage
             .from("activity-audio")
-            .upload(fileName, item.audio.blob, { contentType: item.audio.mimeType });
+            .upload(fileName, item!.audio.blob, { contentType: item!.audio.mimeType });
           if (upErr && !`${upErr.message}`.toLowerCase().includes("exists")) throw upErr;
           const { data: urlData } = supabase.storage.from("activity-audio").getPublicUrl(fileName);
-          payload.attachment_urls = [...(payload.attachment_urls || []), urlData.publicUrl];
+          payload['attachment_urls'] = [...(payload['attachment_urls'] || []), urlData.publicUrl];
         }
 
         // Idempotent insert via upsert on client_uuid.
         const insertRow: any = {
-          user_id: item.target_user_id || item.optimistic_user_id,
-          client_uuid: item.client_uuid,
+          user_id: item!.target_user_id || item!.optimistic_user_id,
+          client_uuid: item!.client_uuid,
           ...payload,
         };
 
@@ -74,13 +74,13 @@ export async function flushActivityQueue(force = false): Promise<void> {
 
         if (error) throw error;
 
-        await removeFromQueue(item.client_uuid);
+        await removeFromQueue(item!.client_uuid);
       } catch (err: any) {
         const message = err?.message || "Sync failed";
-        await updateQueueItem(item.client_uuid, {
+        await updateQueueItem(item!.client_uuid, {
           status: "failed",
           error: message,
-          attempts: (item.attempts || 0) + 1,
+          attempts: (item!.attempts || 0) + 1,
         });
         // Continue with next item; don't abort the batch on validation errors.
       }

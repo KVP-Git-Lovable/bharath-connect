@@ -50,7 +50,7 @@ export default function IOSInstallPrompt({ open, onClose }: Props) {
                 </span>
                 <div className="flex-1">
                   <p className="text-sm font-medium">
-                    Tap the <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-muted">
+                    Tap the <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-sm bg-muted">
                       <Share className="h-3.5 w-3.5" /> Share
                     </span> button in Safari
                   </p>
@@ -63,7 +63,7 @@ export default function IOSInstallPrompt({ open, onClose }: Props) {
                 </span>
                 <div className="flex-1">
                   <p className="text-sm font-medium">
-                    Tap <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-muted">
+                    Tap <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-sm bg-muted">
                       <Plus className="h-3.5 w-3.5" /> Add to Home Screen
                     </span>
                   </p>

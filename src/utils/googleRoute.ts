@@ -90,10 +90,10 @@ function legMeters(points: RoutePoint[]): number {
   let m = 0;
   for (let i = 1; i < points.length; i++) {
     m += haversineMeters(
-      points[i - 1].latitude,
-      points[i - 1].longitude,
-      points[i].latitude,
-      points[i].longitude
+      points[i - 1]!.latitude,
+      points[i - 1]!.longitude,
+      points[i]!.latitude,
+      points[i]!.longitude
     );
   }
   return m;
@@ -196,8 +196,8 @@ export async function getSnappedRoute(segments: RoutePoint[][]): Promise<Snapped
       if (s > 0) {
         // Bridge the hole between the previous segment and this one.
         const prevSeg = nonEmpty[s - 1];
-        const from = prevSeg[prevSeg.length - 1];
-        const to = segment[0];
+        const from = prevSeg![prevSeg!.length - 1];
+        const to = segment![0];
         if (!isBridgeable(from, to)) {
           // Implausible as a road journey — keep the line broken and add nothing.
           path.push(toLatLng(to));
@@ -209,15 +209,15 @@ export async function getSnappedRoute(segments: RoutePoint[][]): Promise<Snapped
           estimatedMeters += bridge.meters;
           if (!bridge.snapped) allSnapped = false;
         } else {
-          const straight = haversineMeters(from.latitude, from.longitude, to.latitude, to.longitude);
+          const straight = haversineMeters(from!.latitude, from!.longitude, to!.latitude, to!.longitude);
           estimatedMeters += straight;
           path.push(toLatLng(to));
           allSnapped = false;
         }
       }
 
-      if (segment.length < 2) {
-        path.push(toLatLng(segment[0]));
+      if (segment!.length < 2) {
+        path.push(toLatLng(segment![0]));
         continue;
       }
 
@@ -225,8 +225,8 @@ export async function getSnappedRoute(segments: RoutePoint[][]): Promise<Snapped
       // seam leg is measured exactly once; drop the duplicated seam vertex
       // from the drawn path.
       let firstBatch = true;
-      for (let i = 0; i < segment.length - 1; i += SNAP_BATCH - 1) {
-        const batch = segment.slice(i, i + SNAP_BATCH);
+      for (let i = 0; i < segment!.length - 1; i += SNAP_BATCH - 1) {
+        const batch = segment!.slice(i, i + SNAP_BATCH);
         if (batch.length < 2) break;
         if (calls >= MAX_CALLS) {
           path.push(...batch.slice(firstBatch ? 0 : 1).map(toLatLng));

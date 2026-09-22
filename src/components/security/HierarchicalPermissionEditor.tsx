@@ -51,7 +51,7 @@ export default function HierarchicalPermissionEditor({ permissions, definitions,
       updated[objectName] = { ...updated[objectName], [field]: value };
     }
     Object.keys(updated).forEach((key) => {
-      if (updated[key].parentModule === objectName) {
+      if (updated[key]!.parentModule === objectName) {
         updated[key] = { ...updated[key], [field]: value };
       }
     });
@@ -71,7 +71,7 @@ export default function HierarchicalPermissionEditor({ permissions, definitions,
     };
     if (updated[objectName]) setAll(objectName);
     Object.keys(updated).forEach((key) => {
-      if (updated[key].parentModule === objectName) setAll(key);
+      if (updated[key]!.parentModule === objectName) setAll(key);
     });
     onChange(updated);
   };

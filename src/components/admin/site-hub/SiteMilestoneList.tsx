@@ -527,8 +527,8 @@ function MilestoneCard({
                 disabled={!clickable}
                 onClick={() => onOpenActivity?.(a)}
                 className={cn(
-                  "w-full text-left text-[11px] rounded bg-muted/40 px-2 py-1.5 transition-colors",
-                  clickable && "cursor-pointer hover:bg-muted focus:outline-none focus:ring-1 focus:ring-primary/40"
+                  "w-full text-left text-[11px] rounded-sm bg-muted/40 px-2 py-1.5 transition-colors",
+                  clickable && "cursor-pointer hover:bg-muted focus:outline-hidden focus:ring-1 focus:ring-primary/40"
                 )}
               >
                 <div className="font-medium truncate">{a.activity_name}</div>
@@ -632,7 +632,7 @@ function MilestoneCard({
               <p className="text-[11px] text-muted-foreground italic">No comments yet.</p>
             ) : (
               cardComments.map((c) => (
-                <div key={c.id} className="text-[11px] bg-muted/40 rounded px-2 py-1.5 group">
+                <div key={c.id} className="text-[11px] bg-muted/40 rounded-sm px-2 py-1.5 group">
                   <div className="flex justify-between items-start gap-2">
                     <span className="font-medium">{c.author_name || "User"}</span>
                     <div className="flex items-center gap-1.5 shrink-0">

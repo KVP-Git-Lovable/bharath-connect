@@ -100,16 +100,16 @@ const offlineSnap = async (segments: TrackPoint[][]) => {
   for (const seg of segments) {
     for (let i = 1; i < seg.length; i++) {
       tracked += haversineMeters(
-        seg[i - 1].latitude, seg[i - 1].longitude,
-        seg[i].latitude, seg[i].longitude
+        seg[i - 1]!.latitude, seg[i - 1]!.longitude,
+        seg[i]!.latitude, seg[i]!.longitude
       );
     }
   }
   let estimated = 0;
   for (let s = 1; s < segments.length; s++) {
-    const a = segments[s - 1][segments[s - 1].length - 1];
-    const b = segments[s][0];
-    estimated += haversineMeters(a.latitude, a.longitude, b.latitude, b.longitude);
+    const a = segments[s - 1]![segments[s - 1]!.length - 1];
+    const b = segments[s]![0];
+    estimated += haversineMeters(a!.latitude, a!.longitude, b!.latitude, b!.longitude);
   }
   return {
     distanceMeters: tracked + estimated,

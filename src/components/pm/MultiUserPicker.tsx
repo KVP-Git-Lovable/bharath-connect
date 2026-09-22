@@ -67,7 +67,7 @@ export function MultiUserPicker({ label, selectedUsers, onAdd, onRemove, compact
             <button
               type="button"
               onClick={() => setShowSearch(true)}
-              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground px-1 py-1 rounded transition-colors"
+              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground px-1 py-1 rounded-sm transition-colors"
             >
               <Plus className="w-3 h-3" /> Add
             </button>
@@ -80,7 +80,7 @@ export function MultiUserPicker({ label, selectedUsers, onAdd, onRemove, compact
                     value={query}
                     onChange={e => setQuery(e.target.value)}
                     placeholder="Search users..."
-                    className="flex-1 text-sm bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground/50"
+                    className="flex-1 text-sm bg-transparent border-none outline-hidden text-foreground placeholder:text-muted-foreground/50"
                   />
                 </div>
                 {results.map(u => (
@@ -88,7 +88,7 @@ export function MultiUserPicker({ label, selectedUsers, onAdd, onRemove, compact
                     key={u.id}
                     type="button"
                     onClick={() => { onAdd(u); setQuery(""); }}
-                    className="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted transition-colors"
+                    className="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded-sm hover:bg-muted transition-colors"
                   >
                     <div className="w-5 h-5 rounded-full bg-primary/15 flex items-center justify-center text-primary text-[10px] font-semibold">
                       {u.full_name?.charAt(0) ?? "?"}
@@ -140,14 +140,14 @@ export function MultiUserPicker({ label, selectedUsers, onAdd, onRemove, compact
                 value={query}
                 onChange={e => setQuery(e.target.value)}
                 placeholder="Search users..."
-                className="flex-1 text-sm bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground/50"
+                className="flex-1 text-sm bg-transparent border-none outline-hidden text-foreground placeholder:text-muted-foreground/50"
               />
             </div>
             {results.map(u => (
               <button
                 key={u.id}
                 onClick={() => { onAdd(u); setQuery(""); }}
-                className="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted transition-colors"
+                className="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded-sm hover:bg-muted transition-colors"
               >
                 <div className="w-5 h-5 rounded-full bg-primary/15 flex items-center justify-center text-primary text-[10px] font-semibold">
                   {u.full_name?.charAt(0) ?? "?"}

@@ -118,7 +118,7 @@ export function TaskTimesheetSection({ taskId, projectId }: Props) {
   if (isLoading) {
     return (
       <div className="space-y-2">
-        <div className="h-20 bg-muted animate-pulse rounded" />
+        <div className="h-20 bg-muted animate-pulse rounded-sm" />
       </div>
     );
   }

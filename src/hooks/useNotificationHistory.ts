@@ -55,7 +55,7 @@ export function useNotificationHistory(filters: HistoryFilters, page: number, pa
       });
       if (error) throw error;
       const rows = (data || []) as HistoryRow[];
-      return { rows, total: rows.length ? Number(rows[0].total_count) : 0 };
+      return { rows, total: rows.length ? Number(rows[0]!.total_count) : 0 };
     },
   });
 }

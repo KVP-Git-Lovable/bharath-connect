@@ -146,7 +146,7 @@ export default function VehicleTaCard({
               className="h-auto min-h-14 justify-start gap-3 px-3 py-2 text-left"
               onClick={() => setStage(item.value)}
             >
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-sm border border-current/20 text-xs font-semibold">{index + 1}</span>
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xs border border-current/20 text-xs font-semibold">{index + 1}</span>
               <span className="min-w-0">
                 <span className="block text-sm font-semibold">{item.label}</span>
                 <span className="block truncate text-xs opacity-75">{item.description}</span>
@@ -195,7 +195,7 @@ export default function VehicleTaCard({
               <div className="grid gap-3 p-4 sm:grid-cols-[1fr_1fr_1fr_1fr_auto] sm:items-end">
                 <div><p className="mb-2 text-xs font-semibold text-muted-foreground">Rate / km</p><MoneyInput value={defaultRate} disabled={isFixed} suffix="/km" onCommit={onDefaultRateChange} /></div>
                 <div><p className="mb-2 text-xs font-semibold text-muted-foreground">Fixed price / day</p><MoneyInput value={defaultFixed} disabled={!isFixed} suffix="/day" onCommit={onDefaultFixedChange} /></div>
-                <div><p className="mb-2 text-xs font-semibold text-muted-foreground">Assigned roles</p><span className="inline-flex rounded-sm bg-primary/10 px-2 py-1 text-xs font-semibold text-primary">All roles</span></div>
+                <div><p className="mb-2 text-xs font-semibold text-muted-foreground">Assigned roles</p><span className="inline-flex rounded-xs bg-primary/10 px-2 py-1 text-xs font-semibold text-primary">All roles</span></div>
                 <div><p className="mb-2 text-xs font-semibold text-muted-foreground">Custom users</p><span className="text-sm text-muted-foreground">None</span></div>
                 <div><p className="mb-2 text-xs font-semibold text-muted-foreground">Actions</p><span className="inline-flex h-9 items-center text-xs text-muted-foreground">Default</span></div>
               </div>
@@ -228,7 +228,7 @@ export default function VehicleTaCard({
                     const roleLinks = (data?.links || []).filter((link) => link.profile_id === r.id);
                     return roleLinks.length === 0 || roleLinks.some((link) => link.vehicle_type_id === v.id);
                   });
-                  return <tr key={v.id} className="block border-t p-4 md:table-row md:p-0"><td className="block py-2 font-semibold md:table-cell md:px-4 md:py-3">{v.name}</td><td className="block py-2 md:table-cell md:px-3 md:py-3"><span className="mb-1 block text-xs font-semibold text-muted-foreground md:hidden">Assigned roles</span><RolePicker vehicleId={v.id} roles={data?.roles || []} links={data?.links || []} allVehicleIds={activeVehicleIds} onChanged={reload} /></td><td className="block py-2 md:table-cell md:px-3 md:py-3"><span className="mb-1 block text-xs font-semibold text-muted-foreground md:hidden">Custom users</span>{v.is_no_vehicle ? <span className="text-muted-foreground">—</span> : <CustomUsers vehicle={v} isFixed={isFixed} emps={data?.emps || []} empName={empName} overrides={(data?.overrides || []).filter((o) => o.vehicle_type_id === v.id)} ready={!!data?.overridesReady} onChanged={reload} />}</td><td className="block py-2 md:table-cell md:px-3 md:py-3"><span className="mb-1 block text-xs font-semibold text-muted-foreground md:hidden">Access</span><span className="inline-flex items-center gap-1 rounded-sm bg-muted px-2 py-1 text-xs font-medium"><Users className="h-3 w-3" />{allowed.length === (data?.roles || []).length ? "All roles" : "Restricted"}</span></td></tr>;
+                  return <tr key={v.id} className="block border-t p-4 md:table-row md:p-0"><td className="block py-2 font-semibold md:table-cell md:px-4 md:py-3">{v.name}</td><td className="block py-2 md:table-cell md:px-3 md:py-3"><span className="mb-1 block text-xs font-semibold text-muted-foreground md:hidden">Assigned roles</span><RolePicker vehicleId={v.id} roles={data?.roles || []} links={data?.links || []} allVehicleIds={activeVehicleIds} onChanged={reload} /></td><td className="block py-2 md:table-cell md:px-3 md:py-3"><span className="mb-1 block text-xs font-semibold text-muted-foreground md:hidden">Custom users</span>{v.is_no_vehicle ? <span className="text-muted-foreground">—</span> : <CustomUsers vehicle={v} isFixed={isFixed} emps={data?.emps || []} empName={empName} overrides={(data?.overrides || []).filter((o) => o.vehicle_type_id === v.id)} ready={!!data?.overridesReady} onChanged={reload} />}</td><td className="block py-2 md:table-cell md:px-3 md:py-3"><span className="mb-1 block text-xs font-semibold text-muted-foreground md:hidden">Access</span><span className="inline-flex items-center gap-1 rounded-xs bg-muted px-2 py-1 text-xs font-medium"><Users className="h-3 w-3" />{allowed.length === (data?.roles || []).length ? "All roles" : "Restricted"}</span></td></tr>;
                 })}</tbody>
               </table>
             </div>

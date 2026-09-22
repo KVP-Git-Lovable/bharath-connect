@@ -495,7 +495,7 @@ export default function Attendance() {
           className={cn(
             "py-3 text-sm font-semibold transition-all",
             activeView === "my"
-              ? "bg-card text-foreground shadow-sm"
+              ? "bg-card text-foreground shadow-xs"
               : "bg-muted/50 text-muted-foreground hover:text-foreground"
           )}
         >
@@ -506,7 +506,7 @@ export default function Attendance() {
           className={cn(
             "py-3 text-sm font-semibold transition-all",
             activeView === "team"
-              ? "bg-primary text-primary-foreground shadow-sm"
+              ? "bg-primary text-primary-foreground shadow-xs"
               : "bg-muted/50 text-muted-foreground hover:text-foreground"
           )}
         >
@@ -521,11 +521,11 @@ export default function Attendance() {
 
       {/* Monthly Summary Cards */}
       <div className="grid grid-cols-2 gap-3">
-        <div className="bg-card rounded-2xl p-5 text-center shadow-sm">
+        <div className="bg-card rounded-2xl p-5 text-center shadow-xs">
           <div className="text-3xl font-bold text-foreground">{stats.pct}%</div>
           <div className="text-xs font-medium text-muted-foreground mt-1">This Month</div>
         </div>
-        <div className="bg-card rounded-2xl p-5 text-center shadow-sm">
+        <div className="bg-card rounded-2xl p-5 text-center shadow-xs">
           <div className="text-3xl font-bold text-foreground">{stats.presentDays}/{stats.totalWorkingDays}</div>
           <div className="text-xs font-medium text-muted-foreground mt-1">Present Days</div>
         </div>
@@ -554,7 +554,7 @@ export default function Attendance() {
                         className={cn(
                           "flex h-10 w-10 items-center justify-center rounded-full border-2 text-sm font-semibold transition-all duration-200",
                           isComplete && "border-[hsl(var(--success))] bg-[hsl(var(--success))] text-[hsl(var(--success-foreground))]",
-                          isActive && "border-primary bg-primary text-primary-foreground shadow-sm",
+                          isActive && "border-primary bg-primary text-primary-foreground shadow-xs",
                           isUpcoming && "border-border bg-background text-muted-foreground"
                         )}
                       >
@@ -624,7 +624,7 @@ export default function Attendance() {
       </div>
 
       {/* Calendar View with Present/Absent Summary */}
-      <div className="bg-background rounded-2xl p-4 shadow-sm space-y-3">
+      <div className="bg-background rounded-2xl p-4 shadow-xs space-y-3">
         <div className="grid grid-cols-2 gap-2">
           <div className="bg-[hsl(150,35%,93%)] rounded-xl p-2.5 text-center cursor-pointer hover:shadow-md transition-shadow" onClick={() => setShowPresentDaysDialog(true)}>
             <div className="flex items-center justify-center gap-1.5">

@@ -229,7 +229,7 @@ export default function OpportunityReport() {
         mapped.filter((r) => {
           if (band !== "all") {
             const [lo, hi] = band.split("-").map(Number);
-            if (r.probability < lo || r.probability > hi) return false;
+            if (r.probability < lo! || r.probability > hi!) return false;
           }
           if (sla !== "all") {
             const want =
@@ -434,16 +434,16 @@ export default function OpportunityReport() {
       filterState={{ ...state, owner, stage, type, band, sla }}
       onApplyFilterState={(s) => {
         patch({
-          field: (s.field as string) || state.field,
-          preset: (s.preset as PresetKey) || state.preset,
-          customFrom: (s.customFrom as string) || state.customFrom,
-          customTo: (s.customTo as string) || state.customTo,
+          field: (s['field'] as string) || state.field,
+          preset: (s['preset'] as PresetKey) || state.preset,
+          customFrom: (s['customFrom'] as string) || state.customFrom,
+          customTo: (s['customTo'] as string) || state.customTo,
         });
-        setOwner((s.owner as string) || "all");
-        setStage((s.stage as string) || "all");
-        setType((s.type as string) || "all");
-        setBand((s.band as string) || "all");
-        setSla((s.sla as string) || "all");
+        setOwner((s['owner'] as string) || "all");
+        setStage((s['stage'] as string) || "all");
+        setType((s['type'] as string) || "all");
+        setBand((s['band'] as string) || "all");
+        setSla((s['sla'] as string) || "all");
       }}
       filterSummary={[
         `${fieldLabel}: ${presetLabel(state.preset)} (${from} to ${to})`,

@@ -69,11 +69,11 @@ function OwnerPickerField({ value, onChange }: { value: UserInfo | null; onChang
             <div className="flex items-center gap-2 border-b pb-2 mb-1">
               <Search className="w-3.5 h-3.5 text-muted-foreground" />
               <input autoFocus value={query} onChange={e => setQuery(e.target.value)} placeholder="Search users..."
-                className="flex-1 text-sm bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground/50" />
+                className="flex-1 text-sm bg-transparent border-none outline-hidden text-foreground placeholder:text-muted-foreground/50" />
             </div>
             {results.map(u => (
               <button key={u.id} type="button" onClick={() => { onChange(u); setShowSearch(false); setQuery(""); }}
-                className="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted transition-colors">
+                className="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded-sm hover:bg-muted transition-colors">
                 <div className="w-5 h-5 rounded-full bg-primary/15 flex items-center justify-center text-primary text-[10px] font-semibold">
                   {u.full_name?.charAt(0) ?? "?"}
                 </div>

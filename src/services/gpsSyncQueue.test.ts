@@ -71,11 +71,11 @@ describe("gpsSyncQueue", () => {
     for (let i = 0; i < 5; i++) enqueueGpsPoint(point(i));
     await flushPendingGpsPoints();
     expect(getQueueSize()).toBe(5); // nothing removed on failure
-    const firstIds = upsertMock.mock.calls[0][1].map((r: { id: string }) => r.id);
+    const firstIds = upsertMock.mock.calls[0]![1].map((r: { id: string }) => r.id);
 
     await flushPendingGpsPoints(); // retry succeeds
     expect(getQueueSize()).toBe(0);
-    const retryIds = upsertMock.mock.calls[1][1].map((r: { id: string }) => r.id);
+    const retryIds = upsertMock.mock.calls[1]![1].map((r: { id: string }) => r.id);
     expect(retryIds).toEqual(firstIds); // same client UUIDs — server dedupes
   });
 
@@ -105,8 +105,8 @@ describe("gpsSyncQueue", () => {
     await flushPendingGpsPoints();
     expect(getQueueSize()).toBe(0);
     expect(upsertMock).toHaveBeenCalledTimes(2);
-    expect(upsertMock.mock.calls[0][1]).toHaveLength(CFG.CHUNK_SIZE);
-    expect(upsertMock.mock.calls[1][1]).toHaveLength(10);
+    expect(upsertMock.mock.calls[0]![1]).toHaveLength(CFG.CHUNK_SIZE);
+    expect(upsertMock.mock.calls[1]![1]).toHaveLength(10);
   });
 
   it("persists to localStorage and restores across a restart", () => {

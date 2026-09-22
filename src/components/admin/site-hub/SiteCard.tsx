@@ -60,7 +60,7 @@ interface Props {
 }
 
 export default function SiteCard({ site, assignedNames, progress, milestoneCount, onOpen }: Props) {
-  const s = STATUS_STYLES[site.status] || STATUS_STYLES.planned;
+  const s = STATUS_STYLES[site.status] || STATUS_STYLES['planned'];
 
   return (
     <motion.button
@@ -71,13 +71,13 @@ export default function SiteCard({ site, assignedNames, progress, milestoneCount
       className="group relative text-left rounded-2xl border bg-card shadow-card hover:shadow-elevated transition-shadow overflow-hidden w-full flex flex-col"
     >
       {/* status accent header */}
-      <div className={`absolute inset-x-0 top-0 h-24 bg-gradient-to-b ${s.accent} pointer-events-none`} />
-      <div className={`absolute left-0 top-0 h-full w-1 ${s.ring}`} />
+      <div className={`absolute inset-x-0 top-0 h-24 bg-gradient-to-b ${s!.accent} pointer-events-none`} />
+      <div className={`absolute left-0 top-0 h-full w-1 ${s!.ring}`} />
 
       <div className="relative p-4 flex flex-col gap-3.5">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shrink-0 shadow-sm">
+            <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shrink-0 shadow-xs">
               <Building2 className="h-5 w-5 text-primary-foreground" />
             </div>
             <div className="min-w-0">
@@ -90,7 +90,7 @@ export default function SiteCard({ site, assignedNames, progress, milestoneCount
               </span>
             </div>
           </div>
-          <Badge variant="outline" className={`shrink-0 border ${s.chip}`}>{s.label}</Badge>
+          <Badge variant="outline" className={`shrink-0 border ${s!.chip}`}>{s!.label}</Badge>
         </div>
 
         <div className="space-y-1.5">
@@ -101,7 +101,7 @@ export default function SiteCard({ site, assignedNames, progress, milestoneCount
             <span className="text-foreground">{progress}%</span>
           </div>
           <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
-            <div className={`h-full rounded-full bg-gradient-to-r ${s.bar} transition-all`} style={{ width: `${progress}%` }} />
+            <div className={`h-full rounded-full bg-gradient-to-r ${s!.bar} transition-all`} style={{ width: `${progress}%` }} />
           </div>
         </div>
 

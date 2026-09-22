@@ -40,8 +40,8 @@ function Stat({ icon: Icon, label, value, tone }: { icon: typeof BellRing; label
 }
 
 function DeliveryBadge({ status }: { status: string }) {
-  const d = DELIVERY_INFO[status] ?? DELIVERY_INFO.delivered;
-  return <span className={`inline-block rounded-full px-2 py-0.5 text-[11px] whitespace-nowrap ${d.tone}`}>{d.label}</span>;
+  const d = DELIVERY_INFO[status] ?? DELIVERY_INFO['delivered'];
+  return <span className={`inline-block rounded-full px-2 py-0.5 text-[11px] whitespace-nowrap ${d!.tone}`}>{d!.label}</span>;
 }
 
 export default function NotificationHistoryTab() {

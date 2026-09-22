@@ -242,16 +242,16 @@ export default function ActivityReport() {
       filterState={{ ...state, employee, site, milestone, actType, outcome }}
       onApplyFilterState={(s) => {
         patch({
-          field: (s.field as string) || state.field,
-          preset: (s.preset as PresetKey) || state.preset,
-          customFrom: (s.customFrom as string) || state.customFrom,
-          customTo: (s.customTo as string) || state.customTo,
+          field: (s['field'] as string) || state.field,
+          preset: (s['preset'] as PresetKey) || state.preset,
+          customFrom: (s['customFrom'] as string) || state.customFrom,
+          customTo: (s['customTo'] as string) || state.customTo,
         });
-        setEmployee((s.employee as string) || "all");
-        setSite((s.site as string) || "all");
-        setMilestone((s.milestone as string) || "all");
-        setActType((s.actType as string) || "all");
-        setOutcome((s.outcome as string) || "all");
+        setEmployee((s['employee'] as string) || "all");
+        setSite((s['site'] as string) || "all");
+        setMilestone((s['milestone'] as string) || "all");
+        setActType((s['actType'] as string) || "all");
+        setOutcome((s['outcome'] as string) || "all");
       }}
       filterSummary={[
         `${fieldLabel}: ${presetLabel(state.preset)} (${from} to ${to})`,

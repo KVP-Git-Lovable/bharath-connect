@@ -22,8 +22,8 @@ interface GoogleTrackMapProps {
 }
 
 
-const BROWSER_KEY = import.meta.env.VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_BROWSER_KEY as string | undefined;
-const CHANNEL = import.meta.env.VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_TRACKING_ID as string | undefined;
+const BROWSER_KEY = import.meta.env['VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_BROWSER_KEY'] as string | undefined;
+const CHANNEL = import.meta.env['VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_TRACKING_ID'] as string | undefined;
 
 let mapsPromise: Promise<void> | null = null;
 
@@ -217,21 +217,21 @@ const GoogleTrackMap = forwardRef<HTMLDivElement, GoogleTrackMapProps>(function 
     if (points.length > 0) {
       const first = points[0];
       addMarker(
-        { lat: first.latitude, lng: first.longitude },
+        { lat: first!.latitude, lng: first!.longitude },
         startPinSvg,
         { w: 26, h: 36 },
         true,
-        `<strong>Start</strong><br/>${format(new Date(first.timestamp), "MMM d, hh:mm a")}`
+        `<strong>Start</strong><br/>${format(new Date(first!.timestamp), "MMM d, hh:mm a")}`
       );
       if (points.length > 1) {
         const last = points[points.length - 1];
         addMarker(
-          { lat: last.latitude, lng: last.longitude },
+          { lat: last!.latitude, lng: last!.longitude },
           livePinSvg,
           { w: 26, h: 26 },
           false,
           `<strong style="color:#dc2626">Latest location</strong><br/>${format(
-            new Date(last.timestamp),
+            new Date(last!.timestamp),
             "MMM d, hh:mm a"
           )}`
         );

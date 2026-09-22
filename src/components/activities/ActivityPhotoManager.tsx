@@ -56,7 +56,7 @@ function PhotoThumb({
         <button
           type="button"
           onClick={onRemove}
-          className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center shadow"
+          className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center shadow-sm"
         >
           <X className="h-3 w-3" />
         </button>

@@ -76,7 +76,7 @@ const MultiProfileSelector = React.memo<Props>(({ excludeIds, onAdd, label, mana
           <div className="p-1.5 space-y-0.5">
             {filtered.map((p) => (
               <div key={p.id}
-                className={cn("flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer text-xs transition-colors",
+                className={cn("flex items-center gap-2 px-2 py-1.5 rounded-sm cursor-pointer text-xs transition-colors",
                   selected.has(p.id) ? "bg-primary/10" : "hover:bg-muted/50")}
                 onClick={() => toggle(p.id)}>
                 <Checkbox checked={selected.has(p.id)} onCheckedChange={() => toggle(p.id)} className="h-3.5 w-3.5" />

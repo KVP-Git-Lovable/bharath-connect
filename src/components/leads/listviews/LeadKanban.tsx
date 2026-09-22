@@ -92,7 +92,7 @@ export default function LeadKanban({ rows, config, options, columns, avatars = {
                     onDragStart={() => setDragId(row.id)}
                     onDragEnd={() => { setDragId(null); setOverCol(null); }}
                     onClick={() => onOpen(row)}
-                    className={`cursor-pointer rounded-lg border border-border bg-card p-3 shadow-sm transition-all hover:shadow-md ${
+                    className={`cursor-pointer rounded-lg border border-border bg-card p-3 shadow-xs transition-all hover:shadow-md ${
                       dragId === row.id ? "opacity-50" : ""
                     }`}
                   >

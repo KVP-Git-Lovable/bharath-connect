@@ -27,7 +27,7 @@ export async function fetchTaRates(): Promise<TaRate[]> {
 /** Rate that applied on a given date (yyyy-MM-dd). Falls back to the newest rate. */
 export function rateForDate(rates: TaRate[], date?: string | null): number {
   if (!rates.length) return 0;
-  if (!date) return rates[0].per_km_rate;
+  if (!date) return rates[0]!.per_km_rate;
   const d = date.slice(0, 10);
   const hit = rates.find(
     (r) => r.effective_from <= d && (!r.effective_to || r.effective_to >= d)

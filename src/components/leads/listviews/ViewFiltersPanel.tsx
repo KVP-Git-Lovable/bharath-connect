@@ -61,7 +61,7 @@ export default function ViewFiltersPanel({ view, canManage, picklistOptions, onS
   };
 
   return (
-    <div className="flex h-full flex-col rounded-xl border border-border bg-card shadow-sm">
+    <div className="flex h-full flex-col rounded-xl border border-border bg-card shadow-xs">
       <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
         <h2 className="text-lg font-semibold">Filters</h2>
         <div className="flex items-center gap-1">
@@ -147,7 +147,7 @@ export default function ViewFiltersPanel({ view, canManage, picklistOptions, onS
                       const nd = fieldDef(v);
                       updateCond(i, {
                         field: v,
-                        operator: OPERATORS[nd?.type ?? "text"][0].value,
+                        operator: OPERATORS[nd?.type ?? "text"][0]!.value,
                         value: "",
                         value2: "",
                         values: [],

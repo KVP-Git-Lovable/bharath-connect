@@ -1,10 +1,15 @@
-import { defineConfig, type Plugin } from "vite";
-import react from "@vitejs/plugin-react-swc";
+// @lovable.dev/vite-tanstack-config already includes the following — do NOT add them manually
+// or the app will break with duplicate plugins:
+//   - TanStack devtools (dev-only, first), tanstackStart, viteReact, tailwindcss, tsConfigPaths,
+//     nitro (build-only using cloudflare as a default target), VITE_* env injection, @ path alias,
+//     React/TanStack dedupe, error logger plugins, and sandbox detection (port/host/strictPort).
+import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 import path from "path";
 import fs from "fs";
-import { componentTagger } from "lovable-tagger";
+import type { Plugin } from "vite";
 
-// https://vitejs.dev/config/
+// Carried over from the Classic config: build id used by the client-side
+// cache-busting / version-sync logic (src/utils/cacheVersion.ts).
 const buildId = `${Date.now()}`;
 
 function buildMetaPlugin(id: string): Plugin {
@@ -20,42 +25,16 @@ function buildMetaPlugin(id: string): Plugin {
   };
 }
 
-export default defineConfig(({ mode }) => ({
-  define: {
-    __APP_BUILD_ID__: JSON.stringify(buildId),
+export default defineConfig({
+  tanstackStart: {
+    // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
+    // nitro/vite builds from this
+    server: { entry: "server" },
   },
-  server: {
-    host: "::",
-    port: 8080,
-    hmr: {
-      overlay: false,
+  vite: {
+    define: {
+      __APP_BUILD_ID__: JSON.stringify(buildId),
     },
+    plugins: [buildMetaPlugin(buildId)],
   },
-  plugins: [
-    react(),
-    buildMetaPlugin(buildId),
-    mode === "development" && componentTagger(),
-  ].filter(Boolean),
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
-    },
-  },
-  build: {
-    chunkSizeWarningLimit: 1500,
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom', 'react-router-dom'],
-          ui: ['@radix-ui/react-dialog', '@radix-ui/react-popover', '@radix-ui/react-select', '@radix-ui/react-tabs'],
-          charts: ['recharts'],
-          xlsx: ['xlsx'],
-          pdf: ['jspdf'],
-        },
-      },
-    },
-  },
-  optimizeDeps: {
-    include: ["react", "react-dom", "react-dom/client", "@tanstack/react-query"],
-  },
-}));
+});

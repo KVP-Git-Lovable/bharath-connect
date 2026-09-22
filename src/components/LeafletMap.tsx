@@ -118,7 +118,7 @@ export default function LeafletMap({ location, gpsPoints, activityMarkers }: Lea
   }, [points]);
 
   const center: [number, number] = points.length > 0
-    ? [points[lastIdx].latitude, points[lastIdx].longitude]
+    ? [points[lastIdx]!.latitude, points[lastIdx]!.longitude]
     : location
       ? [location.lat, location.lng]
       : [22.5, 78.9];
@@ -171,22 +171,22 @@ export default function LeafletMap({ location, gpsPoints, activityMarkers }: Lea
       {points.length > 0 && (
         <>
           {/* Start point */}
-          <Marker position={[points[0].latitude, points[0].longitude]} icon={trailIcon}>
+          <Marker position={[points[0]!.latitude, points[0]!.longitude]} icon={trailIcon}>
             <Popup>
               <div className="text-xs">
                 <div className="font-semibold">Start</div>
-                <div>{format(new Date(points[0].timestamp), "MMM d, hh:mm a")}</div>
+                <div>{format(new Date(points[0]!.timestamp), "MMM d, hh:mm a")}</div>
               </div>
             </Popup>
           </Marker>
 
           {/* End point (live location) */}
           {points.length > 1 && (
-            <Marker position={[points[lastIdx].latitude, points[lastIdx].longitude]} icon={liveIcon}>
+            <Marker position={[points[lastIdx]!.latitude, points[lastIdx]!.longitude]} icon={liveIcon}>
               <Popup>
                 <div className="text-xs">
                   <div className="font-semibold text-red-600">Latest location</div>
-                  <div>{format(new Date(points[lastIdx].timestamp), "MMM d, hh:mm a")}</div>
+                  <div>{format(new Date(points[lastIdx]!.timestamp), "MMM d, hh:mm a")}</div>
                 </div>
               </Popup>
             </Marker>

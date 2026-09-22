@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { motion } from "framer-motion";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "@/lib/router-compat";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ListChecks, Flag, Compass, Gauge, Briefcase, CheckCircle } from "lucide-react";
 import { useProfilePermissions } from "@/hooks/useProfilePermissions";

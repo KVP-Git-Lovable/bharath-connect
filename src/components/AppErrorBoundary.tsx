@@ -17,13 +17,13 @@ const RELOAD_KEY = "app_error_reload_at";
  * leaving the user on a blank screen.
  */
 export class AppErrorBoundary extends Component<Props, State> {
-  state: State = { hasError: false, message: "" };
+  override state: State = { hasError: false, message: "" };
 
   static getDerivedStateFromError(error: Error): State {
     return { hasError: true, message: error?.message ?? "Unexpected error" };
   }
 
-  componentDidCatch(error: Error, info: ErrorInfo) {
+  override componentDidCatch(error: Error, info: ErrorInfo) {
     console.error("App crashed:", error, info.componentStack);
     try {
       const last = Number(sessionStorage.getItem(RELOAD_KEY) || "0");
@@ -36,7 +36,7 @@ export class AppErrorBoundary extends Component<Props, State> {
     }
   }
 
-  render() {
+  override render() {
     if (this.state.hasError) {
       return (
         <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-6 text-center">

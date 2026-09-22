@@ -219,7 +219,7 @@ export default function ViewChartsPanel({ charts, rows, canManage, onChange, onC
   };
 
   return (
-    <div className="flex h-full flex-col rounded-xl border border-border bg-card shadow-sm p-4 space-y-3 overflow-y-auto">
+    <div className="flex h-full flex-col rounded-xl border border-border bg-card shadow-xs p-4 space-y-3 overflow-y-auto">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 text-base font-semibold">
           <BarChart3 className="h-4 w-4 text-primary" />

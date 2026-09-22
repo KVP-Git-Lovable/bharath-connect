@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "@/lib/router-compat";
 import { formatDistanceToNow } from "date-fns";
 import { ArrowLeft, Bell, CheckCheck, Loader2, X } from "lucide-react";
 import { toast } from "sonner";

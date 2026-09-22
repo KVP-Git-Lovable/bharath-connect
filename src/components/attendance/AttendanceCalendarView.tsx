@@ -81,8 +81,8 @@ export const AttendanceCalendarView = ({
         // Parse date-only strings as local dates (avoid UTC shift)
         const [sy, sm, sd] = l.from_date.split('-').map(Number);
         const [ey, em, ed] = l.to_date.split('-').map(Number);
-        const start = new Date(sy, sm - 1, sd);
-        const end = new Date(ey, em - 1, ed);
+        const start = new Date(sy, sm! - 1, sd);
+        const end = new Date(ey, em! - 1, ed);
         for (let d = new Date(start); d <= end; d = addDays(d, 1)) {
           map.set(format(d, 'yyyy-MM-dd'), l);
         }

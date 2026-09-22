@@ -84,8 +84,8 @@ function DeliveryHistoryDialog({ sub, onClose }: { sub: ReportSubscription | nul
                   </p>
                 </div>
                 <div className="text-right shrink-0">
-                  <span className={`rounded-full px-2 py-0.5 text-[11px] ${tone[d.status] ?? tone.running}`}>
-                    {d.status === "no_recipients" ? "No recipients" : d.status[0].toUpperCase() + d.status.slice(1)}
+                  <span className={`rounded-full px-2 py-0.5 text-[11px] ${tone[d.status] ?? tone['running']}`}>
+                    {d.status === "no_recipients" ? "No recipients" : d.status[0]!.toUpperCase() + d.status.slice(1)}
                   </span>
                   <p className="text-[11px] text-muted-foreground mt-1">{d.recipients} sent</p>
                 </div>

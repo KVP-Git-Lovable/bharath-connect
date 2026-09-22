@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "@/lib/router-compat";
 import { motion } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -222,11 +222,11 @@ export default function Leads() {
     } else if (key === "status_name") {
       const st = statuses.find((s) => s.name === value);
       if (!st) return;
-      patch.lead_status_id = st.id;
+      patch['lead_status_id'] = st.id;
     } else if (key === "source_name") {
       const so = sources.find((s) => s.name === value);
       if (!so) return;
-      patch.lead_source_id = so.id;
+      patch['lead_source_id'] = so.id;
     } else {
       toast.error("This field can't be edited inline");
       return;

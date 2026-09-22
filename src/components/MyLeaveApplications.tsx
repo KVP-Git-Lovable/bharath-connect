@@ -61,8 +61,8 @@ const MyLeaveApplications: React.FC<MyLeaveApplicationsProps> = ({ refreshTrigge
       approved: { variant: 'default', className: 'bg-[hsl(var(--success))]/20 text-[hsl(var(--success))]', label: 'Approved' },
       rejected: { variant: 'destructive', className: '', label: 'Rejected' },
     };
-    const c = config[status] || config.pending;
-    return <Badge variant={c.variant} className={c.className}>{c.label}</Badge>;
+    const c = config[status] || config['pending'];
+    return <Badge variant={c!.variant} className={c!.className}>{c!.label}</Badge>;
   };
 
   const calculateLeaveDays = (from: string, to: string) => {

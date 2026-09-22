@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useSearchParams, useParams } from "react-router-dom";
+import { useNavigate, useSearchParams, useParams } from "@/lib/router-compat";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -774,10 +774,10 @@ function KpiCard({
 }: { label: string; value: string; icon: React.ComponentType<{ className?: string }>; accent: keyof typeof ACCENTS }) {
   const a = ACCENTS[accent];
   return (
-    <Card className={`border-l-4 ${a.border} shadow-card hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200`}>
+    <Card className={`border-l-4 ${a!.border} shadow-card hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200`}>
       <CardContent className="p-3 flex items-start gap-3">
-        <div className={`h-10 w-10 rounded-lg flex items-center justify-center flex-shrink-0 ${a.bg}`}>
-          <Icon className={`h-5 w-5 ${a.text}`} />
+        <div className={`h-10 w-10 rounded-lg flex items-center justify-center flex-shrink-0 ${a!.bg}`}>
+          <Icon className={`h-5 w-5 ${a!.text}`} />
         </div>
         <div className="min-w-0">
           <div className="text-[11px] text-muted-foreground leading-tight">{label}</div>

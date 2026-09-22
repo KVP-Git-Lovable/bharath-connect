@@ -186,7 +186,7 @@ export function LeadForm({
 
   useEffect(() => {
     if (!lead && !f.lead_status_id && statuses.length) {
-      setF((prev) => ({ ...prev, lead_status_id: statuses[0].id }));
+      setF((prev) => ({ ...prev, lead_status_id: statuses[0]!.id }));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statuses, lead]);

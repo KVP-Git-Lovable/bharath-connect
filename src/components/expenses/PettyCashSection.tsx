@@ -69,7 +69,7 @@ export default function PettyCashSection() {
     const spent = new Map<string, number>();
     if (advs.length) {
       const userIds = Array.from(new Set(advs.map((a) => a.user_id)));
-      const minDate = advs.reduce((m, a) => (a.issued_on < m ? a.issued_on : m), advs[0].issued_on);
+      const minDate = advs.reduce((m, a) => (a.issued_on < m ? a.issued_on : m), advs[0]!.issued_on);
       const { data: exp } = await supabase.from("additional_expenses")
         .select("user_id, amount, expense_date, status")
         .in("user_id", userIds).eq("status", "approved").gte("expense_date", minDate);

@@ -106,7 +106,7 @@ const StepEmployment: React.FC<StepEmploymentProps> = ({ formData, onUpdate, man
               <div className="flex items-center border-b px-3">
                 <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
                 <input
-                  className="flex h-10 w-full bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground"
+                  className="flex h-10 w-full bg-transparent py-3 text-sm outline-hidden placeholder:text-muted-foreground"
                   placeholder="Search manager..."
                   value={managerSearch}
                   onChange={(e) => setManagerSearch(e.target.value)}
@@ -120,7 +120,7 @@ const StepEmployment: React.FC<StepEmploymentProps> = ({ formData, onUpdate, man
                     <div
                       key={manager.id}
                       className={cn(
-                        "relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground",
+                        "relative flex cursor-pointer select-none items-center rounded-xs px-2 py-1.5 text-sm outline-hidden hover:bg-accent hover:text-accent-foreground",
                         formData.manager_id === manager.id && "bg-accent"
                       )}
                       onClick={() => {
@@ -152,7 +152,7 @@ const StepEmployment: React.FC<StepEmploymentProps> = ({ formData, onUpdate, man
               <div className="flex items-center border-b px-3">
                 <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
                 <input
-                  className="flex h-10 w-full bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground"
+                  className="flex h-10 w-full bg-transparent py-3 text-sm outline-hidden placeholder:text-muted-foreground"
                   placeholder="Search manager..."
                   value={secondaryManagerSearch}
                   onChange={(e) => setSecondaryManagerSearch(e.target.value)}
@@ -166,7 +166,7 @@ const StepEmployment: React.FC<StepEmploymentProps> = ({ formData, onUpdate, man
                     <div
                       key={manager.id}
                       className={cn(
-                        "relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground",
+                        "relative flex cursor-pointer select-none items-center rounded-xs px-2 py-1.5 text-sm outline-hidden hover:bg-accent hover:text-accent-foreground",
                         formData.secondary_manager_id === manager.id && "bg-accent"
                       )}
                       onClick={() => {

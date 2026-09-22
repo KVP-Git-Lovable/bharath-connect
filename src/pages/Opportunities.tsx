@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "@/lib/router-compat";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -59,7 +59,7 @@ export default function Opportunities() {
       map.set(k, (map.get(k) || 0) + 1);
     });
     return Array.from(map, ([name, value]) => ({
-      name, value, color: STAGE_HEX[stageMap[name]?.color ?? "gray"] || STAGE_HEX.gray,
+      name, value, color: STAGE_HEX[stageMap[name]?.color ?? "gray"] || STAGE_HEX['gray'],
     }));
   }, [opps, stageMap]);
 

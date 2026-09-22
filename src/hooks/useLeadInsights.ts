@@ -51,12 +51,12 @@ export function slaStatusFromAudit(
   );
   if (firstProductive) {
     const d = String(firstProductive.created_at).slice(0, 10);
-    if (!actuals.contacted || d < actuals.contacted) actuals.contacted = d;
+    if (!actuals['contacted'] || d < actuals['contacted']) actuals['contacted'] = d;
   }
-  if (!actuals.contacted && fallbackContactDate) {
-    actuals.contacted = String(fallbackContactDate).slice(0, 10);
+  if (!actuals['contacted'] && fallbackContactDate) {
+    actuals['contacted'] = String(fallbackContactDate).slice(0, 10);
   }
-  const contactDate = actuals.contacted;
+  const contactDate = actuals['contacted'];
   if (!contactDate) return "Not Started";
 
   const flags = SLA_STAGES.filter((s) => s.key !== "contacted").map((s) => {
@@ -120,14 +120,14 @@ export function useLeadsInsights(leadIds: string[]) {
       const map: Record<string, LeadInsight> = {};
       for (const id of leadIds) map[id] = { activityCount: 0, documentCount: 0, sla: "Not Started" };
 
-      ((acts.data ?? []) as any[]).forEach((r) => { if (map[r.lead_id]) map[r.lead_id].activityCount += 1; });
-      ((docs.data ?? []) as any[]).forEach((r) => { if (map[r.lead_id]) map[r.lead_id].documentCount += 1; });
+      ((acts.data ?? []) as any[]).forEach((r) => { if (map[r.lead_id]) map[r.lead_id]!.activityCount += 1; });
+      ((docs.data ?? []) as any[]).forEach((r) => { if (map[r.lead_id]) map[r.lead_id]!.documentCount += 1; });
 
       const byLead: Record<string, any[]> = {};
       ((audit.data ?? []) as any[]).forEach((r) => {
         (byLead[r.lead_id] ||= []).push(r);
       });
-      for (const id of leadIds) map[id].sla = slaStatusFromAudit(byLead[id] ?? []);
+      for (const id of leadIds) map[id]!.sla = slaStatusFromAudit(byLead[id] ?? []);
 
       return map;
     },

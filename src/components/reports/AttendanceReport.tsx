@@ -154,13 +154,13 @@ export default function AttendanceReport() {
       filterState={{ ...state, employee, status }}
       onApplyFilterState={(s) => {
         patch({
-          field: (s.field as string) || state.field,
-          preset: (s.preset as PresetKey) || state.preset,
-          customFrom: (s.customFrom as string) || state.customFrom,
-          customTo: (s.customTo as string) || state.customTo,
+          field: (s['field'] as string) || state.field,
+          preset: (s['preset'] as PresetKey) || state.preset,
+          customFrom: (s['customFrom'] as string) || state.customFrom,
+          customTo: (s['customTo'] as string) || state.customTo,
         });
-        setEmployee((s.employee as string) || "all");
-        setStatus((s.status as string) || "all");
+        setEmployee((s['employee'] as string) || "all");
+        setStatus((s['status'] as string) || "all");
       }}
       filterSummary={[
         `${fieldLabel}: ${presetLabel(state.preset)} (${from} to ${to})`,

@@ -82,8 +82,8 @@ export default function WeeklyExecutiveReport() {
           if (!ownerStats[lead.owner_id]) {
             ownerStats[lead.owner_id] = { count: 0, value: 0 };
           }
-          ownerStats[lead.owner_id].count += 1;
-          ownerStats[lead.owner_id].value += value;
+          ownerStats[lead.owner_id]!.count += 1;
+          ownerStats[lead.owner_id]!.value += value;
         }
       });
 

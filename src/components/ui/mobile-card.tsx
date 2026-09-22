@@ -44,7 +44,7 @@ export function MobileCard({
       role={clickable ? "button" : undefined}
       tabIndex={clickable ? 0 : undefined}
       className={cn(
-        "rounded-xl border bg-card shadow-sm p-3 transition-colors",
+        "rounded-xl border bg-card shadow-xs p-3 transition-colors",
         clickable && "cursor-pointer active:bg-muted/60 hover:bg-muted/40",
         className,
       )}
