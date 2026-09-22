@@ -1306,7 +1306,7 @@ export default function Activities() {
                           min={0}
                           max={100}
                           step={1}
-                          onValueChange={(v) => setForm({ ...form, milestone_progress: v[0] })}
+                          onValueChange={(v) => setForm({ ...form, milestone_progress!: v[0] })}
                         />
                       </div>
                     </div>

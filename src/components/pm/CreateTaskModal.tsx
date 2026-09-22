@@ -148,7 +148,7 @@ export function CreateTaskModal({ open, onClose, projectId, sprints, milestones,
       due_date: form.due_date || undefined,
       estimated_hours: form.estimated_hours ? parseFloat(form.estimated_hours) : undefined,
       story_points: form.story_points ? parseInt(form.story_points) : undefined,
-      tags: form.tags.length ? form.tags : undefined,
+      tags: (form.tags.length ? form.tags : undefined)!,
     });
     // Add collaborators
     for (const collab of collaborators) {

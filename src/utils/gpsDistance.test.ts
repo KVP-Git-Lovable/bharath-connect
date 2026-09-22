@@ -304,7 +304,7 @@ describe("duplicates, accuracy bands, invalid input", () => {
     const ordered: TrackPoint[] = [];
     for (let i = 0; i <= 5; i++) ordered.push(point(i * 200, 0, START + i * 30_000, 8));
     const shuffled = [ordered[3], ordered[0], ordered[5], ordered[1], ordered[4], ordered[2]];
-    expect(computeFilteredDistanceKm(shuffled!!!)).toBeCloseTo(
+    expect(computeFilteredDistanceKm(shuffled!!!!!!)).toBeCloseTo(
       computeFilteredDistanceKm(ordered),
       3
     );

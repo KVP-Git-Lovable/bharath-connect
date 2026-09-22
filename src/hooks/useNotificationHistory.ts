@@ -46,7 +46,7 @@ export function useNotificationHistory(filters: HistoryFilters, page: number, pa
         p_to: to,
         p_search: filters.search.trim() || undefined,
         p_source: orNull(filters.source),
-        p_module: orNull(filters.module),
+        p_module: orNull(filters.module)!,
         p_user: orNull(filters.user),
         p_read: orNull(filters.read),
         p_delivery: orNull(filters.delivery)!,

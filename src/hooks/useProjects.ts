@@ -20,7 +20,7 @@ export interface Project {
   end_date?: string | undefined;
   estimated_hours?: number | undefined;
   logged_hours?: number;
-  budget?: number;
+  budget?: number | undefined;
   color: string;
   is_template: boolean;
   template_name?: string;
@@ -82,10 +82,10 @@ export interface Task {
   collaborator_id?: string;
   reporter_id?: string;
   start_date?: string | undefined;
-  due_date?: string;
-  estimated_hours?: number;
+  due_date?: string | undefined;
+  estimated_hours?: number | undefined;
   logged_hours?: number;
-  story_points?: number;
+  story_points?: number | undefined;
   sort_order: number;
   tags?: string[];
   is_blocked: boolean;

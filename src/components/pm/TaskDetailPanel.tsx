@@ -245,7 +245,7 @@ export function TaskDetailPanel({ task, onClose, projectId, allTasks = [], onSel
       due_date: task.due_date || undefined,
       estimated_hours: task.estimated_hours || undefined,
       story_points: task.story_points || undefined,
-      tags: task.tags || undefined,
+      tags: (task.tags || undefined)!,
     });
     toast.success("Task duplicated");
   };

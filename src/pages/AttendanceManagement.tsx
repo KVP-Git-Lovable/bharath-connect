@@ -31,8 +31,8 @@ interface LeaveApplication {
   status: string;
   applied_date: string | null;
   total_days: number;
-  profiles?: { full_name: string; username: string } | undefined;
-  leave_types?: { name: string };
+  profiles?: { full_name: string | null; username: string | null } | undefined;
+  leave_types?: { name: string } | undefined;
 }
 
 interface RegularizationRequest {
@@ -47,7 +47,7 @@ interface RegularizationRequest {
   reason: string | null;
   status: string;
   created_at: string;
-  profiles?: { full_name: string | null; username: string } | undefined;
+  profiles?: { full_name: string | null; username: string | null } | undefined;
 }
 
 const overviewTabs = [
