@@ -34,7 +34,7 @@ export default function TeamAttendanceReportGenerator({ onClose }: Props) {
   const [toDate, setToDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [selectedUser, setSelectedUser] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
-  const [teamMembers, setTeamMembers] = useState<{ id: string; full_name: string }[]>([]);
+  const [teamMembers, setTeamMembers] = useState<{ id: string; full_name: string | null }[]>([]);
   const [reportData, setReportData] = useState<ReportRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);

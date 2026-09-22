@@ -15,13 +15,13 @@ import { downloadCSVString } from '@/utils/nativeDownload';
 
 interface LeaveBalance {
   id: string; user_id: string; leave_type_id: string; opening_balance: number; used_balance: number; remaining_balance: number | null; year: number;
-  profiles?: { full_name: string }; leave_types?: { name: string };
+  profiles?: { full_name: string | null } | undefined; leave_types?: { name: string } | undefined;
 }
 
 const LeaveBalancesManager = () => {
   const [balances, setBalances] = useState<LeaveBalance[]>([]);
   const [leaveTypes, setLeaveTypes] = useState<{ id: string; name: string; annual_quota: number; accrual_type: string }[]>([]);
-  const [users, setUsers] = useState<{ id: string; full_name: string }[]>([]);
+  const [users, setUsers] = useState<{ id: string; full_name: string | null }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterLeaveType, setFilterLeaveType] = useState('all');

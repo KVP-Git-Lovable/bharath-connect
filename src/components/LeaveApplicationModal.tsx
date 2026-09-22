@@ -15,7 +15,7 @@ import { toast } from 'sonner';
 interface LeaveType {
   id: string;
   name: string;
-  description?: string;
+  description?: string | null;
 }
 
 interface LeaveApplicationModalProps {

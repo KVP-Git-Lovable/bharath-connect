@@ -29,7 +29,7 @@ function UserPickerField({ label, currentUser, onSave }: {
 }) {
   const [showSearch, setShowSearch] = useState(false);
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<{ id: string; full_name: string }[]>([]);
+  const [results, setResults] = useState<{ id: string; full_name: string | null }[]>([]);
   const searchRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

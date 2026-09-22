@@ -18,8 +18,8 @@ import jsPDF from 'jspdf';
 
 interface UserInfo {
   id: string;
-  full_name: string;
-  username: string;
+  full_name: string | null;
+  username: string | null;
 }
 
 interface AttendanceData {

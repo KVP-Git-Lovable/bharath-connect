@@ -50,7 +50,7 @@ export async function getRouteForTrack(points: RouteCoordinate[]): Promise<[numb
   if (points.length <= 50) {
     const routedSegments: [number, number][] = [];
     for (let i = 0; i < points.length - 1; i++) {
-      const route = await getRouteBetweenPoints(points[i]!, points[i + 1]);
+      const route = await getRouteBetweenPoints(points[i]!, points[i + 1]!);
       if (route) {
         // Add all coordinates except the last (to avoid duplicates at segment boundaries)
         routedSegments.push(...route.coordinates.slice(0, -1));
@@ -70,7 +70,7 @@ export async function getRouteForTrack(points: RouteCoordinate[]): Promise<[numb
 
   const routedSegments: [number, number][] = [];
   for (let i = 0; i < sampledPoints.length - 1; i++) {
-    const route = await getRouteBetweenPoints(sampledPoints[i]!, sampledPoints[i + 1]);
+    const route = await getRouteBetweenPoints(sampledPoints[i]!, sampledPoints[i + 1]!);
     if (route) {
       routedSegments.push(...route.coordinates.slice(0, -1));
     } else {

@@ -27,11 +27,11 @@ interface LeaveApplication {
   leave_type_id: string;
   from_date: string;
   to_date: string;
-  reason: string;
+  reason: string | null;
   status: string;
-  applied_date: string;
+  applied_date: string | null;
   total_days: number;
-  profiles?: { full_name: string; username: string };
+  profiles?: { full_name: string; username: string } | undefined;
   leave_types?: { name: string };
 }
 
@@ -44,10 +44,10 @@ interface RegularizationRequest {
   current_check_out_time: string | null;
   requested_check_in_time: string | null;
   requested_check_out_time: string | null;
-  reason: string;
+  reason: string | null;
   status: string;
   created_at: string;
-  profiles?: { full_name: string; username: string };
+  profiles?: { full_name: string | null; username: string } | undefined;
 }
 
 const overviewTabs = [
@@ -73,7 +73,7 @@ export default function AttendanceManagement() {
   const [regularizationRequests, setRegularizationRequests] = useState<RegularizationRequest[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedUser, setSelectedUser] = useState("all");
-  const [allUsers, setAllUsers] = useState<Array<{ id: string; full_name: string }>>([]);
+  const [allUsers, setAllUsers] = useState<Array<{ id: string; full_name: string | null }>>([]);
   const [showRejectionDialog, setShowRejectionDialog] = useState(false);
   const [rejectionTarget, setRejectionTarget] = useState<{ type: "leave" | "reg"; id: string } | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);

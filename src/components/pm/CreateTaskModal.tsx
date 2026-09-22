@@ -13,8 +13,8 @@ import { supabase } from "@/integrations/supabase/client";
 
 interface UserInfo {
   id: string;
-  full_name: string;
-  profile_picture_url?: string;
+  full_name: string | null;
+  profile_picture_url?: string | undefined | null;
 }
 
 // ── Reusable Owner Picker for the form ──────────────────────

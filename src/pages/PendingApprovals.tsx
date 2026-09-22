@@ -30,7 +30,7 @@ interface RegRequest {
   user_id: string;
   date: string;
   attendance_date: string | null;
-  reason: string;
+  reason: string | null;
   status: string;
   created_at: string;
   requested_check_in_time: string | null;

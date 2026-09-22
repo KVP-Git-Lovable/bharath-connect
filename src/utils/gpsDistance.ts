@@ -250,7 +250,7 @@ function isCorroborated(prev: Candidate, curr: Candidate, impliedKmh: number): b
 
 export function processTrajectory(
   raw: TrackPoint[],
-  options?: { window?: AttendanceWindow | null; config?: Partial<GpsProcessingConfig> }
+  options?: { window?: AttendanceWindow | null | undefined; config?: Partial<GpsProcessingConfig> }
 ): ProcessedTrajectory {
   const cfg: GpsProcessingConfig = { ...GPS_PROCESSING_CONFIG, ...(options?.config ?? {}) };
   const m = emptyMetrics(raw?.length ?? 0);

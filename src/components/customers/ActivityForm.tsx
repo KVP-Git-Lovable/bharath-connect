@@ -62,7 +62,7 @@ export function ActivityForm({
   }, [activity, open, opportunityId]);
 
   useEffect(() => {
-    setForm((f) => (f.type || typeOptions.length === 0 ? f : { ...f, type: typeOptions[0] }));
+    setForm((f) => (f.type || typeOptions.length === 0 ? f : { ...f, type: typeOptions[0] })!!!);
   }, [typeOptions]);
 
   const reset = () => setForm({
