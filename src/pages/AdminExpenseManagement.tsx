@@ -21,7 +21,7 @@ export default function AdminExpenseManagement() {
   return (
     <div className="min-h-screen bg-background">
       <div className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur-sm">
-        <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3 sm:py-4">
+        <div className="flex items-center gap-3 px-4 py-3 sm:px-6 sm:py-4 lg:px-8">
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xs border border-primary/10 bg-primary/10 shadow-card">
             <Receipt className="h-5 w-5 text-primary" aria-hidden="true" />
           </div>
@@ -34,7 +34,7 @@ export default function AdminExpenseManagement() {
         </div>
       </div>
 
-      <main className="mx-auto max-w-7xl px-4 py-4 sm:py-6">
+      <main className="px-4 py-4 sm:px-6 sm:py-6 lg:px-8">
         <Tabs defaultValue="overview" className="w-full">
           <TabsList className="mb-5 grid h-11 w-full grid-cols-3 rounded-xs bg-muted/70 p-1">
             <TabsTrigger value="overview" className="gap-1.5 rounded-xs text-xs data-[state=active]:text-info sm:text-sm"><BarChart3 className="h-4 w-4" />Overview</TabsTrigger>
