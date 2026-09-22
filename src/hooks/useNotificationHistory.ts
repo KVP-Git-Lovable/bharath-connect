@@ -41,15 +41,21 @@ export function useNotificationHistory(filters: HistoryFilters, page: number, pa
     placeholderData: keepPreviousData,
     queryFn: async () => {
       const { from, to } = rangeBounds(filters.range);
+      const search = filters.search.trim();
+      const source = orNull(filters.source);
+      const module = orNull(filters.module);
+      const user = orNull(filters.user);
+      const read = orNull(filters.read);
+      const delivery = orNull(filters.delivery);
       const { data, error } = await supabase.rpc("notif_history_list", {
         p_from: from,
         p_to: to,
-        p_search: (filters.search.trim() || undefined)!,
-        p_source: orNull(filters.source),
-        p_module: orNull(filters.module)!,
-        p_user: orNull(filters.user),
-        p_read: orNull(filters.read)!,
-        p_delivery: orNull(filters.delivery)!,
+        ...(search ? { p_search: search } : {}),
+        ...(source !== undefined ? { p_source: source } : {}),
+        ...(module !== undefined ? { p_module: module } : {}),
+        ...(user !== undefined ? { p_user: user } : {}),
+        ...(read !== undefined ? { p_read: read } : {}),
+        ...(delivery !== undefined ? { p_delivery: delivery } : {}),
         p_limit: pageSize,
         p_offset: page * pageSize,
       });

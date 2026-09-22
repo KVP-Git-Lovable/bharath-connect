@@ -64,9 +64,9 @@ interface ActivityMarker {
 }
 
 interface LeafletMapProps {
-  location?: { lat: number; lng: number } | null;
-  gpsPoints?: GPSPoint[];
-  activityMarkers?: ActivityMarker[];
+  location?: { lat: number; lng: number } | null | undefined;
+  gpsPoints?: GPSPoint[] | undefined;
+  activityMarkers?: ActivityMarker[] | undefined;
 }
 
 function MapAutoFit({ location, gpsPoints, activityMarkers }: LeafletMapProps) {

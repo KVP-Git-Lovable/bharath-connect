@@ -81,10 +81,10 @@ interface Props {
   siteId: string;
   milestones: HubMilestone[];
   activities?: Activity[];
-  onChanged?: () => void;
-  onAddSubMilestone?: (parentId: string, parentName: string) => void;
-  onEditMilestone?: (m: HubMilestone) => void;
-  onOpenActivity?: (a: Activity) => void;
+  onChanged?: (() => void) | undefined;
+  onAddSubMilestone?: ((parentId: string, parentName: string) => void) | undefined;
+  onEditMilestone?: ((m: HubMilestone) => void) | undefined;
+  onOpenActivity?: ((a: Activity) => void) | undefined;
 }
 
 async function saveMilestoneProgress(id: string, pct: number, currentStatus?: string | null) {
@@ -125,11 +125,11 @@ interface MilestoneCardProps {
   activitiesById: Record<string, Activity[]>;
   comments: Comment[];
   onCommentAdded: () => void;
-  onChanged?: () => void;
-  currentUserId?: string;
-  onAddSubMilestone?: (parentId: string, parentName: string) => void;
-  onEditMilestone?: (m: HubMilestone) => void;
-  onOpenActivity?: (a: Activity) => void;
+  onChanged?: (() => void) | undefined;
+  currentUserId?: string | undefined;
+  onAddSubMilestone?: ((parentId: string, parentName: string) => void) | undefined;
+  onEditMilestone?: ((m: HubMilestone) => void) | undefined;
+  onOpenActivity?: ((a: Activity) => void) | undefined;
   depth: number;
   ancestorPath: string[];
 }
@@ -745,8 +745,8 @@ interface TableRowsProps {
   childrenByParent: Record<string, HubMilestone[]>;
   activityCount: Record<string, number>;
   commentsCount: Record<string, number>;
-  onEditMilestone?: (m: HubMilestone) => void;
-  onAddSubMilestone?: (parentId: string, parentName: string) => void;
+  onEditMilestone?: ((m: HubMilestone) => void) | undefined;
+  onAddSubMilestone?: ((parentId: string, parentName: string) => void) | undefined;
 }
 
 function TableView({

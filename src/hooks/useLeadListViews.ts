@@ -140,7 +140,6 @@ export function useLeadListViews(section = "leads", objectLabel = "Leads") {
         sort_direction: payload.sort_dir ?? "desc",
         visibility: payload.visibility ?? "private",
         shared_with: payload.visibility === "selected" ? payload.shared_user_ids ?? [] : [],
-        is_shared: (payload.visibility ?? "private") !== "private",
         is_default: payload.is_default ?? false,
         charts: (payload.charts ?? []) as any,
       };
