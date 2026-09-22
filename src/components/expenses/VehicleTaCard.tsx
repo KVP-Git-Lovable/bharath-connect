@@ -11,7 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  Bike, Bus, Car as CarIcon, Check, ChevronDown, History, Loader2, MapPinOff, Pencil, Plus, Trash2, Truck, X, Users, BadgeIndianRupee,
+  Bike, Bus, Car as CarIcon, Check, ChevronDown, History, Loader2, MapPinOff, Pencil, Plus, Trash2, Truck, X, Users,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -274,7 +274,7 @@ export function MoneyInput({ value, onCommit, disabled, suffix, placeholder }: {
 }
 
 /* ---------- one vehicle row ---------- */
-function VehicleRow({ v, isFixed, rates, roles, links, allVehicleIds, emps, empName, overrides, overridesReady, onEdit, onChanged }: {
+function VehiclePricingRow({ v, isFixed, rates, roles, links, allVehicleIds, emps, empName, overrides, overridesReady, onEdit, onChanged }: {
   v: VehicleType; isFixed: boolean; rates: VehicleRate[]; roles: Role[];
   links: { profile_id: string; vehicle_type_id: string }[]; allVehicleIds: string[]; emps: Emp[]; empName: Map<string, string>;
   overrides: Override[]; overridesReady: boolean; onEdit: () => void; onChanged: () => void;
@@ -329,21 +329,19 @@ function VehicleRow({ v, isFixed, rates, roles, links, allVehicleIds, emps, empN
         </div>
       </td>
 
-      {noTa ? (
-        <td className="px-3 py-3 text-xs text-muted-foreground">No vehicle used — no TA that day</td>
-      ) : isFixed ? (
-        <td className="px-3 py-3">
-          <MoneyInput value={v.fixed_ta_amount} onCommit={saveFixed} />
-        </td>
-      ) : (
-        <td className="px-3 py-3">
+      <td className="px-3 py-3">
+        {noTa ? <span className="text-xs text-muted-foreground">No TA</span> : (
           <div className="flex items-center gap-1">
-            <MoneyInput value={cur ? cur.per_km_rate : null} suffix="/km" placeholder="Set" onCommit={saveRate} />
+            <MoneyInput value={cur ? cur.per_km_rate : null} disabled={isFixed} suffix="/km" placeholder="Set" onCommit={saveRate} />
             <RateHistory rates={rates} cur={cur} onChanged={onChanged} />
           </div>
-          {!cur && <p className="mt-1 text-xs text-warning">Rate not set</p>}
-        </td>
-      )}
+        )}
+        {!noTa && !cur && <p className="mt-1 text-xs text-warning">Rate not set</p>}
+      </td>
+
+      <td className="px-3 py-3">
+        {noTa ? <span className="text-xs text-muted-foreground">No TA</span> : <MoneyInput value={v.fixed_ta_amount} disabled={!isFixed} suffix="/day" onCommit={saveFixed} />}
+      </td>
 
       <td className="px-3 py-3">
         <RolePicker vehicleId={v.id} roles={roles} links={links} allVehicleIds={allVehicleIds} onChanged={onChanged} />
@@ -353,13 +351,6 @@ function VehicleRow({ v, isFixed, rates, roles, links, allVehicleIds, emps, empN
         {noTa ? <span className="text-xs text-muted-foreground">—</span> : (
           <CustomUsers vehicle={v} isFixed={isFixed} emps={emps} empName={empName} overrides={overrides} ready={overridesReady} onChanged={onChanged} />
         )}
-      </td>
-
-      <td className="px-3 py-3">
-        <label className="flex items-center gap-2">
-          <Switch checked={v.is_active} onCheckedChange={toggleActive} aria-label={`${v.name} on or off`} />
-          <span className={cn("text-xs font-medium", v.is_active ? "text-foreground" : "text-muted-foreground")}>{v.is_active ? "Active" : "Off"}</span>
-        </label>
       </td>
 
       <td className="px-3 py-3">
