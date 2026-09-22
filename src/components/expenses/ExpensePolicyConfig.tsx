@@ -376,7 +376,14 @@ export default function ExpensePolicyConfig() {
         onDeleteOverride={(e) => deleteOverride("ta", e)}
         onRegisterMethodSync={registerTaMethodSync}
       />
-      <VehicleTaCard method={config.ta_type} />
+      <VehicleTaCard
+        method={config.ta_type}
+        onMethodChange={(method) => setConfig({ ...config, ta_type: method })}
+        defaultRate={config.ta_per_km_rate}
+        defaultFixed={config.fixed_ta_amount}
+        onDefaultRateChange={(rate) => setConfig({ ...config, ta_per_km_rate: rate })}
+        onDefaultFixedChange={(amount) => setConfig({ ...config, fixed_ta_amount: amount })}
+      />
 
       {/* DA Policy */}
       <Card className="overflow-hidden border-border/70 shadow-card">
