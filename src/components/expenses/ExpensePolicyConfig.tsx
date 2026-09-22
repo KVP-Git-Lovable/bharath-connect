@@ -19,7 +19,6 @@ import OverrideTable, { type OverrideEntry } from "./OverrideTable";
 import ExpenseGroupsInline, { type ExpenseGroup } from "./ExpenseGroupsInline";
 import TaPolicyCard from "./TaPolicyCard";
 import VehicleTaCard from "./VehicleTaCard";
-import PettyCashSection from "./PettyCashSection";
 
 
 interface ExpenseConfig {
@@ -452,7 +451,6 @@ export default function ExpensePolicyConfig() {
         </CardContent>
       </Card>
 
-      <PettyCashSection />
       </div>
 
       <div className="space-y-4 pt-2">
