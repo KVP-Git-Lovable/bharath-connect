@@ -187,7 +187,7 @@ export default function GRNForm({
             quantity_accuracy: fbQuantity,
             overall_experience: fbOverall,
             comments: fbComments.trim() || null,
-            created_by: createdBy ?? null ?? null,
+            created_by: createdBy ?? null,
           });
           if (fe) toast.error("GRN saved, but feedback failed: " + fe.message);
           else queryClient.invalidateQueries({ queryKey: ["vendor-feedback"] });

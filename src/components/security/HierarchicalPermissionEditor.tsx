@@ -62,7 +62,7 @@ export default function HierarchicalPermissionEditor({ permissions, definitions,
     const updated = { ...permissions };
     const setAll = (key: string) => {
       updated[key] = {
-        ...updated[key],
+        ...updated[key]!,
         canRead: value,
         canCreate: value,
         canEdit: value,
