@@ -61,7 +61,7 @@ export default function VendorDetail() {
     queryKey: ["vendor", id],
     enabled: !!id,
     queryFn: async () => {
-      const { data, error } = await supabase.from("vendors").select("*").eq("id", id).maybeSingle();
+      const { data, error } = await supabase.from("vendors").select("*").eq("id", id!).maybeSingle();
       if (error) throw error;
       if (!data) return null;
       return {
@@ -80,7 +80,7 @@ export default function VendorDetail() {
       const { data, error } = await supabase
         .from("procurement_vendor_feedback")
         .select("*, po:procurement_orders(po_number)")
-        .eq("vendor_id", id)
+        .eq("vendor_id", id!)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data || [];
@@ -102,7 +102,7 @@ export default function VendorDetail() {
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("vendors").delete().eq("id", id);
+      const { error } = await supabase.from("vendors").delete().eq("id", id!);
       if (error) throw error;
     },
     onSuccess: () => {

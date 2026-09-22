@@ -78,7 +78,7 @@ async function cleanupOldTempFiles(userId: string) {
       // Extract timestamp from filename: timestamp-originalname
       const match = file.name.match(/^(\d+)-/);
       if (match) {
-        const fileTimestamp = parseInt(match[1], 10);
+        const fileTimestamp = parseInt(match[1]!, 10);
         if (fileTimestamp < oneHourAgo) {
           toDelete.push(`${userId}/${file.name}`);
         }
@@ -168,7 +168,7 @@ function blobToBase64(blob: Blob): Promise<string> {
     reader.onloadend = () => {
       const dataUrl = reader.result as string;
       const base64 = dataUrl.split(',')[1];
-      resolve(base64);
+      resolve(base64!);
     };
     reader.onerror = reject;
     reader.readAsDataURL(blob);

@@ -37,7 +37,7 @@ export default function TemplatesPage() {
   const handleCreate = () => {
     if (!name.trim()) return;
     createTemplate.mutate(
-      { name: name.trim(), description: description.trim() || undefined },
+      { name: name.trim(), description: (description.trim() || undefined)! },
       {
         onSuccess: () => {
           setShowCreate(false);

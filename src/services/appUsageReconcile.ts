@@ -145,7 +145,7 @@ export function deterministicId(...parts: (string | number | null | undefined)[]
     .join("");
   // Force the version (4) and variant nibbles so the value is a legal uuid.
   const v = `${hex.slice(0, 12)}4${hex.slice(13, 16)}`;
-  const variantNibble = ((parseInt(hex[16], 16) & 0x3) | 0x8).toString(16);
+  const variantNibble = ((parseInt(hex[16]!, 16) & 0x3) | 0x8).toString(16);
   return `${v.slice(0, 8)}-${v.slice(8, 12)}-${v.slice(12, 16)}-${variantNibble}${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
 }
 

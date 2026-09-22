@@ -160,7 +160,7 @@ async function uploadTable(table: string, rows: AnyRow[]): Promise<"ok" | "retry
         continue;
       }
       consecutiveFailures++;
-      lastError = error.message;
+      lastError! = error.message;
       scheduleRetry();
       return "retry";
     }
@@ -193,7 +193,7 @@ async function flushOnce(): Promise<{ remaining: number }> {
       .eq("status", "open");
     if (error && !isPermissionError(error)) {
       consecutiveFailures++;
-      lastError = error.message;
+      lastError! = error.message;
       scheduleRetry();
       return { remaining: size() };
     }

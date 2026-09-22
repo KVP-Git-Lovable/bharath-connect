@@ -226,7 +226,7 @@ export default function ActivityReportGenerator({ isAdmin, filtersOpen, onFilter
 
       doc.setFontSize(8);
       doc.setFont('helvetica', 'bold');
-      headers.forEach((h, i) => doc.text(h, colX[i], y));
+      headers.forEach((h, i) => doc.text(h, colX[i]!, y));
       y += 2;
       doc.line(14, y, 283, y);
       y += 5;
@@ -237,21 +237,21 @@ export default function ActivityReportGenerator({ isAdmin, filtersOpen, onFilter
           doc.addPage();
           y = 15;
           doc.setFont('helvetica', 'bold');
-          headers.forEach((h, i) => doc.text(h, colX[i], y));
+          headers.forEach((h, i) => doc.text(h, colX[i]!, y));
           y += 2;
           doc.line(14, y, 283, y);
           y += 5;
           doc.setFont('helvetica', 'normal');
         }
-        doc.text(r.user_name.substring(0, 15), colX[0], y);
-        doc.text((r.customer_name || '-').substring(0, 15), colX[1], y);
-        doc.text(r.activity_name.substring(0, 25), colX[2], y);
-        doc.text(format(new Date(r.activity_date), 'dd MMM yyyy'), colX[3], y);
-        doc.text(formatTime(r.start_time), colX[4], y);
-        doc.text(formatTime(r.end_time), colX[5], y);
-        doc.text(r.total_hours.toFixed(1), colX[6], y);
-        doc.text(r.status.replace('_', ' '), colX[7], y);
-        doc.text((r.location_address || '-').substring(0, 25), colX[8], y);
+        doc.text(r.user_name.substring(0, 15), colX[0]!, y);
+        doc.text((r.customer_name || '-').substring(0, 15), colX[1]!, y);
+        doc.text(r.activity_name.substring(0, 25), colX[2]!, y);
+        doc.text(format(new Date(r.activity_date), 'dd MMM yyyy'), colX[3]!, y);
+        doc.text(formatTime(r.start_time), colX[4]!, y);
+        doc.text(formatTime(r.end_time), colX[5]!, y);
+        doc.text(r.total_hours.toFixed(1), colX[6]!, y);
+        doc.text(r.status.replace('_', ' '), colX[7]!, y);
+        doc.text((r.location_address || '-').substring(0, 25), colX[8]!, y);
         y += 6;
       });
 
@@ -259,8 +259,8 @@ export default function ActivityReportGenerator({ isAdmin, filtersOpen, onFilter
       doc.line(14, y, 283, y);
       y += 6;
       doc.setFont('helvetica', 'bold');
-      doc.text('TOTAL HOURS', colX[5], y);
-      doc.text(totalHours.toFixed(1), colX[6], y);
+      doc.text('TOTAL HOURS', colX[5]!, y);
+      doc.text(totalHours.toFixed(1), colX[6]!, y);
 
       await downloadPDFNative(doc, `Activity_Report_${filterDateFrom}_to_${filterDateTo}.pdf`);
       toast.success('PDF report downloaded');

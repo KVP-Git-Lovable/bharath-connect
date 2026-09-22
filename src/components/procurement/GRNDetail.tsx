@@ -453,7 +453,7 @@ export default function GRNDetail({ open, onOpenChange, grn, vendorName, onSaved
               <Button
                 variant="secondary"
                 size="sm"
-                onClick={() => downloadPhoto(photoUrls[viewerIdx], viewerIdx)}
+                onClick={() => downloadPhoto(photoUrls[viewerIdx]!, viewerIdx)}
               >
                 <Download className="h-4 w-4 mr-1.5" />Download
               </Button>

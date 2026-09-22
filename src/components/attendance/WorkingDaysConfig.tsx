@@ -82,7 +82,7 @@ const WorkingDaysConfig = () => {
         if (!config?.is_off || config.alternate_pattern === 'none') holidayCount++;
       }
       const existing = workingDaysData.find(d => d.month === month);
-      updated.push({ id: existing?.id, year, month, total_days: totalDays, working_days: totalDays - weekOffs - holidayCount, week_offs: weekOffs, holidays: holidayCount });
+      updated.push({ id: existing?.id!, year, month, total_days: totalDays, working_days: totalDays - weekOffs - holidayCount, week_offs: weekOffs, holidays: holidayCount });
     }
     setWorkingDaysData(updated);
     setIsCalculating(false);

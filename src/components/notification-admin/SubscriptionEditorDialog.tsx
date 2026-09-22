@@ -165,7 +165,7 @@ export default function SubscriptionEditorDialog({
       values['saved_report_name'] = saved.name;
     }
     try {
-      await save.mutateAsync({ id: subscription?.id, values: values as never });
+      await save.mutateAsync({ id: subscription?.id!, values: values as never });
       toast.success(subscription ? "Subscription updated" : "Subscription created");
       onOpenChange(false);
     } catch (e) {

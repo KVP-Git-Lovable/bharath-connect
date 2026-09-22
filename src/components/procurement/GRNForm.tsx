@@ -102,7 +102,7 @@ export default function GRNForm({
   const totals = useMemo(() => {
     const ordered = items.reduce((s, it) => s + it.qty, 0);
     const priorReceived = items.reduce((s, it) => s + (alreadyReceived[it.id] || 0), 0);
-    const thisReceipt = items.reduce((s, it) => s + (parseFloat(recv[it.id]) || 0), 0);
+    const thisReceipt = items.reduce((s, it) => s + (parseFloat(recv[it.id]!) || 0), 0);
     return { ordered, priorReceived, thisReceipt, cumulative: priorReceived + thisReceipt };
   }, [items, alreadyReceived, recv]);
 
@@ -129,7 +129,7 @@ export default function GRNForm({
 
   const handleSave = async () => {
     const rows = items
-      .map((it) => ({ it, received: parseFloat(recv[it.id]) || 0 }))
+      .map((it) => ({ it, received: parseFloat(recv[it.id]!) || 0 }))
       .filter((r) => r.received > 0);
     if (status !== "Rejected" && rows.length === 0) {
       toast.error("Enter received quantity for at least one item");

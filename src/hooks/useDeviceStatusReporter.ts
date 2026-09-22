@@ -80,8 +80,8 @@ export function useDeviceStatusReporter(userId: string | null | undefined) {
       const network = readNetwork();
       try {
         await supabase.rpc("report_device_status", {
-          _battery: batteryLevel,
-          _charging: charging,
+          _battery!: batteryLevel,
+          _charging!: charging,
           _network: network,
           _platform: platform,
         });

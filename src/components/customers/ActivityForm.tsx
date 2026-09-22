@@ -81,7 +81,7 @@ export function ActivityForm({
           activity_name: name,
           activity_date: form.activity_date,
           description: form.notes || null,
-          outcome: form.outcome,
+          outcome: form.outcome!,
         });
       } else {
         await createLeadActivity.mutateAsync({
@@ -90,7 +90,7 @@ export function ActivityForm({
           activity_name: name,
           activity_date: form.activity_date,
           description: form.notes || null,
-          outcome: form.outcome,
+          outcome: form.outcome!,
         });
       }
     } else {
@@ -98,7 +98,7 @@ export function ActivityForm({
         opportunity_id: form.opportunity_id || null,
         customer_id: customerId ?? null,
         type: form.type,
-        outcome: form.outcome,
+        outcome: form.outcome!,
         subject: name,
         notes: form.notes || null,
         activity_date: new Date(form.activity_date).toISOString(),

@@ -47,7 +47,7 @@ export function useProfilePermissions() {
       const { data, error } = await supabase
         .from("profile_object_permissions")
         .select("object_name, permission_type, can_read, can_create, can_edit, can_delete, can_view_all, can_modify_all")
-        .eq("profile_id", userProfile!.profile_id);
+        .eq("profile_id", userProfile!.profile_id!);
       if (error) throw error;
       return (data || []) as ProfilePermission[];
     },

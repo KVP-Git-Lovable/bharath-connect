@@ -158,7 +158,7 @@ export default function TeamAttendanceReportGenerator({ onClose }: Props) {
 
       doc.setFontSize(9);
       doc.setFont('helvetica', 'bold');
-      headers.forEach((h, i) => doc.text(h, colX[i], y));
+      headers.forEach((h, i) => doc.text(h, colX[i]!, y));
       y += 2;
       doc.line(14, y, 283, y);
       y += 5;
@@ -171,7 +171,7 @@ export default function TeamAttendanceReportGenerator({ onClose }: Props) {
         const vals = Object.values(row);
         vals.forEach((v, i) => {
           const text = String(v).substring(0, colX[i + 1] ? Math.floor((colX[i + 1]! - colX[i]!) / 2) : 40);
-          doc.text(text, colX[i], y);
+          doc.text(text, colX[i]!, y);
         });
         y += 6;
       });

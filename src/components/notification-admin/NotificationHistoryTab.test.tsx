@@ -44,7 +44,7 @@ describe("NotificationHistoryTab", () => {
     fireEvent.click(screen.getByLabelText("Next page"));
     await waitFor(() => expect(h.calls.at(-1)).toMatchObject({ page: 1 }));
 
-    fireEvent.click(screen.getAllByText("Expense submitted: ₹100")[0]);
+    fireEvent.click(screen.getAllByText("Expense submitted: ₹100")[0]!);
     await waitFor(() => expect(screen.getByText(/no phone registered for push/)).toBeInTheDocument());
     expect(screen.getByText("Open Expenses")).toBeInTheDocument();
   });

@@ -54,7 +54,7 @@ export function SavedReportBar({
     }
     try {
       const id = await save.mutateAsync({
-        id: asNew ? undefined : activeId || undefined,
+        id: (asNew ? undefined : activeId || undefined)!,
         name: finalName,
         config: currentConfig,
       });

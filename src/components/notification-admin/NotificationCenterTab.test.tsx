@@ -50,7 +50,7 @@ describe("Notification Center smoke", () => {
     expect(screen.getByText("12")).toBeInTheDocument();
     expect(screen.getAllByText("Profile: Sales Manager").length).toBeGreaterThan(0);
 
-    fireEvent.click(screen.getAllByText("Leave applied → admins")[0]);
+    fireEvent.click(screen.getAllByText("Leave applied → admins")[0]!);
     await waitFor(() => expect(screen.getByText("Edit notification rule")).toBeInTheDocument());
     expect(screen.getByText(/already sends its own notification/)).toBeInTheDocument();
 
@@ -74,7 +74,7 @@ describe("Notification Center smoke", () => {
 
   it("inserts details into the field whose chip was tapped, spaced and at the end", async () => {
     render(<NotificationCenterTab />);
-    fireEvent.click(screen.getAllByText("Expense submitted → manager")[0]);
+    fireEvent.click(screen.getAllByText("Expense submitted → manager")[0]!);
     await waitFor(() => expect(screen.getByText("Edit notification rule")).toBeInTheDocument());
     const title = screen.getByLabelText("Title") as HTMLInputElement;
     const message = screen.getByLabelText("Message") as HTMLTextAreaElement;
@@ -82,17 +82,17 @@ describe("Notification Center smoke", () => {
 
     const amountChips = screen.getAllByText("Amount");
     expect(amountChips).toHaveLength(2); // one row per field
-    fireEvent.click(amountChips[1]);
+    fireEvent.click(amountChips[1]!);
     expect(message.value).toBe("{user_name} submitted {amount} {amount}");
     expect(title.value).toBe("Expense submitted: {amount}");
 
-    fireEvent.click(screen.getAllByText("Employee name")[0]);
+    fireEvent.click(screen.getAllByText("Employee name")[0]!);
     expect(title.value).toBe("Expense submitted: {amount} {user_name}");
   });
 
   it("replaces broken wording with the suggested text in one tap", async () => {
     render(<NotificationCenterTab />);
-    fireEvent.click(screen.getAllByText("Expense submitted → manager")[0]);
+    fireEvent.click(screen.getAllByText("Expense submitted → manager")[0]!);
     await waitFor(() => expect(screen.getByText("Edit notification rule")).toBeInTheDocument());
     const title = screen.getByLabelText("Title") as HTMLInputElement;
     fireEvent.change(title, { target: { value: "Expense sub{user_name}mitted" } });

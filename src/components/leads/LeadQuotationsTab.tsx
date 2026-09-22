@@ -52,7 +52,7 @@ export default function LeadQuotationsTab({ leadId }: { leadId: string }) {
   const save = async () => {
     setSaving(true);
     const ok = await upsert({
-      id: editing?.id,
+      id: editing?.id!,
       enquiry_number: f.enquiry_number.trim() || null,
       enquiry_received_date: f.enquiry_received_date || null,
       quotation_number: f.quotation_number.trim() || null,

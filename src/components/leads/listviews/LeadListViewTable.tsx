@@ -160,7 +160,7 @@ export default function LeadListViewTable({
               {columns.map((key) => {
                 const def = fieldDef(key);
                 const value = cell(row, key);
-                const isEditing = editing?.id === row.id && editing.key === key;
+                const isEditing = editing?.id === row.id && editing!.key === key;
 
                 if (isEditing) {
                   return (

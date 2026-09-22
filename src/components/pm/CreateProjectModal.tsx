@@ -47,7 +47,7 @@ export function CreateProjectModal({ open, onClose }: Props) {
     try {
       const project = await createProject.mutateAsync({
         name: form.name,
-        description: form.description || undefined,
+        description: (form.description || undefined)!,
         status: form.status,
         priority: form.priority,
         start_date: form.start_date || undefined,

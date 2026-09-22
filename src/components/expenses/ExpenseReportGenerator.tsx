@@ -203,7 +203,7 @@ export default function ExpenseReportGenerator({ isAdmin }: Props) {
 
       doc.setFontSize(9);
       doc.setFont('helvetica', 'bold');
-      headers.forEach((h, i) => doc.text(h, colX[i], y));
+      headers.forEach((h, i) => doc.text(h, colX[i]!, y));
       y += 2;
       doc.line(14, y, 283, y);
       y += 5;
@@ -214,18 +214,18 @@ export default function ExpenseReportGenerator({ isAdmin }: Props) {
           doc.addPage();
           y = 15;
           doc.setFont('helvetica', 'bold');
-          headers.forEach((h, i) => doc.text(h, colX[i], y));
+          headers.forEach((h, i) => doc.text(h, colX[i]!, y));
           y += 2;
           doc.line(14, y, 283, y);
           y += 5;
           doc.setFont('helvetica', 'normal');
         }
-        doc.text(r.user_name.substring(0, 25), colX[0], y);
-        doc.text(format(new Date(r.expense_date), 'dd MMM yyyy'), colX[1], y);
-        doc.text(r.category.substring(0, 20), colX[2], y);
-        doc.text((r.description || '-').substring(0, 35), colX[3], y);
-        doc.text(`₹${r.amount.toFixed(2)}`, colX[4], y);
-        doc.text(r.status.charAt(0).toUpperCase() + r.status.slice(1), colX[5], y);
+        doc.text(r.user_name.substring(0, 25), colX[0]!, y);
+        doc.text(format(new Date(r.expense_date), 'dd MMM yyyy'), colX[1]!, y);
+        doc.text(r.category.substring(0, 20), colX[2]!, y);
+        doc.text((r.description || '-').substring(0, 35), colX[3]!, y);
+        doc.text(`₹${r.amount.toFixed(2)}`, colX[4]!, y);
+        doc.text(r.status.charAt(0).toUpperCase() + r.status.slice(1), colX[5]!, y);
         y += 6;
       });
 
@@ -233,8 +233,8 @@ export default function ExpenseReportGenerator({ isAdmin }: Props) {
       doc.line(14, y, 283, y);
       y += 6;
       doc.setFont('helvetica', 'bold');
-      doc.text('TOTAL', colX[3], y);
-      doc.text(`₹${totalAmount.toFixed(2)}`, colX[4], y);
+      doc.text('TOTAL', colX[3]!, y);
+      doc.text(`₹${totalAmount.toFixed(2)}`, colX[4]!, y);
 
       await downloadPDFNative(doc, `Expense_Report_${filterDateFrom}_to_${filterDateTo}.pdf`);
       toast.success('PDF report downloaded');

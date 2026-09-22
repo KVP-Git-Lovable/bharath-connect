@@ -115,7 +115,7 @@ export default function LeadDetail() {
   const currentStatus = statuses.find((s) => s.id === lead.lead_status_id);
   const bant = bantScore(
     {
-      statusName: currentStatus?.name,
+      statusName: currentStatus?.name!,
       contactRole: (lead as any).contact_role,
       activityCount: activities.length,
       createdAt: lead.created_at,

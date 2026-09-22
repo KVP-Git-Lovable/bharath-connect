@@ -1,3 +1,4 @@
+import type { JSX } from "react";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
@@ -178,7 +179,7 @@ function MilestoneCard({
     setExpanded(true);
     setInlineDraft({
       name: "",
-      start_date: m.start_date || new Date().toISOString().split("T")[0],
+      start_date!: m.start_date || new Date().toISOString().split("T")[0],
       end_date: m.end_date || "",
       status: "not_started",
     });
@@ -469,8 +470,8 @@ function MilestoneCard({
           min={0}
           max={100}
           step={1}
-          onValueChange={(v) => !hasChildren && setDraft(v[0])}
-          onValueCommit={(v) => commitProgress(v[0])}
+          onValueChange={(v) => !hasChildren && setDraft(v[0]!)}
+          onValueCommit={(v) => commitProgress(v[0]!)}
           disabled={saving || hasChildren}
           className="flex-1"
         />

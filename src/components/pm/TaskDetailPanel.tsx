@@ -234,7 +234,7 @@ export function TaskDetailPanel({ task, onClose, projectId, allTasks = [], onSel
   const handleDuplicate = async () => {
     await createTask.mutateAsync({
       project_id: projectId,
-      parent_task_id: task.parent_task_id || undefined,
+      parent_task_id: (task.parent_task_id || undefined)!,
       title: `${task.title} (copy)`,
       description: task.description || undefined,
       type: task.type,

@@ -49,7 +49,7 @@ export function useNotificationHistory(filters: HistoryFilters, page: number, pa
         p_module: orNull(filters.module),
         p_user: orNull(filters.user),
         p_read: orNull(filters.read),
-        p_delivery: orNull(filters.delivery),
+        p_delivery: orNull(filters.delivery)!,
         p_limit: pageSize,
         p_offset: page * pageSize,
       });

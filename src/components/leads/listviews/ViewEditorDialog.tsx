@@ -146,9 +146,9 @@ export function FieldPicker({ columns, onChange }: { columns: string[]; onChange
     const next = [...columns];
     const order = dir === -1 ? [...next.keys()] : [...next.keys()].reverse();
     for (const i of order) {
-      if (!visSel.includes(next[i])) continue;
+      if (!visSel.includes(next[i]!)) continue;
       const j = i + dir;
-      if (j < 0 || j >= next.length || visSel.includes(next[j])) continue;
+      if (j < 0 || j >= next.length || visSel.includes(next[j]!)) continue;
       [next[i], next[j]] = [next[j], next[i]];
     }
     onChange(next);
@@ -283,7 +283,7 @@ export default function ViewEditorDialog({ open, onOpenChange, view, onSave, pic
   const submit = () => {
     if (!name.trim()) return;
     onSave({
-      id: view?.id || undefined,
+      id: (view?.id || undefined)!,
       name: name.trim(),
       filters: { match, conditions: conditions.filter((c) => c.field && c.operator) },
       columns,

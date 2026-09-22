@@ -113,7 +113,7 @@ export default function SiteCard({ site, assignedNames, progress, milestoneCount
             ) : (
               <div className="flex items-center gap-1.5 min-w-0">
                 <Avatar className="h-6 w-6 shrink-0">
-                  <AvatarFallback className="text-[9px] bg-primary/10 text-primary">{initials(assignedNames[0])}</AvatarFallback>
+                  <AvatarFallback className="text-[9px] bg-primary/10 text-primary">{initials(assignedNames[0]!)}</AvatarFallback>
                 </Avatar>
                 <span className="text-xs truncate">
                   {assignedNames[0]}

@@ -78,7 +78,7 @@ export async function runGpsBenchmark(
   );
   const rawHaversineKm = computeDistanceKm(rawSorted);
 
-  const trajectory = processTrajectory(gated, { window: options.window });
+  const trajectory = processTrajectory(gated, { window: options.window! });
 
   let snappedKm: number | null = null;
   let estimatedKm = 0;

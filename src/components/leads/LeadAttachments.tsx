@@ -76,7 +76,7 @@ export function LeadAttachments({ leadId }: { leadId: string }) {
   const { data: docs = [], isLoading } = useLeadDocuments(leadId);
   const inputRef = useRef<HTMLInputElement>(null);
   const [files, setFiles] = useState<File[]>([]);
-  const [docType, setDocType] = useState<string>(LEAD_DOC_TYPES[0]);
+  const [docType, setDocType] = useState<string>(LEAD_DOC_TYPES[0]!);
   const [uploading, setUploading] = useState(false);
   const [view, setView] = useState<"list" | "grid">("list");
   const [filter, setFilter] = useState<string>("all");

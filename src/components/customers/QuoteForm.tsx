@@ -55,7 +55,7 @@ export function QuoteForm({
     setRows((prev) => {
       const next = [...prev];
       const merged = { ...next[i], ...patch };
-      merged.total = calcLine(merged.qty, merged.unit_price, merged.discount_pct);
+      merged.total = calcLine(merged.qty!, merged.unit_price, merged.discount_pct);
       next[i] = merged;
       return next;
     });
@@ -82,7 +82,7 @@ export function QuoteForm({
     }
     const items = working.filter((r) => r.product_id || (r.product_name && r.product_name.trim()));
     await save.mutateAsync({
-      id: quote?.id,
+      id: quote?.id!,
       opportunity_id: opportunityId,
       name: name.trim(),
       notes: notes.trim() || null,
