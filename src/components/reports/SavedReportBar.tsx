@@ -102,7 +102,7 @@ export function SavedReportBar({
                   type="button"
                   aria-label={r.is_favourite ? "Unpin report" : "Pin report"}
                   title={r.is_favourite ? "Unpin report" : "Pin as default"}
-                  className="p-1 rounded hover:bg-muted"
+                  className="p-1 rounded-sm hover:bg-muted"
                   onClick={(e) => {
                     e.stopPropagation();
                     setFavourite.mutate({ id: r.id, value: !r.is_favourite });
@@ -113,7 +113,7 @@ export function SavedReportBar({
                 <button
                   type="button"
                   aria-label="Delete report"
-                  className="p-1 rounded hover:bg-muted"
+                  className="p-1 rounded-sm hover:bg-muted"
                   onClick={(e) => {
                     e.stopPropagation();
                     remove.mutate(r.id, {

@@ -77,7 +77,7 @@ export default function SiteCard({ site, assignedNames, progress, milestoneCount
       <div className="relative p-4 flex flex-col gap-3.5">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shrink-0 shadow-sm">
+            <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shrink-0 shadow-xs">
               <Building2 className="h-5 w-5 text-primary-foreground" />
             </div>
             <div className="min-w-0">

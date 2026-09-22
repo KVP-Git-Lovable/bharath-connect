@@ -24,7 +24,7 @@ function initials(name: string) {
 function NodeCard({ node }: { node: Node }) {
   return (
     <div className="flex flex-col items-center">
-      <div className="min-w-[220px] rounded-2xl border bg-card shadow-sm px-4 py-3 flex items-center gap-3">
+      <div className="min-w-[220px] rounded-2xl border bg-card shadow-xs px-4 py-3 flex items-center gap-3">
         <div className="h-10 w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-semibold text-sm">
           {initials(node.name)}
         </div>

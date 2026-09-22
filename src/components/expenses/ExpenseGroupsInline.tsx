@@ -232,7 +232,7 @@ export default function ExpenseGroupsInline({ field, groups, reload }: Props) {
           <ScrollArea className="h-[280px] border rounded-md">
             <div className="p-2 space-y-0.5">
               {filteredUsers.map((u) => (
-                <div key={u.id} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted/50 cursor-pointer text-xs"
+                <div key={u.id} className="flex items-center gap-2 px-2 py-1.5 rounded-sm hover:bg-muted/50 cursor-pointer text-xs"
                   onClick={() => {
                     setSelectedMembers((prev) => {
                       const next = new Set(prev);

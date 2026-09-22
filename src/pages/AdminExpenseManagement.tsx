@@ -21,7 +21,7 @@ export default function AdminExpenseManagement() {
     <div className="min-h-screen bg-background">
       <div className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur-sm">
         <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3 sm:py-4">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-sm border border-primary/10 bg-primary/10 shadow-card">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xs border border-primary/10 bg-primary/10 shadow-card">
             <Receipt className="h-5 w-5 text-primary" aria-hidden="true" />
           </div>
           <div className="min-w-0">
@@ -35,9 +35,9 @@ export default function AdminExpenseManagement() {
 
       <main className="mx-auto max-w-7xl px-4 py-4 sm:py-6">
         <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="mb-5 grid h-11 w-full grid-cols-2 rounded-sm bg-muted/70 p-1">
-            <TabsTrigger value="overview" className="gap-1.5 rounded-sm text-xs data-[state=active]:text-info sm:text-sm"><BarChart3 className="h-4 w-4" />Overview</TabsTrigger>
-            <TabsTrigger value="configuration" className="gap-1.5 rounded-sm text-xs data-[state=active]:text-accent sm:text-sm"><Settings className="h-4 w-4" />Configuration</TabsTrigger>
+          <TabsList className="mb-5 grid h-11 w-full grid-cols-2 rounded-xs bg-muted/70 p-1">
+            <TabsTrigger value="overview" className="gap-1.5 rounded-xs text-xs data-[state=active]:text-info sm:text-sm"><BarChart3 className="h-4 w-4" />Overview</TabsTrigger>
+            <TabsTrigger value="configuration" className="gap-1.5 rounded-xs text-xs data-[state=active]:text-accent sm:text-sm"><Settings className="h-4 w-4" />Configuration</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="mt-0">

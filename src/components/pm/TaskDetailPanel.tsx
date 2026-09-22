@@ -81,13 +81,13 @@ function UserPickerField({ label, currentUser, onSave }: {
                 value={query}
                 onChange={e => setQuery(e.target.value)}
                 placeholder="Search users..."
-                className="flex-1 text-sm bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground/50"
+                className="flex-1 text-sm bg-transparent border-none outline-hidden text-foreground placeholder:text-muted-foreground/50"
               />
             </div>
             {currentUser && (
               <button
                 onClick={() => { onSave(null); setShowSearch(false); setQuery(""); }}
-                className="w-full text-left text-xs text-destructive px-2 py-1.5 rounded hover:bg-muted transition-colors mb-1"
+                className="w-full text-left text-xs text-destructive px-2 py-1.5 rounded-sm hover:bg-muted transition-colors mb-1"
               >
                 Remove
               </button>
@@ -96,7 +96,7 @@ function UserPickerField({ label, currentUser, onSave }: {
               <button
                 key={u.id}
                 onClick={() => { onSave(u.id); setShowSearch(false); setQuery(""); }}
-                className="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted transition-colors"
+                className="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded-sm hover:bg-muted transition-colors"
               >
                 <div className="w-5 h-5 rounded-full bg-primary/15 flex items-center justify-center text-primary text-[10px] font-semibold">
                   {u.full_name?.charAt(0) ?? "?"}
@@ -363,7 +363,7 @@ export function TaskDetailPanel({ task, onClose, projectId, allTasks = [], onSel
             value={title}
             onChange={e => setTitle(e.target.value)}
             onBlur={() => { if (title !== task.title) handleSave("title", title); }}
-            className="text-lg font-semibold w-full bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground leading-snug"
+            className="text-lg font-semibold w-full bg-transparent border-none outline-hidden text-foreground placeholder:text-muted-foreground leading-snug"
             placeholder="Task title"
           />
           {task.parent_task_id && (() => {

@@ -51,7 +51,7 @@ export function TaskDependencies({ task, allTasks, onSelectTask }: Props) {
           return (
             <div key={dep.id} className="flex items-center gap-2 p-2 rounded-md border bg-muted/20 group">
               <Link className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-              <span className="text-xs px-1.5 py-0.5 bg-secondary rounded text-secondary-foreground flex-shrink-0">
+              <span className="text-xs px-1.5 py-0.5 bg-secondary rounded-sm text-secondary-foreground flex-shrink-0">
                 {depTypeLabels[dep.dependency_type] || dep.dependency_type}
               </span>
               <span

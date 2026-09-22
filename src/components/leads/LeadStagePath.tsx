@@ -38,7 +38,7 @@ export function LeadStagePath({
                 "relative flex items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
                 "disabled:cursor-not-allowed disabled:opacity-60",
                 active
-                  ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                  ? "border-primary bg-primary text-primary-foreground shadow-xs"
                   : done
                     ? "border-emerald-300 bg-emerald-100 text-emerald-800 line-through decoration-emerald-500/70 hover:bg-emerald-200 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-300"
                     : "border-dashed border-border bg-muted/30 text-muted-foreground/70 hover:bg-muted",

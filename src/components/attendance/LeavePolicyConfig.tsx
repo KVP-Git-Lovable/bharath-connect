@@ -756,7 +756,7 @@ const LeavePolicyConfig = () => {
                                       max={28}
                                     />
                                   </div>
-                                  <div className="flex items-center justify-between p-2 rounded border">
+                                  <div className="flex items-center justify-between p-2 rounded-sm border">
                                     <div>
                                       <Label className="text-xs">Prorate for Mid-Period Joiners</Label>
                                       <p className="text-[10px] text-muted-foreground">Reduce first credit based on joining date</p>

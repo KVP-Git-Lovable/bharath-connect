@@ -249,7 +249,7 @@ export default function LeadDetail() {
                         setOwnerSearch("");
                         await save.mutateAsync({ id: lead.id, owner_id: u.id });
                       }}
-                      className={`flex w-full items-center rounded px-2 py-1.5 text-left text-sm hover:bg-muted ${u.id === (lead as any).owner_id ? "font-semibold text-primary" : ""}`}
+                      className={`flex w-full items-center rounded-sm px-2 py-1.5 text-left text-sm hover:bg-muted ${u.id === (lead as any).owner_id ? "font-semibold text-primary" : ""}`}
                     >
                       {u.name}
                     </button>

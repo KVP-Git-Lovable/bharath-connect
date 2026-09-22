@@ -277,7 +277,7 @@ export function LeadAttachments({ leadId }: { leadId: string }) {
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             {filtered.map((d) => (
               <div key={d.id} className="rounded-md border p-3 space-y-2">
-                <div className="h-20 rounded bg-muted flex items-center justify-center">
+                <div className="h-20 rounded-sm bg-muted flex items-center justify-center">
                   <FileText className="h-8 w-8 text-muted-foreground" />
                 </div>
                 <div className="text-sm font-medium truncate">{d.file_name}</div>

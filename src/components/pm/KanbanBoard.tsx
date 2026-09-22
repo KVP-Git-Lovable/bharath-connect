@@ -181,7 +181,7 @@ export function KanbanBoard({ tasks, onUpdateTask, projectId, sprints, milestone
                       }
                       setEditingSectionId(null);
                     }}
-                    className="text-sm font-semibold bg-transparent border-none outline-none text-foreground w-full"
+                    className="text-sm font-semibold bg-transparent border-none outline-hidden text-foreground w-full"
                   />
                 ) : (
                   <span className="text-sm font-semibold text-foreground">{col.label}</span>
@@ -285,7 +285,7 @@ export function KanbanBoard({ tasks, onUpdateTask, projectId, sprints, milestone
                   }}
                   onBlur={handleAddSection}
                   placeholder="Section name..."
-                  className="w-full text-sm bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground/50 font-semibold"
+                  className="w-full text-sm bg-transparent border-none outline-hidden text-foreground placeholder:text-muted-foreground/50 font-semibold"
                 />
               </div>
             ) : (
@@ -342,7 +342,7 @@ function TaskCard({ task, dragging, onDragStart, onDragEnd, onUpdateTask, onDele
       onDragEnd={onDragEnd}
       onClick={onClick}
       className={cn(
-        "bg-card border rounded-lg p-3 cursor-pointer active:cursor-grabbing shadow-sm hover:shadow-md hover:border-primary/30 transition-all group",
+        "bg-card border rounded-lg p-3 cursor-pointer active:cursor-grabbing shadow-xs hover:shadow-md hover:border-primary/30 transition-all group",
         dragging === task.id ? "opacity-40 scale-95" : ""
       )}
     >
@@ -375,7 +375,7 @@ function TaskCard({ task, dragging, onDragStart, onDragEnd, onUpdateTask, onDele
       {/* Status + Priority row */}
       <div className="flex items-center gap-2 flex-wrap mb-2">
         <span className={cn(
-          "text-[10px] px-1.5 py-0.5 rounded font-medium",
+          "text-[10px] px-1.5 py-0.5 rounded-sm font-medium",
           task.status === "done" ? "bg-green-500/10 text-green-600" :
           task.status === "in_progress" ? "bg-blue-500/10 text-blue-600" :
           task.status === "in_review" ? "bg-purple-500/10 text-purple-600" :
@@ -417,7 +417,7 @@ function TaskCard({ task, dragging, onDragStart, onDragEnd, onUpdateTask, onDele
       {task.tags && task.tags.length > 0 && (
         <div className="flex flex-wrap gap-1 mt-2">
           {task.tags.slice(0, 2).map(tag => (
-            <span key={tag} className="text-xs px-1.5 py-0.5 bg-secondary text-secondary-foreground rounded">{tag}</span>
+            <span key={tag} className="text-xs px-1.5 py-0.5 bg-secondary text-secondary-foreground rounded-sm">{tag}</span>
           ))}
           {task.tags.length > 2 && <span className="text-xs text-muted-foreground">+{task.tags.length - 2}</span>}
         </div>

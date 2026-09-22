@@ -144,7 +144,7 @@ export default function WorkforceFilters() {
                         key={u.id}
                         type="button"
                         onClick={() => toggleUser(u.id)}
-                        className="flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-sm hover:bg-muted"
+                        className="flex w-full items-center justify-between rounded-sm px-2 py-1.5 text-left text-sm hover:bg-muted"
                       >
                         <span className="truncate">{u.full_name}</span>
                         {selected && <Check className="h-4 w-4 text-primary" />}

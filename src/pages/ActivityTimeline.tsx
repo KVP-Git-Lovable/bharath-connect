@@ -392,7 +392,7 @@ export default function ActivityTimeline() {
                   </div>
                   <div className="flex-1 min-w-0 pt-0.5">
                     <Card
-                      className={`shadow-sm cursor-pointer border-l-4 ${accent}`}
+                      className={`shadow-xs cursor-pointer border-l-4 ${accent}`}
                       onClick={() => setDetailActivity(a)}
                     >
                       <CardContent className="p-3">

@@ -47,7 +47,7 @@ export function PriorityBadge({ priority }: { priority: Priority }) {
 export function TypeBadge({ type }: { type: TaskType }) {
   const cfg = typeConfig[type] ?? typeConfig.task;
   return (
-    <span className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium", cfg.className)}>
+    <span className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded-sm text-xs font-medium", cfg.className)}>
       {cfg.emoji} {cfg.label}
     </span>
   );

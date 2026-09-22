@@ -92,7 +92,7 @@ export function InlineEditField({
         <div
           className={cn(
             "text-sm font-medium mt-0.5 min-h-[1.5rem]",
-            !disabled && "cursor-pointer rounded hover:bg-muted/40 px-1 -mx-1"
+            !disabled && "cursor-pointer rounded-sm hover:bg-muted/40 px-1 -mx-1"
           )}
           onClick={start}
         >

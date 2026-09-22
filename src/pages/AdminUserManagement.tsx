@@ -669,7 +669,7 @@ function UserHierarchy({ users, roles, profiles, userRoleMap, getRoleDisplayName
           <div className={`flex items-center gap-2.5 p-2 rounded-lg border-l-[3px] transition-colors ${accentClass} ${hasReports ? "cursor-pointer hover:bg-muted/60" : ""}`}>
             {hasReports ? (
               <CollapsibleTrigger asChild>
-                <button className="shrink-0 p-0.5 rounded hover:bg-muted">
+                <button className="shrink-0 p-0.5 rounded-sm hover:bg-muted">
                   {isOpen ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />}
                 </button>
               </CollapsibleTrigger>

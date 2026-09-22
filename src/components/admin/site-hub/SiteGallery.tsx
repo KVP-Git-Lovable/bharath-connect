@@ -93,7 +93,7 @@ export default function SiteGallery({ gallery, onActivityClick }: SiteGalleryPro
         <DialogContent className="max-w-2xl p-2">
           {preview && (
             <div className="space-y-2">
-              <img src={preview.url} alt={preview.photo.label || "Photo"} className="w-full max-h-[70vh] object-contain rounded" />
+              <img src={preview.url} alt={preview.photo.label || "Photo"} className="w-full max-h-[70vh] object-contain rounded-sm" />
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-2 pb-1 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1"><User className="h-3 w-3" />{preview.photo.uploadedBy}</span>
                 {preview.photo.at && <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{format(parseISO(preview.photo.at), "dd MMM yyyy, h:mm a")}</span>}

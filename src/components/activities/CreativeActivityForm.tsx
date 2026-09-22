@@ -973,7 +973,7 @@ export default function CreativeActivityForm({
             <div className="overflow-y-auto overflow-x-hidden flex-1 bg-muted/40 p-3 sm:p-4 space-y-3 min-w-0 max-w-full">
               {/* Day check-in — available in new, edit and saved records */}
               {onDayCheckIn && (
-                <div className="rounded-2xl bg-card border border-border px-3 sm:px-4 py-3 shadow-sm flex items-center justify-between gap-3 min-w-0">
+                <div className="rounded-2xl bg-card border border-border px-3 sm:px-4 py-3 shadow-xs flex items-center justify-between gap-3 min-w-0">
                   {attendance?.check_in_time ? (
                     <p className="text-[11px] text-emerald-600 flex items-center gap-1.5 min-w-0">
                       <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
@@ -999,7 +999,7 @@ export default function CreativeActivityForm({
               )}
               {/* Details panel — visible in edit/view */}
               {isEdit && editActivity && (
-                <div className="rounded-2xl bg-card border border-border px-3 sm:px-4 py-3 shadow-sm space-y-3 overflow-hidden min-w-0 max-w-full">
+                <div className="rounded-2xl bg-card border border-border px-3 sm:px-4 py-3 shadow-xs space-y-3 overflow-hidden min-w-0 max-w-full">
                   <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 min-w-0">
                     <div className="flex items-center gap-2 min-w-0 flex-1">
                       {editActivity.activity_code && (
@@ -1133,7 +1133,7 @@ export default function CreativeActivityForm({
               )}
 
               {/* Lead picker */}
-              <div className="rounded-2xl bg-gradient-to-br from-indigo-50 to-fuchsia-50 dark:from-indigo-950/30 dark:to-fuchsia-950/30 border border-indigo-100 dark:border-indigo-900/50 px-3 sm:px-4 pt-4 pb-3 shadow-sm min-w-0 max-w-full overflow-hidden">
+              <div className="rounded-2xl bg-gradient-to-br from-indigo-50 to-fuchsia-50 dark:from-indigo-950/30 dark:to-fuchsia-950/30 border border-indigo-100 dark:border-indigo-900/50 px-3 sm:px-4 pt-4 pb-3 shadow-xs min-w-0 max-w-full overflow-hidden">
                 <div className="flex items-center justify-between gap-2 mb-2 min-w-0">
                   <p className="text-xs font-bold uppercase tracking-wider text-indigo-700 dark:text-indigo-300">Lead <span className="text-destructive">*</span></p>
                   {selectedLead && (
@@ -1194,21 +1194,21 @@ export default function CreativeActivityForm({
 
 
               {/* Activity date */}
-              <div className="rounded-2xl bg-card border border-border px-3 sm:px-4 py-2.5 shadow-sm flex items-center gap-2 min-w-0">
+              <div className="rounded-2xl bg-card border border-border px-3 sm:px-4 py-2.5 shadow-xs flex items-center gap-2 min-w-0">
                 <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
                 <label className="text-xs font-semibold text-muted-foreground shrink-0">Activity Date</label>
                 <input
                   type="date"
                   value={activityDate}
                   onChange={(e) => setActivityDate(e.target.value)}
-                  className="flex-1 min-w-0 bg-transparent text-sm outline-none text-right"
+                  className="flex-1 min-w-0 bg-transparent text-sm outline-hidden text-right"
                 />
               </div>
 
               {/* Activity check-in status banner */}
               {isEdit && editActivity && ((editActivity as any).check_in_at || (editActivity as any).check_in_within_site != null) && (
                 <div className={cn(
-                  "rounded-2xl border px-3 sm:px-4 py-2.5 shadow-sm text-xs min-w-0",
+                  "rounded-2xl border px-3 sm:px-4 py-2.5 shadow-xs text-xs min-w-0",
                   (editActivity as any).check_in_within_site === true
                     ? "bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-950/30 dark:border-emerald-900 dark:text-emerald-200"
                     : (editActivity as any).check_in_within_site === false
@@ -1244,7 +1244,7 @@ export default function CreativeActivityForm({
               )}
 
               {/* Description with inline icon rail */}
-              <div className="rounded-2xl bg-card border border-border px-3 sm:px-4 py-3 shadow-sm min-w-0 max-w-full overflow-hidden">
+              <div className="rounded-2xl bg-card border border-border px-3 sm:px-4 py-3 shadow-xs min-w-0 max-w-full overflow-hidden">
                 <div className="flex items-start gap-3 min-w-0">
                   <Popover open={ownerOpen} onOpenChange={(v) => { setOwnerOpen(v); if (!v) setOwnerSearch(""); }}>
                     <PopoverTrigger asChild>
@@ -1252,7 +1252,7 @@ export default function CreativeActivityForm({
                         type="button"
                         title={`Owner: ${ownerName} — tap to reassign`}
                         aria-label={`Activity owner ${ownerName}. Tap to reassign`}
-                        className="relative shrink-0 rounded-full focus:outline-none focus:ring-2 focus:ring-primary/50"
+                        className="relative shrink-0 rounded-full focus:outline-hidden focus:ring-2 focus:ring-primary/50"
                       >
                         {ownerAvatar ? (
                           <SignedImage
@@ -1284,7 +1284,7 @@ export default function CreativeActivityForm({
                           value={ownerSearch}
                           onChange={(e) => setOwnerSearch(e.target.value)}
                           placeholder="Search users..."
-                          className="flex-1 min-w-0 bg-transparent text-sm py-2 outline-none"
+                          className="flex-1 min-w-0 bg-transparent text-sm py-2 outline-hidden"
                         />
                       </div>
                       <div className="max-h-56 overflow-y-auto">
@@ -1294,7 +1294,7 @@ export default function CreativeActivityForm({
                             type="button"
                             onClick={() => { setOwnerId(u.id); setOwnerOpen(false); setOwnerSearch(""); }}
                             className={cn(
-                              "w-full text-left flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted text-sm",
+                              "w-full text-left flex items-center gap-2 px-2 py-1.5 rounded-sm hover:bg-muted text-sm",
                               u.id === effectiveOwnerId && "bg-muted font-semibold"
                             )}
                           >
@@ -1548,7 +1548,7 @@ export default function CreativeActivityForm({
 
               {/* Attachments section — only shown once something is attached */}
               {photos.length > 0 && (
-              <div className="rounded-2xl bg-card border border-border px-3 sm:px-4 py-3 shadow-sm min-w-0 max-w-full overflow-hidden">
+              <div className="rounded-2xl bg-card border border-border px-3 sm:px-4 py-3 shadow-xs min-w-0 max-w-full overflow-hidden">
                 <div className="flex items-center justify-between gap-2 mb-2">
                   <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                     Attachments ({photos.length})
@@ -1591,7 +1591,7 @@ export default function CreativeActivityForm({
 
 
               {/* Activity type chips */}
-              <div className="rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 border border-amber-100 dark:border-amber-900/50 px-3 sm:px-4 py-3 shadow-sm min-w-0 max-w-full overflow-hidden">
+              <div className="rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 border border-amber-100 dark:border-amber-900/50 px-3 sm:px-4 py-3 shadow-xs min-w-0 max-w-full overflow-hidden">
                 <div className="flex items-center gap-1.5 mb-2">
                   <p className="text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300">
                     Activity Type
@@ -1632,7 +1632,7 @@ export default function CreativeActivityForm({
               </div>
 
               {/* Outcome */}
-              <div className="rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 border border-emerald-100 dark:border-emerald-900/50 px-3 sm:px-4 py-3 shadow-sm min-w-0 max-w-full overflow-hidden">
+              <div className="rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 border border-emerald-100 dark:border-emerald-900/50 px-3 sm:px-4 py-3 shadow-xs min-w-0 max-w-full overflow-hidden">
                 <div className="flex items-center gap-1.5 mb-2">
                   <p className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
                     Outcome
@@ -1670,7 +1670,7 @@ export default function CreativeActivityForm({
               </div>
 
               {/* Next follow up */}
-              <div className="rounded-2xl bg-gradient-to-br from-sky-50 to-indigo-50 dark:from-sky-950/30 dark:to-indigo-950/30 border border-sky-100 dark:border-sky-900/50 px-3 sm:px-4 py-3 shadow-sm min-w-0 max-w-full overflow-hidden">
+              <div className="rounded-2xl bg-gradient-to-br from-sky-50 to-indigo-50 dark:from-sky-950/30 dark:to-indigo-950/30 border border-sky-100 dark:border-sky-900/50 px-3 sm:px-4 py-3 shadow-xs min-w-0 max-w-full overflow-hidden">
                 <div className="flex items-center gap-1.5 mb-2">
                   <p className="text-xs font-bold uppercase tracking-wider text-sky-700 dark:text-sky-300">
                     Next Follow Up
@@ -1727,7 +1727,7 @@ export default function CreativeActivityForm({
 
 
               {isEdit && editActivity && (
-                <div className="rounded-2xl bg-card border border-border px-3 sm:px-4 py-3 shadow-sm space-y-3 overflow-hidden min-w-0 max-w-full">
+                <div className="rounded-2xl bg-card border border-border px-3 sm:px-4 py-3 shadow-xs space-y-3 overflow-hidden min-w-0 max-w-full">
                 {/* Effort */}
                 <ActivityEffortSection activity={editActivity as any} onNavigateAway={() => onOpenChange(false)} />
                 {/* Timeline */}
@@ -1757,7 +1757,7 @@ export default function CreativeActivityForm({
 
               {/* GRN — Goods Receipt (only when Activity Type contains "GRN") */}
               {isGrnType && (
-                <div className="rounded-2xl bg-gradient-to-br from-sky-50 to-cyan-50 dark:from-sky-950/30 dark:to-cyan-950/30 border border-sky-100 dark:border-sky-900/50 px-3 sm:px-4 py-3 shadow-sm min-w-0 max-w-full overflow-hidden space-y-3">
+                <div className="rounded-2xl bg-gradient-to-br from-sky-50 to-cyan-50 dark:from-sky-950/30 dark:to-cyan-950/30 border border-sky-100 dark:border-sky-900/50 px-3 sm:px-4 py-3 shadow-xs min-w-0 max-w-full overflow-hidden space-y-3">
                   <div className="flex items-center justify-between gap-2 min-w-0">
                     <p className="text-xs font-bold uppercase tracking-wider text-sky-700 dark:text-sky-300">Goods Receipt (GRN)</p>
                     {grnPoNumber && (
@@ -1859,7 +1859,7 @@ export default function CreativeActivityForm({
 
               {/* Assign */}
               {canAssign && (
-                <div className="rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 border border-emerald-100 dark:border-emerald-900/50 px-3 sm:px-4 py-3 shadow-sm min-w-0 max-w-full overflow-hidden">
+                <div className="rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 border border-emerald-100 dark:border-emerald-900/50 px-3 sm:px-4 py-3 shadow-xs min-w-0 max-w-full overflow-hidden">
                   <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
                     Assign
                   </p>

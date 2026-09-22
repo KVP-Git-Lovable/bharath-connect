@@ -398,7 +398,7 @@ const LiveAttendanceMonitoring = () => {
                 {filteredUsers.map((user) => (
                   <SelectItem key={user.id} value={user.id}>
                     <div className="flex items-center space-x-2">
-                      <input type="checkbox" checked={selectedUsers.includes(user.id)} onChange={() => {}} className="h-4 w-4 rounded border-border" />
+                      <input type="checkbox" checked={selectedUsers.includes(user.id)} onChange={() => {}} className="h-4 w-4 rounded-sm border-border" />
                       <span className="text-xs sm:text-sm">{user.full_name} ({user.username})</span>
                     </div>
                   </SelectItem>
@@ -407,13 +407,13 @@ const LiveAttendanceMonitoring = () => {
             </Select>
 
             {selectedUsers.length > 0 && (
-              <div className="mt-2 p-2 bg-muted rounded">
+              <div className="mt-2 p-2 bg-muted rounded-sm">
                 <div className="text-[10px] sm:text-xs text-muted-foreground mb-1">Selected users:</div>
                 <div className="flex flex-wrap gap-1">
                   {selectedUsers.map(userId => {
                     const user = users.find(u => u.id === userId);
                     return user ? (
-                      <div key={userId} className="flex items-center gap-1 bg-background px-2 py-0.5 sm:py-1 rounded text-[10px] sm:text-xs">
+                      <div key={userId} className="flex items-center gap-1 bg-background px-2 py-0.5 sm:py-1 rounded-sm text-[10px] sm:text-xs">
                         <span>{user.full_name}</span>
                         <button onClick={() => handleUserSelection(userId, false)} className="text-destructive hover:text-destructive/80">×</button>
                       </div>
@@ -456,7 +456,7 @@ const LiveAttendanceMonitoring = () => {
                           <img
                             src={r.signed_photo_url}
                             alt="Check-in"
-                            className="h-8 w-8 rounded object-cover border cursor-pointer hover:ring-2 hover:ring-primary transition-all"
+                            className="h-8 w-8 rounded-sm object-cover border cursor-pointer hover:ring-2 hover:ring-primary transition-all"
                             loading="lazy"
                             onClick={(e) => { e.stopPropagation(); setPreviewPhoto(r.signed_photo_url!); }}
                           />
@@ -498,7 +498,7 @@ const LiveAttendanceMonitoring = () => {
                     <img
                       src={detailRecord.signed_photo_url}
                       alt="Check-in photo"
-                      className="h-32 w-32 rounded-lg object-cover border shadow-sm cursor-pointer hover:ring-2 hover:ring-primary transition-all"
+                      className="h-32 w-32 rounded-lg object-cover border shadow-xs cursor-pointer hover:ring-2 hover:ring-primary transition-all"
                       onClick={() => setPreviewPhoto(detailRecord.signed_photo_url!)}
                     />
                   </div>
@@ -606,7 +606,7 @@ const LiveAttendanceMonitoring = () => {
             <img
               src={previewPhoto}
               alt="Attendance photo preview"
-              className="max-w-full max-h-[90vh] object-contain rounded"
+              className="max-w-full max-h-[90vh] object-contain rounded-sm"
             />
           )}
         </DialogContent>

@@ -313,13 +313,13 @@ export default function Procurement() {
                     <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[--radix-popover-trigger-width] p-2 max-h-64 overflow-y-auto" align="start">
+                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-2 max-h-64 overflow-y-auto" align="start">
                   {vendors.length === 0 ? (
                     <p className="text-xs text-muted-foreground p-2">No vendors found.</p>
                   ) : vendors.map((v) => {
                     const checked = form.vendor_ids.includes(v.id);
                     return (
-                      <label key={v.id} className="flex items-center gap-2 py-1.5 px-1 rounded hover:bg-muted cursor-pointer text-sm">
+                      <label key={v.id} className="flex items-center gap-2 py-1.5 px-1 rounded-sm hover:bg-muted cursor-pointer text-sm">
                         <Checkbox
                           checked={checked}
                           onCheckedChange={(c) =>
