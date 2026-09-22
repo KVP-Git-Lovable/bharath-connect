@@ -270,9 +270,12 @@ export function useUpdateTask() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...values }: Partial<Task> & { id: string }) => {
+      const clean = Object.fromEntries(
+        Object.entries(values).filter(([, v]) => v !== undefined),
+      );
       const { data, error } = await supabase
         .from('pm_tasks')
-        .update(values)
+        .update(clean as never)
         .eq('id', id)
         .select()
         .single();

@@ -58,7 +58,7 @@ describe("gpsSyncQueue", () => {
     for (let i = 0; i < CFG.BATCH_SIZE; i++) enqueueGpsPoint(point(i));
     await flushPendingGpsPoints();
     expect(upsertMock).toHaveBeenCalledTimes(1);
-    const [table, rows, opts] = upsertMock.mock.calls[0];
+    const [table, rows, opts] = upsertMock.mock.calls[0]!;
     expect(table).toBe("gps_tracking");
     expect(rows).toHaveLength(CFG.BATCH_SIZE);
     expect(rows[0].id).toMatch(/[0-9a-f-]{36}/);
