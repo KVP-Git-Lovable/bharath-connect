@@ -123,7 +123,7 @@ async function saveLocationToDatabase(
     timestamp: string;
   }
 ): Promise<void> {
-  const today = new Date().toISOString().split("T")[0];
+  const today = new Date().toISOString().split("T")[0]!;
 
   try {
     // Validate that GPS point falls within an active check-in session

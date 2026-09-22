@@ -32,7 +32,7 @@ export function KanbanBoard({ tasks, onUpdateTask, projectId, sprints, milestone
   const updateSection = useUpdateSection();
   const [dragging, setDragging] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState<string | null>(null);
-  const [createFor, setCreateFor] = useState<{ sectionId?: string; status?: TaskStatus } | null>(null);
+  const [createFor, setCreateFor] = useState<{ sectionId?: string | undefined; status?: TaskStatus } | null>(null);
   const [groupBy, setGroupBy] = useState<GroupBy>("section");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterPriority, setFilterPriority] = useState<string>("all");
@@ -308,8 +308,8 @@ export function KanbanBoard({ tasks, onUpdateTask, projectId, sprints, milestone
           sprints={sprints}
           milestones={milestones}
           sections={sections}
-          defaultStatus={createFor?.status}
-          defaultSectionId={createFor?.sectionId}
+          defaultStatus={createFor?.status!}
+          defaultSectionId={createFor?.sectionId!}
         />
       )}
     </div>

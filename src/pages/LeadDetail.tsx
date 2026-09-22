@@ -115,7 +115,7 @@ export default function LeadDetail() {
   const currentStatus = statuses.find((s) => s.id === lead.lead_status_id);
   const bant = bantScore(
     {
-      statusName: currentStatus?.name,
+      statusName: currentStatus?.name!,
       contactRole: (lead as any).contact_role,
       activityCount: activities.length,
       createdAt: lead.created_at,
@@ -201,7 +201,7 @@ export default function LeadDetail() {
                   {currentStatus?.name || "Converted"}
                 </Badge>
               ) : (
-                <Select value={lead.lead_status_id ?? undefined} onValueChange={changeStatus}>
+                <Select value={(lead.lead_status_id ?? undefined)!} onValueChange={changeStatus}>
                   <SelectTrigger
                     className={`h-auto py-1 px-2.5 border-0 gap-1.5 rounded-full text-xs font-semibold w-auto focus:ring-0 focus:ring-offset-0 hover:opacity-80 ${currentStatus ? statusColorClasses(currentStatus.color) : "bg-gray-100 text-gray-700"}`}
                   >

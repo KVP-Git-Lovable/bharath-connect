@@ -196,21 +196,21 @@ const LeavePolicyConfig = () => {
   const updateOverride = (leaveTypeId: string, field: keyof OverrideForm, value: any) => {
     setOverrideForms(prev => ({
       ...prev,
-      [leaveTypeId]: { ...prev[leaveTypeId], [field]: value },
+      [leaveTypeId]: { ...prev[leaveTypeId]!, [field]: value },
     }));
   };
 
   const updateAccrual = (leaveTypeId: string, field: keyof AccrualForm, value: any) => {
     setAccrualForms(prev => ({
       ...prev,
-      [leaveTypeId]: { ...prev[leaveTypeId], [field]: value },
+      [leaveTypeId]: { ...prev[leaveTypeId]!, [field]: value },
     }));
   };
 
   const updateAccrualConfig = (leaveTypeId: string, field: keyof AccrualConfigForm, value: any) => {
     setAccrualConfigForms(prev => ({
       ...prev,
-      [leaveTypeId]: { ...prev[leaveTypeId], [field]: value },
+      [leaveTypeId]: { ...prev[leaveTypeId]!, [field]: value },
     }));
   };
 

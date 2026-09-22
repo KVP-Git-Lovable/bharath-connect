@@ -13,8 +13,8 @@ import { supabase } from "@/integrations/supabase/client";
 
 interface UserInfo {
   id: string;
-  full_name: string;
-  profile_picture_url?: string;
+  full_name: string | null;
+  profile_picture_url?: string | undefined | null;
 }
 
 // ── Reusable Owner Picker for the form ──────────────────────
@@ -142,13 +142,13 @@ export function CreateTaskModal({ open, onClose, projectId, sprints, milestones,
       status: form.status,
       priority: form.priority,
       assignee_id: owner?.id || undefined,
-      milestone_id: form.milestone_id || undefined,
+      milestone_id: (form.milestone_id || undefined)!,
       section_id: form.section_id || undefined,
       start_date: form.start_date || undefined,
       due_date: form.due_date || undefined,
       estimated_hours: form.estimated_hours ? parseFloat(form.estimated_hours) : undefined,
       story_points: form.story_points ? parseInt(form.story_points) : undefined,
-      tags: form.tags.length ? form.tags : undefined,
+      tags: (form.tags.length ? form.tags : undefined)!,
     });
     // Add collaborators
     for (const collab of collaborators) {

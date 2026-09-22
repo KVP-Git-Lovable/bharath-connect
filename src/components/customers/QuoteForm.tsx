@@ -54,8 +54,8 @@ export function QuoteForm({
   const update = (i: number, patch: Partial<QuoteItem>) => {
     setRows((prev) => {
       const next = [...prev];
-      const merged = { ...next[i], ...patch };
-      merged.total = calcLine(merged.qty, merged.unit_price, merged.discount_pct);
+      const merged = { ...next[i]!, ...patch };
+      merged.total = calcLine(merged.qty!, merged.unit_price!, merged.discount_pct!);
       next[i] = merged;
       return next;
     });
@@ -73,7 +73,7 @@ export function QuoteForm({
             product_name: r!.product_name.trim(),
             default_unit_price: Number(r!.unit_price) || 0,
           });
-          working[i] = { ...r, product_id: created.id, product_name: created.product_name };
+          working[i] = { ...r!, product_id: created.id, product_name: created.product_name };
         } catch (e) {
           // If save-to-master fails (e.g. duplicate), keep as free-text and continue
           console.warn("Add to master failed", e);
@@ -82,7 +82,7 @@ export function QuoteForm({
     }
     const items = working.filter((r) => r.product_id || (r.product_name && r.product_name.trim()));
     await save.mutateAsync({
-      id: quote?.id,
+      id: quote?.id!,
       opportunity_id: opportunityId,
       name: name.trim(),
       notes: notes.trim() || null,

@@ -169,9 +169,9 @@ export async function previewRecipients(args: {
 }) {
   const { data, error } = await supabase.rpc("notif_preview_recipients", {
     p_receiver_type: args.receiver_type,
-    p_receiver_role: args.receiver_role ?? undefined,
-    p_receiver_user_id: args.receiver_user_id ?? undefined,
-    p_sample_actor: args.sample_actor ?? undefined,
+    p_receiver_role: (args.receiver_role ?? undefined)!,
+    p_receiver_user_id: (args.receiver_user_id ?? undefined)!,
+    p_sample_actor: (args.sample_actor ?? undefined)!,
     p_include_secondary: args.include_secondary ?? false,
   });
   if (error) throw error;
@@ -186,7 +186,7 @@ export async function sendTestNotification(ruleId: string) {
 
 /** Fill a template with sample values, mirroring the database notif_fill(). */
 export function fillSample(template: string, sample: Record<string, string>) {
-  return template.replace(/\{([a-z0-9_]+)\}/gi, (m, key: string) => (key in sample ? sample[key] : m));
+  return template.replace(/\{([a-z0-9_]+)\}/gi, (m, key: string) => (key in sample ? sample[key]! : m));
 }
 
 export const SAMPLE_VALUES: Record<string, string> = {

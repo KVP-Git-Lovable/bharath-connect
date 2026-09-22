@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 export interface PermissionRow {
   objectName: string;
   label: string;
-  parentModule?: string;
+  parentModule?: string | undefined;
   canRead: boolean;
   canCreate: boolean;
   canEdit: boolean;

@@ -54,7 +54,7 @@ export default function EventTypesMaster() {
       if (error.code === "23503") {
         await supabase.from("master_event_types" as any).update({ is_active: false }).eq("id", id);
         toast.success("In use — deactivated instead");
-      } else return toast.error(error.message);
+      } else { toast.error(error.message); return; }
     }
     qc.invalidateQueries({ queryKey: ["event-types-admin"] });
     qc.invalidateQueries({ queryKey: ["event-types"] });

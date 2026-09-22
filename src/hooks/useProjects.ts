@@ -16,11 +16,11 @@ export interface Project {
   status: ProjectStatus;
   priority: Priority;
   owner_id?: string;
-  start_date?: string;
-  end_date?: string;
-  estimated_hours?: number;
+  start_date?: string | undefined;
+  end_date?: string | undefined;
+  estimated_hours?: number | undefined;
   logged_hours?: number;
-  budget?: number;
+  budget?: number | undefined;
   color: string;
   is_template: boolean;
   template_name?: string;
@@ -71,21 +71,21 @@ export interface Task {
   project_id: string;
   sprint_id?: string;
   milestone_id?: string;
-  parent_task_id?: string;
-  section_id?: string;
+  parent_task_id?: string | undefined;
+  section_id?: string | undefined;
   title: string;
-  description?: string;
+  description?: string | undefined;
   type: TaskType;
   status: TaskStatus;
   priority: Priority;
-  assignee_id?: string;
+  assignee_id?: string | undefined;
   collaborator_id?: string;
   reporter_id?: string;
-  start_date?: string;
-  due_date?: string;
-  estimated_hours?: number;
+  start_date?: string | undefined;
+  due_date?: string | undefined;
+  estimated_hours?: number | undefined;
   logged_hours?: number;
-  story_points?: number;
+  story_points?: number | undefined;
   sort_order: number;
   tags?: string[];
   is_blocked: boolean;
@@ -184,9 +184,12 @@ export function useUpdateProject() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...values }: Partial<Project> & { id: string }) => {
+      const clean = Object.fromEntries(
+        Object.entries(values).filter(([, v]) => v !== undefined),
+      );
       const { data, error } = await supabase
         .from('pm_projects')
-        .update(values)
+        .update(clean as never)
         .eq('id', id)
         .select()
         .single();
@@ -267,9 +270,12 @@ export function useUpdateTask() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...values }: Partial<Task> & { id: string }) => {
+      const clean = Object.fromEntries(
+        Object.entries(values).filter(([, v]) => v !== undefined),
+      );
       const { data, error } = await supabase
         .from('pm_tasks')
-        .update(values)
+        .update(clean as never)
         .eq('id', id)
         .select()
         .single();

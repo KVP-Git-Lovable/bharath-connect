@@ -140,7 +140,6 @@ export function useLeadListViews(section = "leads", objectLabel = "Leads") {
         sort_direction: payload.sort_dir ?? "desc",
         visibility: payload.visibility ?? "private",
         shared_with: payload.visibility === "selected" ? payload.shared_user_ids ?? [] : [],
-        is_shared: (payload.visibility ?? "private") !== "private",
         is_default: payload.is_default ?? false,
         charts: (payload.charts ?? []) as any,
       };
@@ -151,13 +150,13 @@ export function useLeadListViews(section = "leads", objectLabel = "Leads") {
           .from("list_views")
           .update({ ...record, updated_at: new Date().toISOString() })
           .eq("id", payload.id);
-        if (error) return toast.error(error.message);
+        if (error) { toast.error(error.message); return; }
         toast.success("View updated");
         await load();
         selectView(payload.id);
       } else {
         const { data, error } = await supabase.from("list_views").insert(record).select("id").single();
-        if (error) return toast.error(error.message);
+        if (error) { toast.error(error.message); return; }
         toast.success("View created");
         await load();
         if (data?.id) selectView(data.id);
@@ -185,7 +184,7 @@ export function useLeadListViews(section = "leads", objectLabel = "Leads") {
   const deleteView = useCallback(
     async (view: ListView) => {
       const { error } = await supabase.from("list_views").delete().eq("id", view.id);
-      if (error) return toast.error(error.message);
+      if (error) { toast.error(error.message); return; }
       toast.success("View deleted");
       selectView(null);
       await load();
@@ -202,7 +201,7 @@ export function useLeadListViews(section = "leads", objectLabel = "Leads") {
       await supabase.from("list_views").update({ is_default: false }).eq("section", section).eq("user_id", uid);
       if (view && !view.is_standard && view.owner_id === uid) {
         const { error } = await supabase.from("list_views").update({ is_default: true }).eq("id", view.id);
-        if (error) return toast.error(error.message);
+        if (error) { toast.error(error.message); return; }
         toast.success(`"${view.name}" pinned as default`);
       } else if (view && !view.is_standard) {
         toast.error("You can only pin views you own");

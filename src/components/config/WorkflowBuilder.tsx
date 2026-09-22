@@ -45,7 +45,7 @@ export function WorkflowBuilder({ module }: { module: string }) {
     const list = [...workflow.steps];
     const i = list.findIndex((s) => s.id === id); const j = i + dir;
     if (i < 0 || j < 0 || j >= list.length) return;
-    [list[i], list[j]] = [list[j], list[i]];
+    [list[i], list[j]] = [list[j]!, list[i]!];
     setWorkflow({ ...workflow, steps: list });
   };
 

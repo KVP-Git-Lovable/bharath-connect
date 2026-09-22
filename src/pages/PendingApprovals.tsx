@@ -30,7 +30,7 @@ interface RegRequest {
   user_id: string;
   date: string;
   attendance_date: string | null;
-  reason: string;
+  reason: string | null;
   status: string;
   created_at: string;
   requested_check_in_time: string | null;
@@ -138,7 +138,7 @@ export default function PendingApprovals() {
       const app = leaveRequests.find((l) => l.id === id);
       const { data: { user } } = await supabase.auth.getUser();
       const { error } = await supabase.from("leave_applications").update({
-        status, approved_by: user?.id, approved_date: status === "approved" ? new Date().toISOString() : null,
+        status, approved_by: user?.id!, approved_date: status === "approved" ? new Date().toISOString() : null,
       }).eq("id", id);
       if (error) throw error;
 
@@ -187,7 +187,7 @@ export default function PendingApprovals() {
       }
 
       const { error } = await supabase.from("regularization_requests").update({
-        status, approved_by: user?.id,
+        status, approved_by: user?.id!,
         approved_at: status === "approved" ? new Date().toISOString() : null,
         rejection_reason: reason || null,
       }).eq("id", id);

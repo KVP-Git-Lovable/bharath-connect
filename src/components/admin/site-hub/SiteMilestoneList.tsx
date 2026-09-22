@@ -1,3 +1,4 @@
+import type { JSX } from "react";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
@@ -80,10 +81,10 @@ interface Props {
   siteId: string;
   milestones: HubMilestone[];
   activities?: Activity[];
-  onChanged?: () => void;
-  onAddSubMilestone?: (parentId: string, parentName: string) => void;
-  onEditMilestone?: (m: HubMilestone) => void;
-  onOpenActivity?: (a: Activity) => void;
+  onChanged?: (() => void) | undefined;
+  onAddSubMilestone?: ((parentId: string, parentName: string) => void) | undefined;
+  onEditMilestone?: ((m: HubMilestone) => void) | undefined;
+  onOpenActivity?: ((a: Activity) => void) | undefined;
 }
 
 async function saveMilestoneProgress(id: string, pct: number, currentStatus?: string | null) {
@@ -124,11 +125,11 @@ interface MilestoneCardProps {
   activitiesById: Record<string, Activity[]>;
   comments: Comment[];
   onCommentAdded: () => void;
-  onChanged?: () => void;
-  currentUserId?: string;
-  onAddSubMilestone?: (parentId: string, parentName: string) => void;
-  onEditMilestone?: (m: HubMilestone) => void;
-  onOpenActivity?: (a: Activity) => void;
+  onChanged?: (() => void) | undefined;
+  currentUserId?: string | undefined;
+  onAddSubMilestone?: ((parentId: string, parentName: string) => void) | undefined;
+  onEditMilestone?: ((m: HubMilestone) => void) | undefined;
+  onOpenActivity?: ((a: Activity) => void) | undefined;
   depth: number;
   ancestorPath: string[];
 }
@@ -178,8 +179,7 @@ function MilestoneCard({
     setExpanded(true);
     setInlineDraft({
       name: "",
-      start_date: m.start_date || new Date().toISOString().split("T")[0],
-      end_date: m.end_date || "",
+      start_date: (m.start_date || new Date().toISOString().split("T")[0])!,      end_date: m.end_date || "",
       status: "not_started",
     });
   };
@@ -469,8 +469,8 @@ function MilestoneCard({
           min={0}
           max={100}
           step={1}
-          onValueChange={(v) => !hasChildren && setDraft(v[0])}
-          onValueCommit={(v) => commitProgress(v[0])}
+          onValueChange={(v) => !hasChildren && setDraft(v[0]!)}
+          onValueCommit={(v) => commitProgress(v[0]!)}
           disabled={saving || hasChildren}
           className="flex-1"
         />
@@ -566,8 +566,8 @@ function MilestoneCard({
               activitiesById={activitiesById}
               comments={comments}
               onCommentAdded={onCommentAdded}
-              onChanged={onChanged}
-              currentUserId={currentUserId}
+              onChanged={onChanged!}
+              currentUserId={currentUserId!}
               onAddSubMilestone={onAddSubMilestone}
               onEditMilestone={onEditMilestone}
               onOpenActivity={onOpenActivity}
@@ -745,8 +745,8 @@ interface TableRowsProps {
   childrenByParent: Record<string, HubMilestone[]>;
   activityCount: Record<string, number>;
   commentsCount: Record<string, number>;
-  onEditMilestone?: (m: HubMilestone) => void;
-  onAddSubMilestone?: (parentId: string, parentName: string) => void;
+  onEditMilestone?: ((m: HubMilestone) => void) | undefined;
+  onAddSubMilestone?: ((parentId: string, parentName: string) => void) | undefined;
 }
 
 function TableView({
@@ -987,8 +987,8 @@ export default function SiteMilestoneList({ siteId, milestones, activities = [],
               activitiesById={activitiesById}
               comments={comments}
               onCommentAdded={fetchComments}
-              onChanged={onChanged}
-              currentUserId={user?.id}
+              onChanged={onChanged!}
+              currentUserId={user?.id!}
               onAddSubMilestone={onAddSubMilestone}
               onEditMilestone={onEditMilestone}
               onOpenActivity={onOpenActivity}
@@ -1003,8 +1003,8 @@ export default function SiteMilestoneList({ siteId, milestones, activities = [],
           childrenByParent={childrenByParent}
           activityCount={activityCount}
           commentsCount={commentsCount}
-          onEditMilestone={onEditMilestone}
-          onAddSubMilestone={onAddSubMilestone}
+          onEditMilestone={onEditMilestone!}
+          onAddSubMilestone={onAddSubMilestone!}
         />
       )}
     </div>

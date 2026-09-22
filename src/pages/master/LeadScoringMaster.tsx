@@ -186,12 +186,12 @@ export default function LeadScoringMaster() {
             <div key={i} className="flex items-center gap-2">
               <Label className="text-xs">Min activities</Label>
               <Input disabled={ro} type="number" className="w-20" value={t.min} onChange={(e) => {
-                const arr = [...draft.activityThresholds]; arr[i] = { ...arr[i], min: Number(e.target.value) || 0 };
+                const arr = [...draft.activityThresholds]; arr[i] = { ...arr[i]!, min: Number(e.target.value) || 0 };
                 setDraft({ ...draft, activityThresholds: arr });
               }} />
               <Label className="text-xs">Score</Label>
               <Input disabled={ro} type="number" className="w-20" value={t.score} onChange={(e) => {
-                const arr = [...draft.activityThresholds]; arr[i] = { ...arr[i], score: Number(e.target.value) || 0 };
+                const arr = [...draft.activityThresholds]; arr[i] = { ...arr[i]!, score: Number(e.target.value) || 0 };
                 setDraft({ ...draft, activityThresholds: arr });
               }} />
               {!ro && (
@@ -218,12 +218,12 @@ export default function LeadScoringMaster() {
             <div key={i} className="flex items-center gap-2">
               <Label className="text-xs">Up to (days)</Label>
               <Input disabled={ro} type="number" className="w-24" value={b.maxDays} onChange={(e) => {
-                const arr = [...draft.ageBuckets]; arr[i] = { ...arr[i], maxDays: Number(e.target.value) || 0 };
+                const arr = [...draft.ageBuckets]; arr[i] = { ...arr[i]!, maxDays: Number(e.target.value) || 0 };
                 setDraft({ ...draft, ageBuckets: arr });
               }} />
               <Label className="text-xs">Score</Label>
               <Input disabled={ro} type="number" className="w-20" value={b.score} onChange={(e) => {
-                const arr = [...draft.ageBuckets]; arr[i] = { ...arr[i], score: Number(e.target.value) || 0 };
+                const arr = [...draft.ageBuckets]; arr[i] = { ...arr[i]!, score: Number(e.target.value) || 0 };
                 setDraft({ ...draft, ageBuckets: arr });
               }} />
               {!ro && (

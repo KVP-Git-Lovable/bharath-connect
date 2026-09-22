@@ -51,7 +51,7 @@ const HolidayManagement = ({ readOnly = false }: HolidayManagementProps) => {
     const { data: { user } } = await supabase.auth.getUser();
     const { error } = await supabase.from('holidays').insert({
       date: format(selectedDate, 'yyyy-MM-dd'), holiday_name: formData.holiday_name.trim(),
-      description: formData.description.trim() || null, year: selectedDate.getFullYear(), created_by: user?.id
+      description: formData.description.trim() || null, year: selectedDate.getFullYear(), created_by: user?.id ?? null
     });
     if (error) { toast.error(error.code === '23505' ? 'A holiday already exists for this date' : 'Failed to create holiday'); return; }
     toast.success('Holiday created successfully');

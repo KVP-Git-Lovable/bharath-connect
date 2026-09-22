@@ -356,7 +356,7 @@ export default function Vendors() {
         return;
       }
     }
-    upsertMutation.mutate({ form, id: editingVendor?.id });
+    upsertMutation.mutate({ form, id: editingVendor?.id! });
   };
 
   return (

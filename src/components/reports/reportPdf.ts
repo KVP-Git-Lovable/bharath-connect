@@ -33,12 +33,12 @@ export interface GenerateReportPdfArgs {
   filters: string[];
   columns: PdfColumn[];
   rows: string[][];
-  summary?: PdfSummaryItem[];
+  summary?: PdfSummaryItem[] | undefined;
   generatedBy: string;
   orientation?: "portrait" | "landscape";
   fileName: string;
   /** Optional chart image (PNG data URL) rendered below the table/summary. */
-  chartImage?: { data: string; aspect: number };
+  chartImage?: { data: string; aspect: number } | undefined;
 }
 
 interface CompanyInfo {
@@ -257,7 +257,7 @@ export async function generateReportPdf(args: GenerateReportPdfArgs): Promise<vo
       doc.setFont("helvetica", "normal");
       doc.setFontSize(9);
       doc.setTextColor(80, 80, 80);
-      doc.text(labels[i], margin, y);
+      doc.text(labels[i]!, margin, y);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(20, 30, 60);
       doc.text(pdfText(s.value), valueX, y);

@@ -64,9 +64,9 @@ interface ActivityMarker {
 }
 
 interface LeafletMapProps {
-  location?: { lat: number; lng: number } | null;
-  gpsPoints?: GPSPoint[];
-  activityMarkers?: ActivityMarker[];
+  location?: { lat: number; lng: number } | null | undefined;
+  gpsPoints?: GPSPoint[] | undefined;
+  activityMarkers?: ActivityMarker[] | undefined;
 }
 
 function MapAutoFit({ location, gpsPoints, activityMarkers }: LeafletMapProps) {
@@ -136,7 +136,7 @@ export default function LeafletMap({ location, gpsPoints, activityMarkers }: Lea
         attribution='&copy; <a href="https://osm.org">OpenStreetMap</a>'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
-      <MapAutoFit location={location} gpsPoints={gpsPoints} activityMarkers={activityMarkers} />
+      <MapAutoFit location={location!} gpsPoints={gpsPoints!} activityMarkers={activityMarkers} />
 
       {/* Route line showing actual path traveled */}
       {routedPath.length > 0 && (

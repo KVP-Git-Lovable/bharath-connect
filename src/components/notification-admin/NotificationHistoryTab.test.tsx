@@ -36,7 +36,7 @@ import NotificationHistoryTab from "./NotificationHistoryTab";
 describe("NotificationHistoryTab", () => {
   it("shows stats, rows, paging and a detail sheet", async () => {
     render(<MemoryRouter><NotificationHistoryTab /></MemoryRouter>);
-    expect(screen.getByText("25%")).toBeInTheDocument(); // read rate
+    expect(await screen.findByText("25%")).toBeInTheDocument(); // read rate
     expect(screen.getByText("4")).toBeInTheDocument(); // push problems
     expect(screen.getByText("1–25 of 40")).toBeInTheDocument();
     expect(screen.getAllByText("No device").length).toBeGreaterThan(0);
@@ -44,7 +44,7 @@ describe("NotificationHistoryTab", () => {
     fireEvent.click(screen.getByLabelText("Next page"));
     await waitFor(() => expect(h.calls.at(-1)).toMatchObject({ page: 1 }));
 
-    fireEvent.click(screen.getAllByText("Expense submitted: ₹100")[0]);
+    fireEvent.click(screen.getAllByText("Expense submitted: ₹100")[0]!);
     await waitFor(() => expect(screen.getByText(/no phone registered for push/)).toBeInTheDocument());
     expect(screen.getByText("Open Expenses")).toBeInTheDocument();
   });

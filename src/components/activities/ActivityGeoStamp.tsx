@@ -1,3 +1,4 @@
+import type { JSX } from "react";
 import { useEffect, useState } from "react";
 import { MapPin, CheckCircle2, AlertTriangle, XCircle, Loader2, RefreshCw, Route, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";

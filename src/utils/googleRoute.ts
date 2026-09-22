@@ -198,26 +198,26 @@ export async function getSnappedRoute(segments: RoutePoint[][]): Promise<Snapped
         const prevSeg = nonEmpty[s - 1];
         const from = prevSeg![prevSeg!.length - 1];
         const to = segment![0];
-        if (!isBridgeable(from, to)) {
+        if (!isBridgeable(from!, to!)) {
           // Implausible as a road journey — keep the line broken and add nothing.
-          path.push(toLatLng(to));
+          path.push(toLatLng(to!));
           allSnapped = false;
         } else if (calls < MAX_CALLS) {
           calls++;
-          const bridge = await bridgeGap(from, to);
+          const bridge = await bridgeGap(from!, to!);
           path.push(...bridge.path);
           estimatedMeters += bridge.meters;
           if (!bridge.snapped) allSnapped = false;
         } else {
           const straight = haversineMeters(from!.latitude, from!.longitude, to!.latitude, to!.longitude);
           estimatedMeters += straight;
-          path.push(toLatLng(to));
+          path.push(toLatLng(to!));
           allSnapped = false;
         }
       }
 
       if (segment!.length < 2) {
-        path.push(toLatLng(segment![0]));
+        path.push(toLatLng(segment![0]!));
         continue;
       }
 

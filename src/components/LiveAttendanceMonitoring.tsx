@@ -18,8 +18,8 @@ import jsPDF from 'jspdf';
 
 interface UserInfo {
   id: string;
-  full_name: string;
-  username: string;
+  full_name: string | null;
+  username: string | null;
 }
 
 interface AttendanceData {
@@ -98,7 +98,7 @@ const LiveAttendanceMonitoring = () => {
       if (url.startsWith('http')) {
         const match = url.match(/attendance-photos\/(.+?)(?:\?|$)/);
         if (match) {
-          storagePath = match[1];
+          storagePath = match[1]!;
         } else {
           return url; // Can't parse, return as-is
         }
@@ -129,7 +129,7 @@ const LiveAttendanceMonitoring = () => {
           if (record.check_in_time && record.check_out_time) {
             activeMarketHours = (new Date(record.check_out_time).getTime() - new Date(record.check_in_time).getTime()) / (1000 * 60 * 60);
           }
-          const entry: AttendanceData = { ...record, profiles: { full_name: profile.full_name, username: profile.username, email: profile.email }, active_market_hours: activeMarketHours, signed_photo_url: null };
+          const entry: AttendanceData = { ...record, profiles: { full_name: profile.full_name!, username: profile.username!, email: profile.email }, active_market_hours: activeMarketHours, signed_photo_url: null };
           result.push(entry);
 
           if (record.check_in_photo_url) {
@@ -146,7 +146,7 @@ const LiveAttendanceMonitoring = () => {
         const usersWithAttendanceToday = (attendance || []).filter(a => a.date === today).map(a => a.user_id);
         allUsers.forEach(user => {
           if (!usersWithAttendanceToday.includes(user.id)) {
-            result.push({ id: `absent-${user.id}-${today}`, user_id: user.id, date: today, check_in_time: null, check_out_time: null, total_hours: null, status: 'absent', check_in_location: null, check_out_location: null, check_in_address: null, check_out_address: null, check_in_photo_url: null, check_out_photo_url: null, face_match_confidence: null, face_match_confidence_out: null, profiles: { full_name: user.full_name, username: user.username, email: user.email }, active_market_hours: null, signed_photo_url: null });
+            result.push({ id: `absent-${user.id}-${today}`, user_id: user.id, date: today, check_in_time: null, check_out_time: null, total_hours: null, status: 'absent', check_in_location: null, check_out_location: null, check_in_address: null, check_out_address: null, check_in_photo_url: null, check_out_photo_url: null, face_match_confidence: null, face_match_confidence_out: null, profiles: { full_name: user.full_name!, username: user.username!, email: user.email }, active_market_hours: null, signed_photo_url: null });
           }
         });
         setAttendanceData(result);
@@ -285,14 +285,14 @@ const LiveAttendanceMonitoring = () => {
     try {
       const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
       doc.setFontSize(14);
-      doc.text(modalTitles[modalType || 'all'], 14, 15);
+      doc.text(modalTitles[modalType || 'all']!, 14, 15);
       doc.setFontSize(9);
       doc.text(`Generated: ${format(new Date(), 'PPpp')}`, 14, 21);
       const headers = ['Employee', 'Date', 'In', 'Out', 'Hours', 'Status'];
       const colX = [14, 70, 100, 120, 140, 165];
       let y = 30;
       doc.setFont('helvetica', 'bold');
-      headers.forEach((h, i) => doc.text(h, colX[i], y));
+      headers.forEach((h, i) => doc.text(h, colX[i]!, y));
       doc.line(14, y + 1, 196, y + 1);
       y += 6;
       doc.setFont('helvetica', 'normal');
@@ -307,7 +307,7 @@ const LiveAttendanceMonitoring = () => {
           r.active_market_hours ? `${r.active_market_hours.toFixed(1)}h` : '--',
           r.status,
         ];
-        vals.forEach((v, i) => doc.text(String(v), colX[i], y));
+        vals.forEach((v, i) => doc.text(String(v), colX[i]!, y));
         y += 5;
       });
       await downloadPDF(doc, `${modalTitles[modalType || 'all']}-${todayStr}.pdf`);

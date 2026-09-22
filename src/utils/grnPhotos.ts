@@ -39,7 +39,7 @@ export async function resolveGrnPhotoUrl(pathOrUrl: string): Promise<string> {
   }
   let path = pathOrUrl;
   const m = pathOrUrl.match(/grn-photos\/(.+?)(\?|$)/);
-  if (m) path = m[1];
+  if (m) path = m[1]!;
 
   const cached = signedUrlCache.get(path);
   if (cached && cached.expires > Date.now()) return cached.url;
@@ -56,7 +56,7 @@ export async function resolveGrnPhotoUrl(pathOrUrl: string): Promise<string> {
 export async function removeGrnPhoto(pathOrUrl: string): Promise<void> {
   let path = pathOrUrl;
   const m = pathOrUrl.match(/grn-photos\/(.+?)(\?|$)/);
-  if (m) path = m[1];
+  if (m) path = m[1]!;
   try {
     await supabase.storage.from(BUCKET).remove([path]);
   } catch {

@@ -25,7 +25,7 @@ export function FieldManager({ module }: { module: string }) {
     const i = list.findIndex((f) => f.id === id);
     const j = i + dir;
     if (i < 0 || j < 0 || j >= list.length) return;
-    [list[i], list[j]] = [list[j], list[i]];
+    [list[i], list[j]] = [list[j]!, list[i]!];
     // rebuild full list (deleted retained at end)
     const deleted = fields.filter((f) => f.deleted);
     setFields([...list, ...deleted]);

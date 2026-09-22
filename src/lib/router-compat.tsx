@@ -12,12 +12,16 @@ import {
   Link as TSLink,
   Navigate as TSNavigate,
   Outlet as TSOutlet,
+  RouterProvider,
+  createRootRoute,
+  createRouter,
+  createMemoryHistory,
 } from "@tanstack/react-router";
 import { useMemo, useCallback, forwardRef, type ComponentProps, type ReactNode } from "react";
 
 // ---------- shared URL parsing ----------
 
-function parseTo(to: string): { pathname: string; search?: Record<string, string>; hash?: string } {
+function parseTo(to: string): { pathname: string; search?: Record<string, string> | undefined; hash?: string | undefined } {
   const [beforeHash, hashStr] = (to ?? "").split("#");
   const [pathname, searchStr] = beforeHash!.split("?");
   return {
@@ -49,10 +53,10 @@ export function useNavigate(): NavigateFn {
     const { pathname, search, hash } = parseTo(to);
     tsNav({
       to: pathname,
-      search: search as never,
-      hash,
+      search: (search ?? {}) as never,
+      ...(hash !== undefined ? { hash } : {}),
       state: options?.state as never,
-      replace: options?.replace,
+      replace: options?.replace ?? false,
     });
   }, [tsNav, router]) as NavigateFn;
 }
@@ -105,7 +109,7 @@ export function useSearchParams(): [URLSearchParams, (init: URLSearchParams | Re
             : new URLSearchParams(init);
       const searchObj: Record<string, string> = {};
       next.forEach((v, k) => { searchObj[k] = v; });
-      nav({ to: live.pathname, search: searchObj as never, replace: opts?.replace });
+      nav({ to: live.pathname, search: searchObj as never, replace: opts?.replace! });
     },
     [nav, router],
   );
@@ -131,8 +135,8 @@ export const Link = forwardRef<HTMLAnchorElement, LinkProps>(function Link(
       ref={ref as never}
       to={pathname as never}
       search={search as never}
-      hash={hash}
-      replace={replace}
+      hash={hash!}
+      replace={replace!}
       state={state as never}
       {...((rest ?? {}) as Record<string, unknown>)}
     >
@@ -146,7 +150,7 @@ export const Link = forwardRef<HTMLAnchorElement, LinkProps>(function Link(
 
 export function Navigate({ to, replace, state }: { to: string; replace?: boolean; state?: unknown }) {
   const { pathname, search, hash } = parseTo(to);
-  return <TSNavigate to={pathname as never} search={search as never} hash={hash} state={state as never} replace={replace} />;
+  return <TSNavigate to={pathname as never} search={search as never} hash={hash!} state={state as never} replace={replace!} />;
 }
 
 // ---------- Outlet ----------
@@ -156,3 +160,25 @@ export const Outlet = TSOutlet;
 // ---------- NavLink (minimal) ----------
 
 export const NavLink = Link;
+export type NavLinkProps = LinkProps;
+
+// ---------- MemoryRouter (test-only) ----------
+// Renders children inside a real TanStack router backed by in-memory history,
+// so components using the compat hooks work in unit tests.
+export function MemoryRouter({
+  children,
+  initialEntries = ["/"],
+}: {
+  children?: ReactNode;
+  initialEntries?: string[];
+}) {
+  const router = useMemo(() => {
+    const rootRoute = createRootRoute({ component: () => <>{children}</> });
+    return createRouter({
+      routeTree: rootRoute,
+      history: createMemoryHistory({ initialEntries }),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return <RouterProvider router={router as never} />;
+}

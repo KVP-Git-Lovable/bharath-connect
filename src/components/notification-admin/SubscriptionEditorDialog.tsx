@@ -140,7 +140,7 @@ export default function SubscriptionEditorDialog({
   })();
 
   const onSave = async () => {
-    if (validation) return toast.error(validation);
+    if (validation) { toast.error(validation); return; }
     const saved = savedReports.find((r) => r.id === form.savedReportId);
     const values: Record<string, unknown> = {
       name: form.name.trim(),
@@ -165,7 +165,7 @@ export default function SubscriptionEditorDialog({
       values['saved_report_name'] = saved.name;
     }
     try {
-      await save.mutateAsync({ id: subscription?.id, values: values as never });
+      await save.mutateAsync({ id: subscription?.id!, values: values as never });
       toast.success(subscription ? "Subscription updated" : "Subscription created");
       onOpenChange(false);
     } catch (e) {

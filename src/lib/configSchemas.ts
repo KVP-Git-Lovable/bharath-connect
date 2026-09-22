@@ -11,10 +11,10 @@ export interface FieldDef {
   visible: boolean;
   required: boolean;
   builtin: boolean;
-  deleted?: boolean;
-  defaultValue?: unknown;
-  helpText?: string;
-  options?: string[];
+  deleted?: boolean | undefined;
+  defaultValue?: unknown | undefined;
+  helpText?: string | undefined;
+  options?: string[] | undefined;
   order: number;
 }
 

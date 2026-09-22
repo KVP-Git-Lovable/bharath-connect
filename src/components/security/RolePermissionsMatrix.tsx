@@ -36,7 +36,7 @@ function buildPermissionsFromDefinitions(definitions: PermissionDefinition[]): P
 function buildAllEnabledFromDefinitions(definitions: PermissionDefinition[]): PermissionState {
   const state = buildPermissionsFromDefinitions(definitions);
   Object.keys(state).forEach((key) => {
-    state[key] = { ...state[key], canRead: true, canCreate: true, canEdit: true, canDelete: true };
+    state[key] = { ...state[key]!, canRead: true, canCreate: true, canEdit: true, canDelete: true };
   });
   return state;
 }
@@ -152,7 +152,7 @@ export default function RolePermissionsMatrix() {
       for (const row of permsQuery.data) {
         if (base[row.object_name]) {
           base[row.object_name] = {
-            ...base[row.object_name],
+            ...base[row.object_name]!,
             canRead: row.can_read,
             canCreate: row.can_create,
             canEdit: row.can_edit,

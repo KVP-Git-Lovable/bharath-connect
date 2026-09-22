@@ -92,8 +92,7 @@ interface FormState {
 const emptyForm: FormState = {
   site_name: "",
   description: "",
-  start_date: new Date().toISOString().split("T")[0],
-  end_date: "",
+  start_date: (new Date().toISOString().split("T")[0])!,  end_date: "",
   status: "planned",
 };
 
@@ -358,7 +357,7 @@ export default function SiteMasterManagement() {
         await supabase.from("site_assignments").delete().eq("site_id", siteId).in("user_id", toRemove);
       }
       if (toAdd.length > 0) {
-        await supabase.from("site_assignments").insert(toAdd.map((uid) => ({ site_id: siteId, user_id: uid, assigned_by: user?.id })));
+        await supabase.from("site_assignments").insert(toAdd.map((uid) => ({ site_id: siteId, user_id: uid, assigned_by: user?.id ?? null })));
       }
 
       await persistMilestones(siteId);

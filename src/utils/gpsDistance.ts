@@ -250,7 +250,7 @@ function isCorroborated(prev: Candidate, curr: Candidate, impliedKmh: number): b
 
 export function processTrajectory(
   raw: TrackPoint[],
-  options?: { window?: AttendanceWindow | null; config?: Partial<GpsProcessingConfig> }
+  options?: { window?: AttendanceWindow | null | undefined; config?: Partial<GpsProcessingConfig> }
 ): ProcessedTrajectory {
   const cfg: GpsProcessingConfig = { ...GPS_PROCESSING_CONFIG, ...(options?.config ?? {}) };
   const m = emptyMetrics(raw?.length ?? 0);
@@ -481,8 +481,8 @@ export function processTrajectory(
         const prev = deduped[deduped.length - 1];
         const next = seg[i + 1];
         if (prev && next) {
-          const outM = havP(prev, curr);
-          const backM = havP(curr, next);
+          const outM = havP(prev, curr!);
+          const backM = havP(curr!, next);
           const spanM = havP(prev, next);
           if (
             outM >= cfg.PING_PONG_OUTLIER_METERS &&
@@ -493,7 +493,7 @@ export function processTrajectory(
             continue; // stale-fix outlier between two agreeing fixes
           }
         }
-        deduped.push(curr);
+        deduped.push(curr!);
       }
       if (deduped.length > 0)
         finalSegments.push(

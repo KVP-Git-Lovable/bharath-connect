@@ -34,7 +34,7 @@ export default function TeamAttendanceReportGenerator({ onClose }: Props) {
   const [toDate, setToDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [selectedUser, setSelectedUser] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
-  const [teamMembers, setTeamMembers] = useState<{ id: string; full_name: string }[]>([]);
+  const [teamMembers, setTeamMembers] = useState<{ id: string; full_name: string | null }[]>([]);
   const [reportData, setReportData] = useState<ReportRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -130,7 +130,7 @@ export default function TeamAttendanceReportGenerator({ onClose }: Props) {
         'Location': '',
       });
       const ws = XLSX.utils.json_to_sheet(rows);
-      const colWidths = Object.keys(rows[0]).map(k => ({ wch: Math.max(k.length, 14) }));
+      const colWidths = Object.keys(rows[0]!).map(k => ({ wch: Math.max(k.length, 14) }));
       ws['!cols'] = colWidths;
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Attendance Report');
@@ -158,7 +158,7 @@ export default function TeamAttendanceReportGenerator({ onClose }: Props) {
 
       doc.setFontSize(9);
       doc.setFont('helvetica', 'bold');
-      headers.forEach((h, i) => doc.text(h, colX[i], y));
+      headers.forEach((h, i) => doc.text(h, colX[i]!, y));
       y += 2;
       doc.line(14, y, 283, y);
       y += 5;
@@ -171,7 +171,7 @@ export default function TeamAttendanceReportGenerator({ onClose }: Props) {
         const vals = Object.values(row);
         vals.forEach((v, i) => {
           const text = String(v).substring(0, colX[i + 1] ? Math.floor((colX[i + 1]! - colX[i]!) / 2) : 40);
-          doc.text(text, colX[i], y);
+          doc.text(text, colX[i]!, y);
         });
         y += 6;
       });

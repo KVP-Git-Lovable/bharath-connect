@@ -111,7 +111,7 @@ export default function InvoiceForm({
           invoice_number: invoiceNumber.trim(),
           invoice_date: invoiceDate,
           invoice_amount: amount,
-          created_by: createdBy,
+          created_by: createdBy ?? null,
         })
         .select("id")
         .single();
@@ -134,7 +134,7 @@ export default function InvoiceForm({
             file_name: f.name,
             file_size: f.size,
             file_path: f.path,
-            created_by: createdBy,
+            created_by: createdBy ?? null,
           }))
         );
         if (ae) throw ae;
@@ -151,7 +151,7 @@ export default function InvoiceForm({
             bank_name: p.bank_name.trim() || null,
             amount: parseFloat(p.amount) || 0,
             payment_date: p.payment_date || null,
-            created_by: createdBy,
+            created_by: createdBy ?? null,
           }))
         );
         if (pe) throw pe;

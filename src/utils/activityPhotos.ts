@@ -118,7 +118,7 @@ export async function resolveActivityPhotoUrl(pathOrUrl: string): Promise<string
   // Extract path from a previously signed URL if needed
   let path = pathOrUrl;
   const m = pathOrUrl.match(/activity-photos\/(.+?)(\?|$)/);
-  if (m) path = m[1];
+  if (m) path = m[1]!;
 
   const cached = signedUrlCache.get(path);
   if (cached && cached.expires > Date.now()) return cached.url;

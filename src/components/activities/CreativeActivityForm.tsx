@@ -699,7 +699,7 @@ export default function CreativeActivityForm({
       grnRowsToInsert = grnItems
         .map((it) => ({
           it,
-          received: parseFloat(grnRecv[it.id]) || 0,
+          received: parseFloat(grnRecv[it.id]!) || 0,
           remarks: (grnItemRemarks[it.id] || "").trim(),
         }))
         .filter((r) => r.received > 0);

@@ -26,7 +26,7 @@ const AttendanceReportGenerator = () => {
   const [fromDate, setFromDate] = useState(format(new Date(), 'yyyy-MM-01'));
   const [toDate, setToDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [selectedUser, setSelectedUser] = useState('all');
-  const [users, setUsers] = useState<{ id: string; full_name: string }[]>([]);
+  const [users, setUsers] = useState<{ id: string; full_name: string | null }[]>([]);
   const [reportData, setReportData] = useState<ReportRow[]>([]);
   const [loading, setLoading] = useState(false);
 

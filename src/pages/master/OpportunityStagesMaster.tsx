@@ -63,7 +63,7 @@ export default function OpportunityStagesMaster() {
 
   const del = async (id: string) => {
     const { error } = await supabase.from("opportunity_stages").delete().eq("id", id);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     qc.invalidateQueries({ queryKey: ["opp-stages-admin"] });
     qc.invalidateQueries({ queryKey: ["opp-stages"] });
   };

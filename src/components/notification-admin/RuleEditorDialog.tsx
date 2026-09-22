@@ -229,7 +229,7 @@ export default function RuleEditorDialog({
     }
     try {
       await save.mutateAsync({
-        id: rule?.id,
+        id: rule?.id!,
         values: {
           name: form.name.trim(),
           source_table: form.source_table,

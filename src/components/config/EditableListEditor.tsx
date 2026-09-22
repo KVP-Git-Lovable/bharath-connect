@@ -62,11 +62,11 @@ export function LeaveTypeEditor({
         {items.map((item, idx) => (
           <div key={idx} className="flex items-center gap-2">
             <Input value={item.name} onChange={(e) => {
-              const next = [...items]; next[idx] = { ...next[idx], name: e.target.value }; onChange(next);
+              const next = [...items]; next[idx] = { ...next[idx]!, name: e.target.value }; onChange(next);
             }} />
             <Input type="number" min={0} value={item.maxDays} className="w-28 shrink-0" title="Max days"
               onChange={(e) => {
-                const next = [...items]; next[idx] = { ...next[idx], maxDays: Number(e.target.value) }; onChange(next);
+                const next = [...items]; next[idx] = { ...next[idx]!, maxDays: Number(e.target.value) }; onChange(next);
               }} />
             <Button type="button" variant="ghost" size="icon"
               className="shrink-0 text-muted-foreground hover:text-destructive"

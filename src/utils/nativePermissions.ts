@@ -12,7 +12,7 @@ let _isNativeCached: boolean | null = null;
 
 /** Check if running inside a Capacitor native shell */
 export function isNative(): boolean {
-  if (_isNativeCached !== null) return _isNativeCached;
+  if (_isNativeCached !== null) return _isNativeCached ?? false;
   try {
     // Dynamic check — avoids import errors if @capacitor/core isn't resolved
     const { Capacitor } = require('@capacitor/core');
@@ -20,7 +20,7 @@ export function isNative(): boolean {
   } catch {
     _isNativeCached = false;
   }
-  return _isNativeCached;
+  return _isNativeCached ?? false;
 }
 
 /** Try to use Capacitor Geolocation plugin */

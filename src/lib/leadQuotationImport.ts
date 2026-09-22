@@ -82,7 +82,7 @@ function toNumber(value: unknown): number | null {
 export async function parseQuotationWorkbook(file: File): Promise<ParsedQuotationRow[]> {
   const buf = await file.arrayBuffer();
   const wb = XLSX.read(buf, { type: "array" });
-  const ws = wb.Sheets[wb.SheetNames[0]];
+  const ws = wb.Sheets[wb.SheetNames[0]!]!;
   const raw: unknown[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null, raw: true });
 
   let headerRowIdx = -1;

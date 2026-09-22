@@ -128,7 +128,7 @@ export function TaskSubtasks({ task, allTasks, projectId, onSelectTask }: Props)
             className="flex items-center gap-2 px-3 py-2 border-b last:border-b-0 hover:bg-muted/30 cursor-pointer transition-colors"
           >
             <span className="text-sm flex-1 truncate">{sub.title}</span>
-            <MiniUserAvatar userId={sub.assignee_id} />
+            <MiniUserAvatar userId={(sub.assignee_id)!} />
             <SubtaskDueDate subtask={sub} />
             <StatusBadge status={sub.status} />
             <PriorityBadge priority={sub.priority} />

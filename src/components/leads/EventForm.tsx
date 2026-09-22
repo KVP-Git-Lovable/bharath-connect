@@ -42,7 +42,7 @@ export function EventForm({
   const submit = async () => {
     if (!f.name.trim()) return;
     await save.mutateAsync({
-      id: event?.id,
+      id: event?.id!,
       name: f.name.trim(),
       event_type_id: f.event_type_id || null,
       budget_amount: Number(f.budget_amount) || 0,

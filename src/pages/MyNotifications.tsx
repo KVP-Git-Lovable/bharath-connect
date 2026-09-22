@@ -85,7 +85,7 @@ export default function MyNotifications() {
   const markAll = async () => {
     if (!userId) return;
     const { error } = await supabase.from("notifications").update({ is_read: true }).eq("user_id", userId).eq("is_read", false);
-    if (error) return toast.error("Could not mark all read", { description: error.message });
+    if (error) { toast.error("Could not mark all read", { description: error.message }); return; }
     setItems((prev) => (tab === "unread" ? [] : prev.map((x) => ({ ...x, is_read: true }))));
   };
 

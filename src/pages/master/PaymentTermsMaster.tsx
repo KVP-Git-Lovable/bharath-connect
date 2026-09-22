@@ -50,7 +50,7 @@ export default function PaymentTermsMaster() {
 
   const del = async (id: string) => {
     const { error } = await supabase.from("master_payment_terms" as any).delete().eq("id", id);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     qc.invalidateQueries({ queryKey: ["payment-terms-admin"] });
     qc.invalidateQueries({ queryKey: ["master-payment-terms"] });
   };

@@ -29,7 +29,7 @@ function UserPickerField({ label, currentUser, onSave }: {
 }) {
   const [showSearch, setShowSearch] = useState(false);
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<{ id: string; full_name: string }[]>([]);
+  const [results, setResults] = useState<{ id: string; full_name: string | null }[]>([]);
   const searchRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -234,7 +234,7 @@ export function TaskDetailPanel({ task, onClose, projectId, allTasks = [], onSel
   const handleDuplicate = async () => {
     await createTask.mutateAsync({
       project_id: projectId,
-      parent_task_id: task.parent_task_id || undefined,
+      parent_task_id: (task.parent_task_id || undefined)!,
       title: `${task.title} (copy)`,
       description: task.description || undefined,
       type: task.type,
@@ -245,7 +245,7 @@ export function TaskDetailPanel({ task, onClose, projectId, allTasks = [], onSel
       due_date: task.due_date || undefined,
       estimated_hours: task.estimated_hours || undefined,
       story_points: task.story_points || undefined,
-      tags: task.tags || undefined,
+      tags: (task.tags || undefined)!,
     });
     toast.success("Task duplicated");
   };
@@ -390,7 +390,7 @@ export function TaskDetailPanel({ task, onClose, projectId, allTasks = [], onSel
           <TabsContent value="details" className="px-6 pb-5 space-y-6 mt-4">
             {/* Meta fields */}
             <div className="space-y-3 bg-muted/20 rounded-lg p-4 border border-border/50">
-              <UserPickerField label="Owner" currentUser={task.assignee} onSave={(userId) => handleSave("assignee_id", userId)} />
+              <UserPickerField label="Owner" currentUser={task.assignee!} onSave={(userId) => handleSave("assignee_id", userId)} />
               <MultiUserPicker
                 label="Collaborators"
                 selectedUsers={collaborators.map(c => ({

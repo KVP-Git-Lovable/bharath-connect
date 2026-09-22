@@ -99,7 +99,7 @@ export default function LeadKanban({ rows, config, options, columns, avatars = {
                     <div className="flex items-center gap-2">
                       <LeadAvatar
                         name={row.name}
-                        photoUrl={avatars[row.id]}
+                        photoUrl={avatars[row.id]!}
                         className="h-8 w-8"
                       />
                       <p className="truncate text-sm font-medium text-primary">{formatCell(row, "name")}</p>

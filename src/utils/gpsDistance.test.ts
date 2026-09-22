@@ -54,7 +54,7 @@ describe("stationary + jitter suppression", () => {
     const wobble = [5, -12, 8, 15, -10, 18, -6, 12, -15, 9];
     for (let i = 0; i < 40; i++) {
       const w = wobble[i % wobble.length];
-      points.push(point(w, -w!, START + i * 30_000, 12, { speed: 0 }));
+      points.push(point(w!, -w!, START + i * 30_000, 12, { speed: 0 }));
     }
     const t = processTrajectory(points);
     expect(t.trackedDistanceKm).toBeLessThan(0.1);
@@ -303,7 +303,7 @@ describe("duplicates, accuracy bands, invalid input", () => {
   it("unsorted input is sorted by device timestamp before processing", () => {
     const ordered: TrackPoint[] = [];
     for (let i = 0; i <= 5; i++) ordered.push(point(i * 200, 0, START + i * 30_000, 8));
-    const shuffled = [ordered[3], ordered[0], ordered[5], ordered[1], ordered[4], ordered[2]];
+    const shuffled = [ordered[3]!, ordered[0]!, ordered[5]!, ordered[1]!, ordered[4]!, ordered[2]!];
     expect(computeFilteredDistanceKm(shuffled)).toBeCloseTo(
       computeFilteredDistanceKm(ordered),
       3
