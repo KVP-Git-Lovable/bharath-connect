@@ -85,7 +85,7 @@ export default function SiteGallery({ gallery, onActivityClick }: SiteGalleryPro
     <>
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
         {gallery.map((p, i) => (
-          <GalleryThumb key={`${p.storageKey}-${i}`} photo={p} onOpen={(photo, url) => setPreview({ photo, url })} onActivityClick={onActivityClick} />
+          <GalleryThumb key={`${p.storageKey}-${i}`} photo={p} onOpen={(photo, url) => setPreview({ photo, url })} onActivityClick={onActivityClick!} />
         ))}
       </div>
 

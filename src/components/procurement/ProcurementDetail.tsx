@@ -372,7 +372,7 @@ export default function ProcurementDetail({
             open={grnOpen} onOpenChange={setGrnOpen}
             poId={order.id} poNumber={order.po_number || "(No PO #)"}
             items={items} alreadyReceived={receivedByItem}
-            productName={productName} createdBy={currentUserId}
+            productName={productName} createdBy={currentUserId!}
             onSaved={() => { fetchSub(); onChanged(); }}
           />
         )}
@@ -381,7 +381,7 @@ export default function ProcurementDetail({
             open={invOpen} onOpenChange={setInvOpen}
             poId={order.id} poNumber={order.po_number || "(No PO #)"}
             vendorNameStr={vendorName(order.vendor_id)}
-            items={items} productName={productName} createdBy={currentUserId}
+            items={items} productName={productName} createdBy={currentUserId!}
             onSaved={() => { fetchSub(); onChanged(); }}
           />
         )}

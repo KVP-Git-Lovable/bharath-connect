@@ -42,7 +42,7 @@ export default function LeadSplitView({ rows, columns, avatars = {}, onOpen }: P
             <div className="flex items-center gap-2.5">
               <LeadAvatar
                         name={row.name}
-                photoUrl={avatars[row.id]}
+                photoUrl={avatars[row.id]!}
                 className="h-8 w-8"
               />
               <div className="min-w-0">
@@ -66,7 +66,7 @@ export default function LeadSplitView({ rows, columns, avatars = {}, onOpen }: P
               <div className="flex items-center gap-3">
                 <LeadAvatar
                         name={selected.name}
-                  photoUrl={avatars[selected.id]}
+                  photoUrl={avatars[selected.id]!}
                   className="h-12 w-12"
                 />
                 <div>

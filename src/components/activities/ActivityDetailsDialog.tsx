@@ -152,7 +152,7 @@ export default function ActivityDetailsDialog({ activity, open, onClose, onSaveP
           )}
 
           {/* Effort */}
-          <ActivityEffortSection activity={activity} onSaved={onSavedEffort} />
+          <ActivityEffortSection activity={activity} onSaved={onSavedEffort!} />
 
 
           {/* Status history */}
@@ -200,7 +200,7 @@ export default function ActivityDetailsDialog({ activity, open, onClose, onSaveP
             <ActivityPhotoManager
               photos={activity.photo_urls || []}
               editable={canAddPhotos}
-              onChange={canAddPhotos ? (photos) => onSavePhotos?.(photos) : undefined}
+              onChange={(canAddPhotos ? (photos) => onSavePhotos?.(photos) : undefined)!}
             />
           </div>
 

@@ -71,7 +71,7 @@ export default function ReceiveGoodsDialog({ open, onOpenChange, poId, currentUs
       items={items}
       alreadyReceived={received}
       productName={productName}
-      createdBy={currentUserId}
+      createdBy={currentUserId!}
       onSaved={() => { onSaved?.(); }}
     />
   );

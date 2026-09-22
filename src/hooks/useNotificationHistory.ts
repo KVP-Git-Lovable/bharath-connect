@@ -44,11 +44,11 @@ export function useNotificationHistory(filters: HistoryFilters, page: number, pa
       const { data, error } = await supabase.rpc("notif_history_list", {
         p_from: from,
         p_to: to,
-        p_search: filters.search.trim() || undefined,
+        p_search: (filters.search.trim() || undefined)!,
         p_source: orNull(filters.source),
         p_module: orNull(filters.module)!,
         p_user: orNull(filters.user),
-        p_read: orNull(filters.read),
+        p_read: orNull(filters.read)!,
         p_delivery: orNull(filters.delivery)!,
         p_limit: pageSize,
         p_offset: page * pageSize,

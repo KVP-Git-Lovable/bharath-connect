@@ -407,7 +407,7 @@ export default function Procurement() {
           onOpenChange={(o) => !o && setDetail(null)}
           order={detail}
           canApprove={canApprove}
-          currentUserId={profile?.id}
+          currentUserId={profile?.id!}
           vendorName={vName}
           siteName={sName}
           productName={pName}

@@ -93,7 +93,7 @@ export default function LeadListViewTable({
     if (def?.type === "picklist" && options.length > 0) {
       return (
         <Select
-          defaultValue={draft || undefined}
+          defaultValue={(draft || undefined)!}
           onValueChange={(v) => commit(row, key, v)}
           open
           onOpenChange={(o) => !o && setEditing(null)}
@@ -204,7 +204,7 @@ export default function LeadListViewTable({
                       <div className="flex items-center gap-3">
                         <LeadAvatar
                         name={row.name}
-                          photoUrl={avatars[row.id]}
+                          photoUrl={avatars[row.id]!}
                           className="h-9 w-9"
                         />
                         <span className="line-clamp-2">{value}</span>

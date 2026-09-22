@@ -179,7 +179,7 @@ function MilestoneCard({
     setExpanded(true);
     setInlineDraft({
       name: "",
-      start_date: m.start_date || new Date().toISOString().split("T")[0],
+      start_date!!: m.start_date || new Date().toISOString().split("T")[0],
       end_date: m.end_date || "",
       status: "not_started",
     });
@@ -567,8 +567,8 @@ function MilestoneCard({
               activitiesById={activitiesById}
               comments={comments}
               onCommentAdded={onCommentAdded}
-              onChanged={onChanged}
-              currentUserId={currentUserId}
+              onChanged={onChanged!}
+              currentUserId={currentUserId!}
               onAddSubMilestone={onAddSubMilestone}
               onEditMilestone={onEditMilestone}
               onOpenActivity={onOpenActivity}
@@ -988,8 +988,8 @@ export default function SiteMilestoneList({ siteId, milestones, activities = [],
               activitiesById={activitiesById}
               comments={comments}
               onCommentAdded={fetchComments}
-              onChanged={onChanged}
-              currentUserId={user?.id}
+              onChanged={onChanged!}
+              currentUserId={user?.id!}
               onAddSubMilestone={onAddSubMilestone}
               onEditMilestone={onEditMilestone}
               onOpenActivity={onOpenActivity}
@@ -1004,8 +1004,8 @@ export default function SiteMilestoneList({ siteId, milestones, activities = [],
           childrenByParent={childrenByParent}
           activityCount={activityCount}
           commentsCount={commentsCount}
-          onEditMilestone={onEditMilestone}
-          onAddSubMilestone={onAddSubMilestone}
+          onEditMilestone={onEditMilestone!}
+          onAddSubMilestone={onAddSubMilestone!}
         />
       )}
     </div>

@@ -47,7 +47,7 @@ function emptyMilestone(): LocalMilestone {
   return {
     key: crypto.randomUUID(),
     name: "",
-    start_date: new Date().toISOString().split("T")[0],
+    start_date!!: new Date().toISOString().split("T")[0],
     end_date: "",
     actual_start_date: "",
     actual_end_date: "",

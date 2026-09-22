@@ -308,8 +308,8 @@ export function KanbanBoard({ tasks, onUpdateTask, projectId, sprints, milestone
           sprints={sprints}
           milestones={milestones}
           sections={sections}
-          defaultStatus={createFor?.status}
-          defaultSectionId={createFor?.sectionId}
+          defaultStatus={createFor?.status!}
+          defaultSectionId={createFor?.sectionId!}
         />
       )}
     </div>

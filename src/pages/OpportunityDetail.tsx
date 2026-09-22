@@ -226,7 +226,7 @@ export default function OpportunityDetail() {
           {quoteEditor ? (
             <QuoteForm
               opportunityId={id!}
-              quote={editingQuote}
+              quote={editingQuote!}
               onClose={() => setQuoteEditor(null)}
             />
           ) : (

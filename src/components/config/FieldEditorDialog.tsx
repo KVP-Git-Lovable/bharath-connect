@@ -78,7 +78,7 @@ export function FieldEditorDialog({
           </div>
           <div className="space-y-1">
             <Label>Type</Label>
-            <Select value={type} onValueChange={(v) => setType(v as FieldType)} disabled={initial?.builtin}>
+            <Select value={type} onValueChange={(v) => setType(v as FieldType)} disabled={initial?.builtin!}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 {TYPES.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}

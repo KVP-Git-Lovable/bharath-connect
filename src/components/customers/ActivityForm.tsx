@@ -130,7 +130,7 @@ export function ActivityForm({
           </div>
           <div>
             <Label>Outcome</Label>
-            <Select value={form.outcome} onValueChange={(v) => setForm({ ...form, outcome: v })}>
+            <Select value={form.outcome!} onValueChange={(v) => setForm({ ...form, outcome: v })}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>{OUTCOMES.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
             </Select>

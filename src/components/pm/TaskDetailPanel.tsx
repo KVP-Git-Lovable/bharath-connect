@@ -390,7 +390,7 @@ export function TaskDetailPanel({ task, onClose, projectId, allTasks = [], onSel
           <TabsContent value="details" className="px-6 pb-5 space-y-6 mt-4">
             {/* Meta fields */}
             <div className="space-y-3 bg-muted/20 rounded-lg p-4 border border-border/50">
-              <UserPickerField label="Owner" currentUser={task.assignee} onSave={(userId) => handleSave("assignee_id", userId)} />
+              <UserPickerField label="Owner" currentUser={task.assignee!} onSave={(userId) => handleSave("assignee_id", userId)} />
               <MultiUserPicker
                 label="Collaborators"
                 selectedUsers={collaborators.map(c => ({

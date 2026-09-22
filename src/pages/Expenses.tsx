@@ -331,10 +331,10 @@ export default function Expenses() {
         presentDays={summary?.present_days || 0}
         totalKm={summary?.total_km || 0}
         loading={summaryLoading}
-        taType={policy?.ta_type}
+        taType={policy?.ta_type!}
         taPerKmRate={Number(policy?.ta_per_km_rate || 0)}
         fixedTaAmount={Number(policy?.fixed_ta_amount || 0)}
-        daBasis={policy?.da_calculation_basis}
+        daBasis={policy?.da_calculation_basis!}
         daAmount={Number(policy?.fixed_da_amount || 0)}
         daApplicable={daApplicable}
       />

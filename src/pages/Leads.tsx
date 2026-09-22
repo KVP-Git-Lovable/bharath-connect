@@ -261,7 +261,7 @@ export default function Leads() {
       <ViewBar
         views={allViews}
         activeView={activeView}
-        currentUserId={userId}
+        currentUserId={userId!}
         onSelect={selectView}
         onNew={() => { setEditingView(null); setEditorOpen(true); }}
         onEdit={(v) => { setEditingView(v); setEditorOpen(true); }}

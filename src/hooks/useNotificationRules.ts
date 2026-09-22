@@ -171,7 +171,7 @@ export async function previewRecipients(args: {
     p_receiver_type: args.receiver_type,
     p_receiver_role: (args.receiver_role ?? undefined)!,
     p_receiver_user_id: (args.receiver_user_id ?? undefined)!,
-    p_sample_actor: args.sample_actor ?? undefined,
+    p_sample_actor: (args.sample_actor ?? undefined)!,
     p_include_secondary: args.include_secondary ?? false,
   });
   if (error) throw error;

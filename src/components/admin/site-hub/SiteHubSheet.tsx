@@ -478,7 +478,7 @@ export default function SiteHubSheet({ site, open, onClose, onEdit, onStatusChan
         activity={selectedActivity}
         open={!!selectedActivity}
         onClose={() => setSelectedActivity(null)}
-        attendance={selectedActivity ? attendanceByActivity[selectedActivity.id] : null}
+        attendance={(selectedActivity ? attendanceByActivity[selectedActivity.id] : null)!}
       />
     </>
   );

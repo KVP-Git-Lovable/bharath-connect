@@ -206,7 +206,7 @@ function UserDetailDialog({ user, employee, roleName }: { user: AppUser; employe
         <div className="space-y-4">
           <div className="flex items-center gap-4">
             <Avatar className="h-16 w-16">
-              <SignedAvatarImage src={profile?.profile_picture_url || undefined} />
+              <SignedAvatarImage src={(profile?.profile_picture_url || undefined)!} />
               <AvatarFallback className="bg-primary text-primary-foreground text-lg">
                 {(user.full_name || user.username || "U").charAt(0).toUpperCase()}
               </AvatarFallback>
@@ -609,7 +609,7 @@ function UserHierarchy({ users, roles, profiles, userRoleMap, getRoleDisplayName
         <div className="flex flex-col items-center w-16 md:w-24">
           <div className={`rounded-full p-[2px] ring-2 ${colors.border.replace('border-t-', 'ring-')}`}>
             <Avatar className="h-8 w-8 md:h-12 md:w-12">
-              <SignedAvatarImage src={profile?.profile_picture_url || undefined} />
+              <SignedAvatarImage src={(profile?.profile_picture_url || undefined)!} />
               <AvatarFallback className={`text-[10px] md:text-sm font-semibold text-white ${colors.badge}`}>
                 {(user.full_name || "U").charAt(0).toUpperCase()}
               </AvatarFallback>
@@ -677,7 +677,7 @@ function UserHierarchy({ users, roles, profiles, userRoleMap, getRoleDisplayName
               <div className="w-[18px]" />
             )}
             <Avatar className="h-7 w-7 shrink-0">
-              <SignedAvatarImage src={profile?.profile_picture_url || undefined} />
+              <SignedAvatarImage src={(profile?.profile_picture_url || undefined)!} />
               <AvatarFallback className={`text-[10px] font-semibold text-white ${colors.badge}`}>
                 {(user.full_name || "U").charAt(0).toUpperCase()}
               </AvatarFallback>
@@ -1169,7 +1169,7 @@ export default function AdminUserManagement() {
                                     className={`h-9 w-9 ${profile?.profile_picture_url ? 'cursor-pointer hover:ring-2 hover:ring-primary transition-all' : ''}`}
                                     onClick={() => profile?.profile_picture_url && setPhotoPreviewUrl(profile.profile_picture_url)}
                                   >
-                                    <SignedAvatarImage src={profile?.profile_picture_url || undefined} />
+                                    <SignedAvatarImage src={(profile?.profile_picture_url || undefined)!} />
                                     <AvatarFallback className="bg-primary text-primary-foreground text-xs">
                                       {(user.full_name || user.email || "U").charAt(0).toUpperCase()}
                                     </AvatarFallback>
@@ -1224,7 +1224,7 @@ export default function AdminUserManagement() {
                               {isColVisible("action") && (
                                 <TableCell>
                                   <div className="flex items-center gap-1">
-                                    <UserDetailDialog user={user} employee={employee} roleName={roleName} />
+                                    <UserDetailDialog user={user} employee={employee!} roleName={roleName} />
                                     <Button variant="ghost" size="sm" className="gap-1 text-xs h-8 px-2" onClick={() => setEditingUser(user)}>
                                       <Pencil className="h-3.5 w-3.5" /> Edit
                                     </Button>
@@ -1265,7 +1265,7 @@ export default function AdminUserManagement() {
                       return (
                         <div key={user.id} className="p-3 flex items-start gap-3">
                           <Avatar className="h-9 w-9 shrink-0 mt-0.5">
-                            <SignedAvatarImage src={profile?.profile_picture_url || undefined} />
+                            <SignedAvatarImage src={(profile?.profile_picture_url || undefined)!} />
                             <AvatarFallback className="bg-primary text-primary-foreground text-xs">
                               {(user.full_name || user.email || "U").charAt(0).toUpperCase()}
                             </AvatarFallback>
@@ -1332,7 +1332,7 @@ export default function AdminUserManagement() {
       {editingUser && (
         <EditUserDialog
           user={editingUser}
-          employee={employees.find((e) => e.user_id === editingUser.id)}
+          employee={employees.find((e) => e.user_id === editingUser.id)!}
           roles={roles}
           allUsers={appUsers}
           onSaved={invalidateAll}
