@@ -158,11 +158,11 @@ export default function SubscriptionEditorDialog({
     };
     // Snapshot the chosen saved report's filters/columns/charts for recipients.
     if (form.savedReportId === "none" || (subscription && subscription.module !== form.module && form.savedReportId === "keep")) {
-      values.report_config = {};
-      values.saved_report_name = null;
+      values['report_config'] = {};
+      values['saved_report_name'] = null;
     } else if (saved) {
-      values.report_config = saved.config ?? {};
-      values.saved_report_name = saved.name;
+      values['report_config'] = saved.config ?? {};
+      values['saved_report_name'] = saved.name;
     }
     try {
       await save.mutateAsync({ id: subscription?.id, values: values as never });

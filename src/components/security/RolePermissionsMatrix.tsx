@@ -117,7 +117,7 @@ export default function RolePermissionsMatrix() {
     if (profilesQuery.data && !selectedProfileId) {
       const sysAdmin = profilesQuery.data.find((p) => p.profile_name === "System Administrator");
       if (sysAdmin) setSelectedProfileId(sysAdmin.id);
-      else if (profilesQuery.data.length > 0) setSelectedProfileId(profilesQuery.data[0].id);
+      else if (profilesQuery.data.length > 0) setSelectedProfileId(profilesQuery.data[0]!.id);
     }
   }, [profilesQuery.data, selectedProfileId]);
 

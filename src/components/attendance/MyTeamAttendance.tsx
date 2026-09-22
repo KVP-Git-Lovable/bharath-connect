@@ -182,7 +182,7 @@ export default function MyTeamAttendance() {
 
   const renderMemberRow = (member: TeamMember) => {
     const status = getStatus(member.id);
-    const config = statusConfig[status] || statusConfig.absent;
+    const config = statusConfig[status] || statusConfig['absent'];
     const att = attendanceMap[member.id];
 
     return (
@@ -205,8 +205,8 @@ export default function MyTeamAttendance() {
           </div>
 
           <div className="flex items-center gap-2 flex-shrink-0">
-            <Badge className={cn("text-[11px] px-2 py-0.5 font-medium border-0", config.bg, config.color)}>
-              {config.label}
+            <Badge className={cn("text-[11px] px-2 py-0.5 font-medium border-0", config!.bg, config!.color)}>
+              {config!.label}
             </Badge>
             <Button
               variant="ghost"

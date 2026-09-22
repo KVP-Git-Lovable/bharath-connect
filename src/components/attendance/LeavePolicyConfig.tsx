@@ -680,14 +680,14 @@ const LeavePolicyConfig = () => {
                                 />
                               </div>
                             </div>
-                            {accrualForms[lt.id]?.accrual_type === 'monthly' && accrualForms[lt.id]?.yearly_entitlement > 0 && (
+                            {accrualForms[lt.id]?.accrual_type === 'monthly' && accrualForms[lt.id]?.yearly_entitlement! > 0 && (
                               <p className="text-xs text-muted-foreground">
-                                ℹ Monthly credit: {(accrualForms[lt.id].yearly_entitlement / (accrualConfigForms[lt.id]?.divisor || 12)).toFixed(2)} days/month
+                                ℹ Monthly credit: {(accrualForms[lt.id]!.yearly_entitlement / (accrualConfigForms[lt.id]?.divisor || 12)).toFixed(2)} days/month
                               </p>
                             )}
-                            {accrualForms[lt.id]?.accrual_type === 'quarterly' && accrualForms[lt.id]?.yearly_entitlement > 0 && (
+                            {accrualForms[lt.id]?.accrual_type === 'quarterly' && accrualForms[lt.id]?.yearly_entitlement! > 0 && (
                               <p className="text-xs text-muted-foreground">
-                                ℹ Quarterly credit: {(accrualForms[lt.id].yearly_entitlement / (accrualConfigForms[lt.id]?.divisor || 4)).toFixed(2)} days/quarter
+                                ℹ Quarterly credit: {(accrualForms[lt.id]!.yearly_entitlement / (accrualConfigForms[lt.id]?.divisor || 4)).toFixed(2)} days/quarter
                               </p>
                             )}
 

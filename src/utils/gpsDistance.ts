@@ -329,7 +329,7 @@ export function processTrajectory(
 
     // Capture-health diagnostic over everything that survived sanitation.
     for (let i = 1; i < candidates.length; i++) {
-      const gapMin = (candidates[i].tsMs - candidates[i - 1].tsMs) / 60000;
+      const gapMin = (candidates[i]!.tsMs - candidates[i - 1]!.tsMs) / 60000;
       if (gapMin > m.longestGapMinutes) m.longestGapMinutes = gapMin;
     }
 
@@ -507,10 +507,10 @@ export function processTrajectory(
     for (const seg of finalSegments) {
       for (let i = 1; i < seg.length; i++) {
         trackedM += haversineMeters(
-          seg[i - 1].latitude,
-          seg[i - 1].longitude,
-          seg[i].latitude,
-          seg[i].longitude
+          seg[i - 1]!.latitude,
+          seg[i - 1]!.longitude,
+          seg[i]!.latitude,
+          seg[i]!.longitude
         );
       }
     }
@@ -612,10 +612,10 @@ export function computeDistanceKm(points: TrackPoint[]): number {
   let total = 0;
   for (let i = 1; i < points.length; i++) {
     total += haversineMeters(
-      points[i - 1].latitude,
-      points[i - 1].longitude,
-      points[i].latitude,
-      points[i].longitude
+      points[i - 1]!.latitude,
+      points[i - 1]!.longitude,
+      points[i]!.latitude,
+      points[i]!.longitude
     );
   }
   return total / 1000;

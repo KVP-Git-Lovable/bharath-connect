@@ -64,8 +64,8 @@ function excelDateToISO(value: unknown): string | null {
   const m = s.match(/^(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{2,4})$/);
   if (m) {
     let [, dd, mm, yyyy] = m;
-    if (yyyy.length === 2) yyyy = `20${yyyy}`;
-    return `${yyyy}-${mm.padStart(2, "0")}-${dd.padStart(2, "0")}`;
+    if (yyyy!.length === 2) yyyy = `20${yyyy}`;
+    return `${yyyy}-${mm!.padStart(2, "0")}-${dd!.padStart(2, "0")}`;
   }
   const parsed = new Date(s);
   if (!isNaN(parsed.getTime())) return parsed.toISOString().slice(0, 10);
@@ -92,7 +92,7 @@ export async function parseQuotationWorkbook(file: File): Promise<ParsedQuotatio
     const companyCol = row.findIndex((c) => COMPANY_PATTERN.test(normalize(c)));
     if (companyCol >= 0) {
       headerRowIdx = i;
-      colMap.company = companyCol;
+      colMap['company'] = companyCol;
       row.forEach((cell, idx) => {
         const label = normalize(cell);
         if (!label) return;
@@ -110,23 +110,23 @@ export async function parseQuotationWorkbook(file: File): Promise<ParsedQuotatio
   const out: ParsedQuotationRow[] = [];
   for (let i = headerRowIdx + 1; i < raw.length; i++) {
     const row = raw[i] || [];
-    const companyRaw = normalize(row[colMap.company!]);
+    const companyRaw = normalize(row[colMap['company']!]);
     if (!companyRaw) continue; // skip blank rows
     out.push({
       rowNum: i + 1,
       companyRaw,
       companyKey: normKey(companyRaw),
-      enquiry_number: colMap.enquiry_number !== undefined ? normalize(row[colMap.enquiry_number]) || null : null,
-      enquiry_received_date: colMap.enquiry_received_date !== undefined ? excelDateToISO(row[colMap.enquiry_received_date]) : null,
-      quotation_number: colMap.quotation_number !== undefined ? normalize(row[colMap.quotation_number]) || null : null,
-      quotation_date: colMap.quotation_date !== undefined ? excelDateToISO(row[colMap.quotation_date]) : null,
-      value_without_gst: colMap.value_without_gst !== undefined ? toNumber(row[colMap.value_without_gst]) : null,
-      followed_by_raw: colMap.followed_by_raw !== undefined ? normalize(row[colMap.followed_by_raw]) || null : null,
-      status_raw: colMap.status_raw !== undefined ? normalize(row[colMap.status_raw]) || null : null,
-      po_date: colMap.po_date !== undefined ? excelDateToISO(row[colMap.po_date]) : null,
-      po_number: colMap.po_number !== undefined ? normalize(row[colMap.po_number]) || null : null,
-      po_amount: colMap.po_amount !== undefined ? toNumber(row[colMap.po_amount]) : null,
-      remarks: colMap.remarks !== undefined ? normalize(row[colMap.remarks]) || null : null,
+      enquiry_number: colMap['enquiry_number'] !== undefined ? normalize(row[colMap['enquiry_number']]) || null : null,
+      enquiry_received_date: colMap['enquiry_received_date'] !== undefined ? excelDateToISO(row[colMap['enquiry_received_date']]) : null,
+      quotation_number: colMap['quotation_number'] !== undefined ? normalize(row[colMap['quotation_number']]) || null : null,
+      quotation_date: colMap['quotation_date'] !== undefined ? excelDateToISO(row[colMap['quotation_date']]) : null,
+      value_without_gst: colMap['value_without_gst'] !== undefined ? toNumber(row[colMap['value_without_gst']]) : null,
+      followed_by_raw: colMap['followed_by_raw'] !== undefined ? normalize(row[colMap['followed_by_raw']]) || null : null,
+      status_raw: colMap['status_raw'] !== undefined ? normalize(row[colMap['status_raw']]) || null : null,
+      po_date: colMap['po_date'] !== undefined ? excelDateToISO(row[colMap['po_date']]) : null,
+      po_number: colMap['po_number'] !== undefined ? normalize(row[colMap['po_number']]) || null : null,
+      po_amount: colMap['po_amount'] !== undefined ? toNumber(row[colMap['po_amount']]) : null,
+      remarks: colMap['remarks'] !== undefined ? normalize(row[colMap['remarks']]) || null : null,
     });
   }
   return out;

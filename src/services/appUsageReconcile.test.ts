@@ -76,7 +76,7 @@ describe("splitAtLocalMidnight", () => {
   it("leaves an interval inside one day alone", () => {
     const slices = splitAtLocalMidnight(at(9, 0), at(9, 20));
     expect(slices).toHaveLength(1);
-    expect(slices[0].date).toBe(localDateString(at(9, 0)));
+    expect(slices[0]!.date).toBe(localDateString(at(9, 0)));
   });
 
   it("splits 23:40 -> 00:20 into two days whose durations sum to the original", () => {
@@ -84,8 +84,8 @@ describe("splitAtLocalMidnight", () => {
     const end = at(0, 20, 19);
     const slices = splitAtLocalMidnight(start, end);
     expect(slices).toHaveLength(2);
-    expect(slices[0].date).toBe("2026-09-18");
-    expect(slices[1].date).toBe("2026-09-19");
+    expect(slices[0]!.date).toBe("2026-09-18");
+    expect(slices[1]!.date).toBe("2026-09-19");
     const total = slices.reduce((a, s) => a + (s.endMs - s.startMs), 0);
     expect(total).toBe(end - start);
   });
@@ -129,8 +129,8 @@ describe("mapRecordsToRows", () => {
   it("emits exactly one session row for the batch, ahead of the intervals", () => {
     const { sessions } = mapRecordsToRows(worked);
     expect(sessions).toHaveLength(1);
-    expect(sessions[0].id).toBe(BASE.session_id);
-    expect(sessions[0].started_at).toBe(new Date(at(9, 0)).toISOString());
+    expect(sessions[0]!.id).toBe(BASE.session_id);
+    expect(sessions[0]!.started_at).toBe(new Date(at(9, 0)).toISOString());
   });
 
   it("drops intervals recorded while signed out instead of back-attributing them", () => {
@@ -149,8 +149,8 @@ describe("mapRecordsToRows", () => {
     expect(intervals).toHaveLength(2);
     expect(intervals.map((i) => i.date)).toEqual(["2026-09-18", "2026-09-19"]);
     expect(intervals.every((i) => i.is_midnight_split)).toBe(true);
-    expect(intervals[0].end_reason).toBe("midnight_split");
-    expect(intervals[1].start_reason).toBe("midnight_split");
+    expect(intervals[0]!.end_reason).toBe("midnight_split");
+    expect(intervals[1]!.start_reason).toBe("midnight_split");
     expect(new Set(intervals.map((i) => i.id)).size).toBe(2);
   });
 
@@ -164,9 +164,9 @@ describe("mapRecordsToRows", () => {
       }),
     ];
     const { intervals } = mapRecordsToRows(records);
-    expect(intervals[0].source).toBe("reconciled");
-    expect(intervals[0].end_confidence).toBe("inferred");
-    expect(intervals[0].uncertainty_ms).toBe(90_000);
+    expect(intervals[0]!.source).toBe("reconciled");
+    expect(intervals[0]!.end_confidence).toBe("inferred");
+    expect(intervals[0]!.uncertainty_ms).toBe(90_000);
   });
 
   it("turns an exit record into a seal for the previous session", () => {
@@ -195,7 +195,7 @@ describe("mapRecordsToRows", () => {
 
   it("rejects an unknown source rather than writing it through", () => {
     const records = [interval("foreground", at(9, 0), at(9, 5), 1, { source: "nonsense" })];
-    expect(mapRecordsToRows(records).intervals[0].source).toBe("observed");
+    expect(mapRecordsToRows(records).intervals[0]!.source).toBe("observed");
   });
 
   it("ignores an interval whose end precedes its start", () => {

@@ -8,8 +8,8 @@ interface LocationData {
   timestamp: string;
 }
 
-const SUPABASE_FUNCTIONS_URL = import.meta.env.VITE_SUPABASE_URL
-  ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`
+const SUPABASE_FUNCTIONS_URL = import.meta.env['VITE_SUPABASE_URL']
+  ? `${import.meta.env['VITE_SUPABASE_URL']}/functions/v1`
   : "/.netlify/functions";
 
 /**

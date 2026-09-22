@@ -59,7 +59,7 @@ export default function Opportunities() {
       map.set(k, (map.get(k) || 0) + 1);
     });
     return Array.from(map, ([name, value]) => ({
-      name, value, color: STAGE_HEX[stageMap[name]?.color ?? "gray"] || STAGE_HEX.gray,
+      name, value, color: STAGE_HEX[stageMap[name]?.color ?? "gray"] || STAGE_HEX['gray'],
     }));
   }, [opps, stageMap]);
 

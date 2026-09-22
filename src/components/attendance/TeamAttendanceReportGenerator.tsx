@@ -170,7 +170,7 @@ export default function TeamAttendanceReportGenerator({ onClose }: Props) {
         const row = formatRow(r);
         const vals = Object.values(row);
         vals.forEach((v, i) => {
-          const text = String(v).substring(0, colX[i + 1] ? Math.floor((colX[i + 1] - colX[i]) / 2) : 40);
+          const text = String(v).substring(0, colX[i + 1] ? Math.floor((colX[i + 1]! - colX[i]!) / 2) : 40);
           doc.text(text, colX[i], y);
         });
         y += 6;

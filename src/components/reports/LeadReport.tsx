@@ -342,18 +342,18 @@ export default function LeadReport() {
       filterState={{ ...state, owner, status, source, minProductive, maxProductive, minDaysSince, maxDaysSince }}
       onApplyFilterState={(s) => {
         patch({
-          field: (s.field as string) || state.field,
-          preset: (s.preset as PresetKey) || state.preset,
-          customFrom: (s.customFrom as string) || state.customFrom,
-          customTo: (s.customTo as string) || state.customTo,
+          field: (s['field'] as string) || state.field,
+          preset: (s['preset'] as PresetKey) || state.preset,
+          customFrom: (s['customFrom'] as string) || state.customFrom,
+          customTo: (s['customTo'] as string) || state.customTo,
         });
-        setOwner((s.owner as string) || "all");
-        setStatus((s.status as string) || "all");
-        setSource((s.source as string) || "all");
-        setMinProductive((s.minProductive as string) ?? "");
-        setMaxProductive((s.maxProductive as string) ?? "");
-        setMinDaysSince((s.minDaysSince as string) ?? "");
-        setMaxDaysSince((s.maxDaysSince as string) ?? "");
+        setOwner((s['owner'] as string) || "all");
+        setStatus((s['status'] as string) || "all");
+        setSource((s['source'] as string) || "all");
+        setMinProductive((s['minProductive'] as string) ?? "");
+        setMaxProductive((s['maxProductive'] as string) ?? "");
+        setMinDaysSince((s['minDaysSince'] as string) ?? "");
+        setMaxDaysSince((s['maxDaysSince'] as string) ?? "");
       }}
       defaultCharts={[
         {

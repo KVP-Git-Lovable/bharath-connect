@@ -54,7 +54,7 @@ describe("stationary + jitter suppression", () => {
     const wobble = [5, -12, 8, 15, -10, 18, -6, 12, -15, 9];
     for (let i = 0; i < 40; i++) {
       const w = wobble[i % wobble.length];
-      points.push(point(w, -w, START + i * 30_000, 12, { speed: 0 }));
+      points.push(point(w, -w!, START + i * 30_000, 12, { speed: 0 }));
     }
     const t = processTrajectory(points);
     expect(t.trackedDistanceKm).toBeLessThan(0.1);

@@ -18,7 +18,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 
 export default function NotificationDetailSheet({ row, onClose }: { row: HistoryRow | null; onClose: () => void }) {
   const navigate = useNavigate();
-  const delivery = row ? DELIVERY_INFO[row.delivery_status] ?? DELIVERY_INFO.delivered : null;
+  const delivery = row ? DELIVERY_INFO[row.delivery_status] ?? DELIVERY_INFO['delivered'] : null;
   return (
     <Sheet open={!!row} onOpenChange={(o) => !o && onClose()}>
       <SheetContent className="w-full sm:max-w-md overflow-y-auto">

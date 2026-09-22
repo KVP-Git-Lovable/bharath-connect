@@ -311,15 +311,15 @@ export default function QuotationReport() {
       filterState={{ ...state, owner, followedBy, status, po }}
       onApplyFilterState={(s) => {
         patch({
-          field: (s.field as string) || state.field,
-          preset: (s.preset as PresetKey) || state.preset,
-          customFrom: (s.customFrom as string) || state.customFrom,
-          customTo: (s.customTo as string) || state.customTo,
+          field: (s['field'] as string) || state.field,
+          preset: (s['preset'] as PresetKey) || state.preset,
+          customFrom: (s['customFrom'] as string) || state.customFrom,
+          customTo: (s['customTo'] as string) || state.customTo,
         });
-        setOwner((s.owner as string) || "all");
-        setFollowedBy((s.followedBy as string) || "all");
-        setStatus((s.status as string) || "all");
-        setPo((s.po as string) || "all");
+        setOwner((s['owner'] as string) || "all");
+        setFollowedBy((s['followedBy'] as string) || "all");
+        setStatus((s['status'] as string) || "all");
+        setPo((s['po'] as string) || "all");
       }}
       filterSummary={[
         `${fieldLabel}: ${presetLabel(state.preset)} (${from} to ${to})`,

@@ -147,7 +147,7 @@ export default function ViewFiltersPanel({ view, canManage, picklistOptions, onS
                       const nd = fieldDef(v);
                       updateCond(i, {
                         field: v,
-                        operator: OPERATORS[nd?.type ?? "text"][0].value,
+                        operator: OPERATORS[nd?.type ?? "text"][0]!.value,
                         value: "",
                         value2: "",
                         values: [],

@@ -85,15 +85,15 @@ export function LeadSlaTab({ lead }: { lead: LeadRow & LeadSlaFields }) {
       PRODUCTIVE.includes(String(r.to_value || "").trim().toLowerCase()),
     );
     if (firstProductive) {
-      map.contacted = String(firstProductive.created_at).slice(0, 10);
+      map['contacted'] = String(firstProductive.created_at).slice(0, 10);
     }
-    if (!map.contacted && lead.actual_first_contact_date) {
-      map.contacted = String(lead.actual_first_contact_date).slice(0, 10);
+    if (!map['contacted'] && lead.actual_first_contact_date) {
+      map['contacted'] = String(lead.actual_first_contact_date).slice(0, 10);
     }
     return map;
   }, [audit, lead.actual_first_contact_date]);
 
-  const contactDate = actuals.contacted;
+  const contactDate = actuals['contacted'];
 
   const rows = STAGES.filter((s) => s.key !== "contacted").map((s) => {
     const target = contactDate

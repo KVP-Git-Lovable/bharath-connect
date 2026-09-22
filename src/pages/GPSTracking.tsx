@@ -227,7 +227,7 @@ export default function GPSTracking() {
           .limit(1);
 
         if (data && data.length > 0) {
-          setCurrentLocation({ lat: Number(data[0].latitude), lng: Number(data[0].longitude) });
+          setCurrentLocation({ lat: Number(data[0]!.latitude), lng: Number(data[0]!.longitude) });
         } else {
           setCurrentLocation(null);
           setLocationError(true);
@@ -450,7 +450,7 @@ export default function GPSTracking() {
     const pts = (trajectory?.points ?? []) as GPSPoint[];
     if (
       latestFix &&
-      (pts.length === 0 || pts[pts.length - 1].timestamp !== latestFix.timestamp)
+      (pts.length === 0 || pts[pts.length - 1]!.timestamp !== latestFix.timestamp)
     ) {
       return [...pts, latestFix];
     }

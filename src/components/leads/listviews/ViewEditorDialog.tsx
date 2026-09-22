@@ -349,7 +349,7 @@ export default function ViewEditorDialog({ open, onOpenChange, view, onSave, pic
                         value={c.field}
                         onChange={(v) => {
                           const nd = fieldDef(v);
-                          const defaultOp = OPERATORS[nd?.type ?? "text"][0].value;
+                          const defaultOp = OPERATORS[nd?.type ?? "text"][0]!.value;
                           updateCond(i, { field: v, operator: defaultOp, value: "", value2: "", values: [] });
                         }}
                       />

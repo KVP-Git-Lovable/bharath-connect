@@ -67,11 +67,11 @@ export function QuoteForm({
     // Persist free-text products to master when user opted in
     for (let i = 0; i < working.length; i++) {
       const r = working[i];
-      if (!r.product_id && r.product_name && r.product_name.trim() && saveToMaster[i]) {
+      if (!r!.product_id && r!.product_name && r!.product_name.trim() && saveToMaster[i]) {
         try {
           const created = await addMaster.mutateAsync({
-            product_name: r.product_name.trim(),
-            default_unit_price: Number(r.unit_price) || 0,
+            product_name: r!.product_name.trim(),
+            default_unit_price: Number(r!.unit_price) || 0,
           });
           working[i] = { ...r, product_id: created.id, product_name: created.product_name };
         } catch (e) {

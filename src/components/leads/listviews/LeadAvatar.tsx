@@ -10,7 +10,7 @@ interface Props {
 function initials(name?: string | null) {
   const parts = (name ?? "").trim().split(/\s+/).filter(Boolean);
   if (!parts.length) return "?";
-  return (parts[0][0] + (parts[1]?.[0] ?? "")).toUpperCase();
+  return (parts[0]![0] + (parts[1]?.[0] ?? "")).toUpperCase();
 }
 
 export function LeadAvatar({ name, photoUrl, className }: Props) {

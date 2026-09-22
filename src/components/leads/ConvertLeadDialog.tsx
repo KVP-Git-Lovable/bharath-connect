@@ -37,8 +37,8 @@ export function ConvertLeadDialog({
       opportunity_name: oppName || null,
       opportunity_amount: Number(amount) || 0,
     };
-    if (mode === "existing") payload.existing_customer_id = existingId;
-    else payload.new_customer = { name, email: lead.email, phone: lead.phone, industry: lead.industry, website: lead.website };
+    if (mode === "existing") payload['existing_customer_id'] = existingId;
+    else payload['new_customer'] = { name, email: lead.email, phone: lead.phone, industry: lead.industry, website: lead.website };
 
     const customerId = await convert.mutateAsync({ leadId: lead.id, payload });
     onOpenChange(false);

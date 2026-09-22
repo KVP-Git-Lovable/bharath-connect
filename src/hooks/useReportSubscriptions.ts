@@ -48,8 +48,8 @@ export const RECIPIENT_MODES: { value: string; label: string; hint: string }[] =
 
 export function formatTime(t: string) {
   const [h, m] = t.split(":").map(Number);
-  const suffix = h >= 12 ? "PM" : "AM";
-  return `${((h + 11) % 12) + 1}:${String(m).padStart(2, "0")} ${suffix}`;
+  const suffix = h! >= 12 ? "PM" : "AM";
+  return `${((h! + 11) % 12) + 1}:${String(m).padStart(2, "0")} ${suffix}`;
 }
 
 export function scheduleText(s: Pick<ReportSubscription, "cadence" | "fire_time" | "fire_weekday" | "fire_monthday">) {

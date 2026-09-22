@@ -99,13 +99,13 @@ const CreateUserWizard: React.FC<CreateUserWizardProps> = ({ onSuccess }) => {
       if (!completedSteps.includes(currentStep)) {
         setCompletedSteps(prev => [...prev, currentStep]);
       }
-      setCurrentStep(WIZARD_STEPS[currentIndex + 1].id);
+      setCurrentStep(WIZARD_STEPS[currentIndex + 1]!.id);
     }
   };
 
   const goToPreviousStep = () => {
     const currentIndex = WIZARD_STEPS.findIndex(s => s.id === currentStep);
-    if (currentIndex > 0) setCurrentStep(WIZARD_STEPS[currentIndex - 1].id);
+    if (currentIndex > 0) setCurrentStep(WIZARD_STEPS[currentIndex - 1]!.id);
   };
 
   // Map role id → old enum for edge function compat
@@ -147,26 +147,26 @@ const CreateUserWizard: React.FC<CreateUserWizardProps> = ({ onSuccess }) => {
 
       // Update users table with extra fields
       const updatePayload: Record<string, unknown> = {};
-      if (formData.phone_number) updatePayload.phone = formData.phone_number;
-      if (formData.manager_id) updatePayload.reporting_manager_id = formData.manager_id;
+      if (formData.phone_number) updatePayload['phone'] = formData.phone_number;
+      if (formData.manager_id) updatePayload['reporting_manager_id'] = formData.manager_id;
       if (Object.keys(updatePayload).length > 0) {
         await supabase.from('users').update(updatePayload).eq('id', userId);
       }
 
       // Update employees table
       const empPayload: Record<string, unknown> = { user_id: userId };
-      if (formData.manager_id) empPayload.manager_id = formData.manager_id;
-      if (formData.secondary_manager_id) empPayload.secondary_manager_id = formData.secondary_manager_id;
-      if (formData.hq) empPayload.hq = formData.hq;
-      if (formData.monthly_salary) empPayload.monthly_salary = parseFloat(formData.monthly_salary) || 0;
-      if (formData.daily_da_allowance) empPayload.daily_da_allowance = parseFloat(formData.daily_da_allowance) || 0;
-      if (formData.band) empPayload.band = formData.band;
-      if (formData.date_of_joining) empPayload.date_of_joining = formData.date_of_joining;
-      if (formData.date_of_exit) empPayload.date_of_exit = formData.date_of_exit;
-      if (formData.emergency_contact_number) empPayload.emergency_contact_number = formData.emergency_contact_number;
-      if (formData.alternate_email) empPayload.alternate_email = formData.alternate_email;
-      if (formData.address) empPayload.address = formData.address;
-      if (formData.education) empPayload.education = formData.education;
+      if (formData.manager_id) empPayload['manager_id'] = formData.manager_id;
+      if (formData.secondary_manager_id) empPayload['secondary_manager_id'] = formData.secondary_manager_id;
+      if (formData.hq) empPayload['hq'] = formData.hq;
+      if (formData.monthly_salary) empPayload['monthly_salary'] = parseFloat(formData.monthly_salary) || 0;
+      if (formData.daily_da_allowance) empPayload['daily_da_allowance'] = parseFloat(formData.daily_da_allowance) || 0;
+      if (formData.band) empPayload['band'] = formData.band;
+      if (formData.date_of_joining) empPayload['date_of_joining'] = formData.date_of_joining;
+      if (formData.date_of_exit) empPayload['date_of_exit'] = formData.date_of_exit;
+      if (formData.emergency_contact_number) empPayload['emergency_contact_number'] = formData.emergency_contact_number;
+      if (formData.alternate_email) empPayload['alternate_email'] = formData.alternate_email;
+      if (formData.address) empPayload['address'] = formData.address;
+      if (formData.education) empPayload['education'] = formData.education;
 
       await supabase.from('employees').upsert(empPayload as any, { onConflict: 'user_id' });
 
@@ -253,7 +253,7 @@ const CreateUserWizard: React.FC<CreateUserWizardProps> = ({ onSuccess }) => {
                 Step {currentIndex + 1} of {WIZARD_STEPS.length}
               </span>
               <span className="text-sm text-muted-foreground">
-                {WIZARD_STEPS[currentIndex].label}
+                {WIZARD_STEPS[currentIndex]!.label}
               </span>
             </div>
             <div className="flex gap-1 mt-2">

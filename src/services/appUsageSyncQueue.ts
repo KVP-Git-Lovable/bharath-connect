@@ -152,7 +152,7 @@ async function uploadTable(table: string, rows: AnyRow[]): Promise<"ok" | "retry
         // Unacceptable to the server however often we retry: discard this
         // chunk (counted) and keep the rest of the queue moving.
         const sent = new Set(chunk.map((c) => c.id));
-        for (let i = rows.length - 1; i >= 0; i--) if (sent.has(rows[i].id)) rows.splice(i, 1);
+        for (let i = rows.length - 1; i >= 0; i--) if (sent.has(rows[i]!.id)) rows.splice(i, 1);
         dropped += chunk.length;
         persistNow();
         lastError = `rejected: ${error.message}`;
@@ -165,7 +165,7 @@ async function uploadTable(table: string, rows: AnyRow[]): Promise<"ok" | "retry
       return "retry";
     }
     const sent = new Set(chunk.map((c) => c.id));
-    for (let i = rows.length - 1; i >= 0; i--) if (sent.has(rows[i].id)) rows.splice(i, 1);
+    for (let i = rows.length - 1; i >= 0; i--) if (sent.has(rows[i]!.id)) rows.splice(i, 1);
     persistNow();
   }
   return "ok";
