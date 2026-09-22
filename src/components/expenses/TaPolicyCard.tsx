@@ -27,8 +27,8 @@ const TA_METHODS: readonly SegmentedOption<Method>[] = [
   { value: "from_gps", label: "Variable Amount" },
 ];
 const TA_DISTRIBUTIONS: readonly SegmentedOption<Dist>[] = [
-  { value: "same_for_all", label: "Same for all" },
-  { value: "custom", label: "Custom per user/team" },
+  { value: "same_for_all", label: "Same Policy for all" },
+  { value: "custom", label: "Custom Policy Per User/Team" },
 ];
 
 interface Role { id: string; name: string }
