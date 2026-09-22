@@ -1,9 +1,69 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useCallback, useMemo, useEffect } from "react";
+import { useCallback, useMemo, useEffect, useRef } from "react";
 import { ADMIN_MODULE_PATH_MAP } from "@/components/security/permissionModules";
 import { useUserProfile } from "./useUserProfile";
 import { useCurrentUser } from "./useCurrentUser";
+
+/**
+ * One realtime channel per profile, shared by every mounted consumer.
+ *
+ * This hook has 13 call sites and several of them render together (AppHeader,
+ * BottomNav, Dashboard, WorkforceOverviewSection, useAdminAccess), so a
+ * per-instance subscription breaks: supabase.channel(topic) hands back the
+ * channel an earlier instance already subscribed, and RealtimeChannel.on()
+ * throws once that channel is joining or joined. Subscribing once and
+ * fanning out to listeners keeps .on() to a single call on a fresh channel,
+ * however many consumers mount.
+ */
+type PermissionListener = () => void;
+
+const permissionChannels = new Map<
+  string,
+  { channel: ReturnType<typeof supabase.channel>; listeners: Set<PermissionListener> }
+>();
+
+export function subscribeToProfilePermissions(profileId: string, listener: PermissionListener): () => void {
+  let entry = permissionChannels.get(profileId);
+
+  if (!entry) {
+    const topic = `profile_permissions_${profileId}`;
+    // A channel we are not tracking is stale (module reload); drop it so the
+    // fresh .on() below runs on an unsubscribed channel.
+    const stale = supabase.getChannels().find((c) => c.topic === `realtime:${topic}`);
+    if (stale) supabase.removeChannel(stale);
+
+    const listeners = new Set<PermissionListener>();
+    const channel = supabase
+      .channel(topic)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "profile_object_permissions",
+          filter: `profile_id=eq.${profileId}`,
+        },
+        () => listeners.forEach((l) => l()),
+      )
+      .subscribe();
+
+    entry = { channel, listeners };
+    permissionChannels.set(profileId, entry);
+  }
+
+  entry.listeners.add(listener);
+
+  return () => {
+    const current = permissionChannels.get(profileId);
+    if (!current) return;
+    current.listeners.delete(listener);
+    if (current.listeners.size === 0) {
+      permissionChannels.delete(profileId);
+      supabase.removeChannel(current.channel);
+    }
+  };
+}
 
 
 interface ProfilePermission {
@@ -54,34 +114,21 @@ export function useProfilePermissions() {
     refetchInterval: 5000, // Auto-refetch every 5 seconds for real-time updates
   });
 
+  // Kept in a ref so the effect below depends only on the profile id. The
+  // QueryClient is built inside getRouter() rather than at module scope, so a
+  // fresh identity would otherwise tear the subscription down and rebuild it.
+  const queryClientRef = useRef(queryClient);
+  queryClientRef.current = queryClient;
+
   // Subscribe to permission changes and refetch when they change
   useEffect(() => {
-    if (!userProfile?.profile_id) return;
+    const profileId = userProfile?.profile_id;
+    if (!profileId) return;
 
-    const channel = supabase
-      .channel(`profile_permissions_${userProfile.profile_id}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "profile_object_permissions",
-          filter: `profile_id=eq.${userProfile.profile_id}`,
-        },
-        () => {
-          // Invalidate and refetch permissions when they change
-          queryClient.invalidateQueries({ queryKey: ["user-profile-permissions", userProfile.profile_id] });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      // removeChannel, not unsubscribe: unsubscribe leaves the channel registered
-      // on the client, so a re-run gets the same already-subscribed channel back
-      // and .on() throws "cannot add postgres_changes callbacks ... after subscribe()".
-      supabase.removeChannel(channel);
-    };
-  }, [userProfile?.profile_id, queryClient]);
+    return subscribeToProfilePermissions(profileId, () => {
+      queryClientRef.current.invalidateQueries({ queryKey: ["user-profile-permissions", profileId] });
+    });
+  }, [userProfile?.profile_id]);
 
   const hasNoProfile = userProfile === null;
 
