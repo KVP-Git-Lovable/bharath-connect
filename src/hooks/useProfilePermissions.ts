@@ -58,7 +58,7 @@ export function useProfilePermissions() {
   useEffect(() => {
     if (!userProfile?.profile_id) return;
 
-    const subscription = supabase
+    const channel = supabase
       .channel(`profile_permissions_${userProfile.profile_id}`)
       .on(
         "postgres_changes",
@@ -76,7 +76,10 @@ export function useProfilePermissions() {
       .subscribe();
 
     return () => {
-      subscription.unsubscribe();
+      // removeChannel, not unsubscribe: unsubscribe leaves the channel registered
+      // on the client, so a re-run gets the same already-subscribed channel back
+      // and .on() throws "cannot add postgres_changes callbacks ... after subscribe()".
+      supabase.removeChannel(channel);
     };
   }, [userProfile?.profile_id, queryClient]);
 
