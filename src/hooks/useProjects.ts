@@ -184,9 +184,12 @@ export function useUpdateProject() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...values }: Partial<Project> & { id: string }) => {
+      const clean = Object.fromEntries(
+        Object.entries(values).filter(([, v]) => v !== undefined),
+      );
       const { data, error } = await supabase
         .from('pm_projects')
-        .update(values)
+        .update(clean as never)
         .eq('id', id)
         .select()
         .single();
