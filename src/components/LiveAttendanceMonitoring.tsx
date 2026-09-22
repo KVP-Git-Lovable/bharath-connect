@@ -98,7 +98,7 @@ const LiveAttendanceMonitoring = () => {
       if (url.startsWith('http')) {
         const match = url.match(/attendance-photos\/(.+?)(?:\?|$)/);
         if (match) {
-          storagePath = match[1];
+          storagePath = match[1]!;
         } else {
           return url; // Can't parse, return as-is
         }

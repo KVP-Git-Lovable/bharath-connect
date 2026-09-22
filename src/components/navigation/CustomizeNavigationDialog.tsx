@@ -40,7 +40,7 @@ export default function CustomizeNavigationDialog({ open, onClose, allItems, pre
       const next = [...prev];
       const targetIndex = index + direction;
       if (targetIndex < 0 || targetIndex >= next.length) return prev;
-      [next[index], next[targetIndex]] = [next[targetIndex], next[index]];
+      [next[index], next[targetIndex]] = [next[targetIndex]!, next[index]!];
       return next;
     });
   }, []);

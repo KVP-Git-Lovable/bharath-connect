@@ -101,8 +101,8 @@ export default function DraggableNavGrid({ items, onReorder, onItemClick }: Prop
     ) {
       const newItems = [...items];
       const temp = newItems[dragSourceIndex.current];
-      newItems[dragSourceIndex.current] = newItems[overIndex];
-      newItems[overIndex] = temp;
+      newItems[dragSourceIndex.current] = newItems[overIndex]!;
+      newItems[overIndex] = temp!;
       onReorder(newItems.map((i) => i.label));
     }
 

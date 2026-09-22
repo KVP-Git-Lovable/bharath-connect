@@ -149,7 +149,7 @@ export function FieldPicker({ columns, onChange }: { columns: string[]; onChange
       if (!visSel.includes(next[i]!)) continue;
       const j = i + dir;
       if (j < 0 || j >= next.length || visSel.includes(next[j]!)) continue;
-      [next[i], next[j]] = [next[j], next[i]];
+      [next[i], next[j]] = [next[j]!, next[i]!];
     }
     onChange(next);
   };
