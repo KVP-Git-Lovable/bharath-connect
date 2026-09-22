@@ -12,7 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { SegmentedControl, type SegmentedOption } from "@/components/ui/segmented-control";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Save, Loader2, Car, Utensils, Receipt, Tags, GitBranch, Scale, Plus, Trash2, Pencil, ChevronDown, ChevronUp, Navigation, Info } from "lucide-react";
+import { Save, Loader2, Car, Utensils, Tags, GitBranch, Scale, Plus, Trash2, Pencil, ChevronDown, ChevronUp, Navigation, Info } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import OverrideTable, { type OverrideEntry } from "./OverrideTable";
@@ -455,24 +455,6 @@ export default function ExpensePolicyConfig() {
 
       <div className="space-y-4 pt-2">
         <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Claims and approvals</h2>
-
-      {/* Receipt rule (kept from the old Additional Expenses Policy) */}
-      <Card className="overflow-hidden border-border/70 shadow-card">
-        <CardHeader className="flex flex-row items-center gap-3 space-y-0 border-b border-border/60 bg-muted/30 px-5 py-4 sm:px-7">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary"><Receipt className="h-5 w-5" /></span>
-          <div className="min-w-0">
-            <CardTitle className="text-lg">Receipts</CardTitle>
-            <CardDescription className="mt-0.5">Claims above this amount must have a bill attached. Saved with “Save Policies”.</CardDescription>
-          </div>
-        </CardHeader>
-        <CardContent className="p-5 sm:p-7">
-          <div className="space-y-2 sm:max-w-[220px]">
-            <Label htmlFor="require-bill-above" className="block text-sm font-medium text-foreground">Bill required above (₹)</Label>
-            <Input id="require-bill-above" type="number" min="0" value={policy.require_bill_above_amount}
-              onChange={(e) => setPolicy({ ...policy, require_bill_above_amount: Number(e.target.value) })} className="h-10" />
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Categories */}
       <Card className="overflow-hidden border-border/70 shadow-card">
