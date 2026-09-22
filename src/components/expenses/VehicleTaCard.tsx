@@ -205,9 +205,9 @@ export default function VehicleTaCard({
               <div><h3 className="text-sm font-semibold">Vehicle rates</h3><p className="text-xs text-muted-foreground">Add another row by creating a vehicle, then configure its amount below.</p></div>
               <Button variant="outline" size="sm" onClick={() => setVehicleDialog({ open: true, editing: null })}><Plus className="mr-1 h-4 w-4" />Add new row</Button>
             </div>
-            <div className="overflow-x-auto rounded-md border">
-              <table className="w-full min-w-[940px] text-sm">
-                <thead className="bg-muted/40 text-left text-xs font-semibold text-muted-foreground">
+            <div className="rounded-md border md:overflow-x-auto">
+              <table className="w-full text-sm md:min-w-[940px]">
+                <thead className="hidden bg-muted/40 text-left text-xs font-semibold text-muted-foreground md:table-header-group">
                   <tr><th className="px-4 py-3">Vehicle</th><th className="px-3 py-3">Rate / km</th><th className="px-3 py-3">Fixed price / day</th><th className="px-3 py-3">Assigned roles</th><th className="px-3 py-3">Custom users</th><th className="px-3 py-3 text-right">Actions</th></tr>
                 </thead>
                 <tbody>
@@ -220,15 +220,15 @@ export default function VehicleTaCard({
         ) : (
           <div className="space-y-4">
             <div><h3 className="text-sm font-semibold">Role and user assignments</h3><p className="text-xs text-muted-foreground">Choose which roles can use each vehicle, then add individual pricing exceptions where needed.</p></div>
-            <div className="overflow-x-auto rounded-md border">
-              <table className="w-full min-w-[720px] text-sm">
-                <thead className="bg-muted/40 text-left text-xs font-semibold text-muted-foreground"><tr><th className="px-4 py-3">Vehicle</th><th className="px-3 py-3">Assigned roles</th><th className="px-3 py-3">Custom users</th><th className="px-3 py-3">Access</th></tr></thead>
+            <div className="rounded-md border md:overflow-x-auto">
+              <table className="w-full text-sm md:min-w-[720px]">
+                <thead className="hidden bg-muted/40 text-left text-xs font-semibold text-muted-foreground md:table-header-group"><tr><th className="px-4 py-3">Vehicle</th><th className="px-3 py-3">Assigned roles</th><th className="px-3 py-3">Custom users</th><th className="px-3 py-3">Access</th></tr></thead>
                 <tbody>{visibleVehicles.map((v) => {
                   const allowed = (data?.roles || []).filter((r) => {
                     const roleLinks = (data?.links || []).filter((link) => link.profile_id === r.id);
                     return roleLinks.length === 0 || roleLinks.some((link) => link.vehicle_type_id === v.id);
                   });
-                  return <tr key={v.id} className="border-t"><td className="px-4 py-3 font-semibold">{v.name}</td><td className="px-3 py-3"><RolePicker vehicleId={v.id} roles={data?.roles || []} links={data?.links || []} allVehicleIds={activeVehicleIds} onChanged={reload} /></td><td className="px-3 py-3">{v.is_no_vehicle ? <span className="text-muted-foreground">—</span> : <CustomUsers vehicle={v} isFixed={isFixed} emps={data?.emps || []} empName={empName} overrides={(data?.overrides || []).filter((o) => o.vehicle_type_id === v.id)} ready={!!data?.overridesReady} onChanged={reload} />}</td><td className="px-3 py-3"><span className="inline-flex items-center gap-1 rounded-sm bg-muted px-2 py-1 text-xs font-medium"><Users className="h-3 w-3" />{allowed.length === (data?.roles || []).length ? "All roles" : "Restricted"}</span></td></tr>;
+                  return <tr key={v.id} className="block border-t p-4 md:table-row md:p-0"><td className="block py-2 font-semibold md:table-cell md:px-4 md:py-3">{v.name}</td><td className="block py-2 md:table-cell md:px-3 md:py-3"><span className="mb-1 block text-xs font-semibold text-muted-foreground md:hidden">Assigned roles</span><RolePicker vehicleId={v.id} roles={data?.roles || []} links={data?.links || []} allVehicleIds={activeVehicleIds} onChanged={reload} /></td><td className="block py-2 md:table-cell md:px-3 md:py-3"><span className="mb-1 block text-xs font-semibold text-muted-foreground md:hidden">Custom users</span>{v.is_no_vehicle ? <span className="text-muted-foreground">—</span> : <CustomUsers vehicle={v} isFixed={isFixed} emps={data?.emps || []} empName={empName} overrides={(data?.overrides || []).filter((o) => o.vehicle_type_id === v.id)} ready={!!data?.overridesReady} onChanged={reload} />}</td><td className="block py-2 md:table-cell md:px-3 md:py-3"><span className="mb-1 block text-xs font-semibold text-muted-foreground md:hidden">Access</span><span className="inline-flex items-center gap-1 rounded-sm bg-muted px-2 py-1 text-xs font-medium"><Users className="h-3 w-3" />{allowed.length === (data?.roles || []).length ? "All roles" : "Restricted"}</span></td></tr>;
                 })}</tbody>
               </table>
             </div>
@@ -312,14 +312,9 @@ function VehiclePricingRow({ v, isFixed, rates, roles, links, allVehicleIds, emp
     onChanged();
   };
 
-  const toggleActive = async (on: boolean) => {
-    const { error } = await supabase.from("vehicle_types" as any).update({ is_active: on }).eq("id", v.id);
-    if (error) toast.error("Could not update vehicle"); else onChanged();
-  };
-
   return (
-    <tr className={cn("border-t align-top", !v.is_active && "bg-muted/10 text-muted-foreground")}>
-      <td className="px-4 py-3">
+    <tr className={cn("block border-t p-4 align-top md:table-row md:p-0", !v.is_active && "bg-muted/10 text-muted-foreground")}>
+      <td className="block py-2 md:table-cell md:px-4 md:py-3">
         <div className="flex items-center gap-3">
           <span className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-md",
             noTa || !v.is_active ? "bg-muted text-muted-foreground" : "bg-info/10 text-info")}><Icon className="h-4 w-4" /></span>
@@ -329,7 +324,8 @@ function VehiclePricingRow({ v, isFixed, rates, roles, links, allVehicleIds, emp
         </div>
       </td>
 
-      <td className="px-3 py-3">
+      <td className="block py-2 md:table-cell md:px-3 md:py-3">
+        <span className="mb-1 block text-xs font-semibold text-muted-foreground md:hidden">Rate / km</span>
         {noTa ? <span className="text-xs text-muted-foreground">No TA</span> : (
           <div className="flex items-center gap-1">
             <MoneyInput value={cur ? cur.per_km_rate : null} disabled={isFixed} suffix="/km" placeholder="Set" onCommit={saveRate} />
@@ -339,21 +335,25 @@ function VehiclePricingRow({ v, isFixed, rates, roles, links, allVehicleIds, emp
         {!noTa && !cur && <p className="mt-1 text-xs text-warning">Rate not set</p>}
       </td>
 
-      <td className="px-3 py-3">
+      <td className="block py-2 md:table-cell md:px-3 md:py-3">
+        <span className="mb-1 block text-xs font-semibold text-muted-foreground md:hidden">Fixed price / day</span>
         {noTa ? <span className="text-xs text-muted-foreground">No TA</span> : <MoneyInput value={v.fixed_ta_amount} disabled={!isFixed} suffix="/day" onCommit={saveFixed} />}
       </td>
 
-      <td className="px-3 py-3">
+      <td className="block py-2 md:table-cell md:px-3 md:py-3">
+        <span className="mb-1 block text-xs font-semibold text-muted-foreground md:hidden">Assigned roles</span>
         <RolePicker vehicleId={v.id} roles={roles} links={links} allVehicleIds={allVehicleIds} onChanged={onChanged} />
       </td>
 
-      <td className="px-3 py-3">
+      <td className="block py-2 md:table-cell md:px-3 md:py-3">
+        <span className="mb-1 block text-xs font-semibold text-muted-foreground md:hidden">Custom users</span>
         {noTa ? <span className="text-xs text-muted-foreground">—</span> : (
           <CustomUsers vehicle={v} isFixed={isFixed} emps={emps} empName={empName} overrides={overrides} ready={overridesReady} onChanged={onChanged} />
         )}
       </td>
 
-      <td className="px-3 py-3">
+      <td className="block py-2 md:table-cell md:px-3 md:py-3">
+        <span className="mb-1 block text-xs font-semibold text-muted-foreground md:hidden">Actions</span>
         <div className="flex justify-end gap-1">
           <Button variant="ghost" size="icon" className="h-8 w-8" aria-label={`Edit ${v.name}`} onClick={onEdit}><Pencil className="h-4 w-4" /></Button>
           <DeleteVehicle v={v} onChanged={onChanged} />
