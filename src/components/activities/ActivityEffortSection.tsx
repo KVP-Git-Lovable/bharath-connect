@@ -20,6 +20,7 @@ import {
 import { resolveSignedUrl } from "@/utils/signedStorage";
 import { useTaRates } from "@/hooks/useTaRates";
 import { useVehicleTypes } from "@/hooks/useVehicleTypes";
+import { approvedFareClaim, syncFareClaim, type FareClaimOutcome } from "@/utils/fareClaim";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useActivityTravelExpense, type ActivityTravelExpense } from "@/hooks/useActivityTravelExpense";
 import type { Activity } from "@/hooks/useActivities";
@@ -349,6 +350,18 @@ export default function ActivityEffortSection({
     }
     setSaving(true);
     try {
+      // An approved fare is a settled reimbursement. Refuse the edit before
+      // anything is written, rather than leaving the activity and the claim
+      // disagreeing about the amount.
+      const approved = await approvedFareClaim(activity.id);
+      if (approved && (!fareBased || fareAmount !== approved.amount)) {
+        toast.warning(
+          `This fare is already approved at ${inr(approved.amount)}. Ask an admin to reject it first if it needs changing.`,
+        );
+        setSaving(false);
+        return;
+      }
+
       const { error } = await supabase
         .from("activity_events")
         .update({
@@ -366,10 +379,38 @@ export default function ActivityEffortSection({
           ? new Error("Apply the 2026-09-22 public transport migration to save fares")
           : error;
       }
+      // A fare is a reimbursement claim, so mirror it into additional_expenses
+      // where approve / reject and the Overview totals already live.
+      let claim: FareClaimOutcome = { kind: "none" };
+      try {
+        claim = await syncFareClaim({
+          activityId: activity.id,
+          userId: activity.user_id,
+          activityDate: activity.activity_date,
+          fare: fareBased ? fareAmount : null,
+          billPath: proofs[0]?.url ?? null,
+          description: `${activity.activity_code || "Activity"} · ${activity.activity_name || "travel"}`,
+        });
+      } catch (e: any) {
+        // The effort details are already saved; say what did not follow.
+        toast.error(
+          /activity_id/.test(e?.message || "")
+            ? "Apply the 2026-09-23 fare claim migration to send fares for approval"
+            : "Saved, but the fare could not be sent for approval",
+        );
+      }
+
       // The amount is priced server-side from the activity's vehicle, so it has
       // to be re-fetched once the vehicle or fare changes.
       queryClient.invalidateQueries({ queryKey: ["activity-travel-expense", activity.id] });
-      toast.success("Effort details saved");
+
+      if (claim.kind === "locked") {
+        toast.warning(`This fare is already approved at ${inr(claim.amount)} and cannot be changed here.`);
+      } else if (claim.kind === "saved") {
+        toast.success(claim.autoApproved ? "Fare auto-approved" : "Fare sent for approval");
+      } else {
+        toast.success("Effort details saved");
+      }
       onSaved?.();
     } catch (e: any) {
       toast.error(e?.message || "Could not save the effort details");

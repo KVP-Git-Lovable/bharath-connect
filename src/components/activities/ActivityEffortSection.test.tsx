@@ -24,6 +24,11 @@ vi.mock("@/integrations/supabase/client", () => ({
 vi.mock("@/hooks/useTaRates", () => ({ useTaRates: () => ({ rateFor: () => 5 }) }));
 vi.mock("@/hooks/useActivityTravelExpense", () => ({ useActivityTravelExpense: () => ({ data: h.expense }) }));
 vi.mock("@/utils/signedStorage", () => ({ resolveSignedUrl: vi.fn() }));
+vi.mock("@/utils/fareClaim", () => ({
+  approvedFareClaim: vi.fn().mockResolvedValue(null),
+  syncFareClaim: vi.fn().mockResolvedValue({ kind: "none" }),
+  FARE_CATEGORY: "Public Transport",
+}));
 vi.mock("@/hooks/useVehicleTypes", () => ({
   useVehicleTypes: () => ({ vehicleTypes: h.vehicles, loading: false, refetch: vi.fn() }),
 }));
@@ -161,7 +166,10 @@ describe("ActivityEffortSection travel", () => {
     const payload = h.update.mock.calls[0]?.[0] ?? {};
     expect(payload["vehicle_type_id"]).toBe("v-bus");
     // The day's vehicle lives in daily_vehicle_selections and must be untouched.
-    expect(h.tables).toEqual(["activity_events"]);
+    // (The save also files the fare claim, so the table list is not exhaustive.)
+    expect(h.tables).toContain("activity_events");
+    expect(h.tables).not.toContain("daily_vehicle_selections");
+    expect(h.tables).not.toContain("user_pinned_vehicles");
   });
 
   it("does not keep claiming the old amount after the vehicle is changed", async () => {

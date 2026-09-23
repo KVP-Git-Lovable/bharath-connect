@@ -364,6 +364,7 @@ export type Database = {
       }
       additional_expenses: {
         Row: {
+          activity_id: string | null
           amount: number
           bill_url: string | null
           category: string
@@ -380,6 +381,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          activity_id?: string | null
           amount?: number
           bill_url?: string | null
           category: string
@@ -396,6 +398,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          activity_id?: string | null
           amount?: number
           bill_url?: string | null
           category?: string
