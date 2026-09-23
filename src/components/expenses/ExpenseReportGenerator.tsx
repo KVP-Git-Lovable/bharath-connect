@@ -11,8 +11,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { downloadCSV } from '@/utils/fileDownloader';
-import * as XLSX from 'xlsx';
-import jsPDF from 'jspdf';
 import { downloadXLSX as downloadXLSXNative, downloadPDF as downloadPDFNative } from '@/utils/nativeDownload';
 import { ExpandableText } from '@/components/ui/expandable-text';
 
@@ -168,6 +166,8 @@ export default function ExpenseReportGenerator({ isAdmin }: Props) {
         'Status': '',
       });
 
+      // xlsx is ~420KB; load it when the export runs, not with the page.
+      const XLSX = await import('xlsx');
       const ws = XLSX.utils.json_to_sheet(rows);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Expense Report');
@@ -188,6 +188,8 @@ export default function ExpenseReportGenerator({ isAdmin }: Props) {
   const downloadPDF = async () => {
     if (!reportData || reportData.length === 0) return;
     try {
+      // jsPDF is ~390KB; load it when the export runs, not with the page.
+      const { default: jsPDF } = await import('jspdf');
       const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
       const totalAmount = reportData.reduce((s, r) => s + r.amount, 0);
 

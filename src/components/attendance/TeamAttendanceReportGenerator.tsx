@@ -10,8 +10,6 @@ import { Download, Search, FileSpreadsheet, FileText, X, Loader2 } from 'lucide-
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
-import * as XLSX from 'xlsx';
-import jsPDF from 'jspdf';
 import { downloadXLSX as downloadXLSXNative, downloadPDF as downloadPDFNative } from '@/utils/nativeDownload';
 
 interface ReportRow {
@@ -129,6 +127,8 @@ export default function TeamAttendanceReportGenerator({ onClose }: Props) {
         'Total Hours': summary.totalHours.toFixed(2),
         'Location': '',
       });
+      // xlsx is ~420KB; load it when the export runs, not with the page.
+      const XLSX = await import('xlsx');
       const ws = XLSX.utils.json_to_sheet(rows);
       const colWidths = Object.keys(rows[0]!).map(k => ({ wch: Math.max(k.length, 14) }));
       ws['!cols'] = colWidths;
@@ -145,6 +145,8 @@ export default function TeamAttendanceReportGenerator({ onClose }: Props) {
   const downloadPDF = async () => {
     if (!reportData.length) return;
     try {
+      // jsPDF is ~390KB; load it when the export runs, not with the page.
+      const { default: jsPDF } = await import('jspdf');
       const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
       doc.setFontSize(16);
       doc.text('Team Attendance Report', 14, 15);

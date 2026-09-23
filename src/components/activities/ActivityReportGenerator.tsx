@@ -10,8 +10,6 @@ import { Loader2, FileSpreadsheet, FileText, Filter, X, Download } from 'lucide-
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
-import * as XLSX from 'xlsx';
-import jsPDF from 'jspdf';
 import { downloadXLSX as downloadXLSXNative, downloadPDF as downloadPDFNative } from '@/utils/nativeDownload';
 
 interface ReportActivity {
@@ -194,6 +192,8 @@ export default function ActivityReportGenerator({ isAdmin, filtersOpen, onFilter
         'Hours': totalHours.toFixed(1), 'Status': '', 'Location': '',
       });
 
+      // xlsx is ~420KB; load it when the export runs, not with the page.
+      const XLSX = await import('xlsx');
       const ws = XLSX.utils.json_to_sheet(rows);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Activity Report');
@@ -212,6 +212,8 @@ export default function ActivityReportGenerator({ isAdmin, filtersOpen, onFilter
   const downloadPDF = async () => {
     if (!reportData || reportData.length === 0) return;
     try {
+      // jsPDF is ~390KB; load it when the export runs, not with the page.
+      const { default: jsPDF } = await import('jspdf');
       const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
 
       doc.setFontSize(16);

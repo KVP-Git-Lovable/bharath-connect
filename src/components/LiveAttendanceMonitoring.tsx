@@ -13,8 +13,6 @@ import { toast } from 'sonner';
 import { Search, Download, Users, Clock, MapPin, UserCheck, User, Calendar, TrendingUp, CheckCircle2, XCircle, X, FileSpreadsheet, FileText, ChevronLeft, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
 import { downloadCSVString, downloadXLSX, downloadPDF } from '@/utils/nativeDownload';
-import * as XLSX from 'xlsx';
-import jsPDF from 'jspdf';
 
 interface UserInfo {
   id: string;
@@ -274,6 +272,8 @@ const LiveAttendanceMonitoring = () => {
         Hours: r.active_market_hours ? `${r.active_market_hours.toFixed(1)}h` : '--',
         Status: r.status,
       }));
+      // xlsx is ~420KB; load it when the export runs, not with the page.
+      const XLSX = await import('xlsx');
       const ws = XLSX.utils.json_to_sheet(rows);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Records');
@@ -283,6 +283,8 @@ const LiveAttendanceMonitoring = () => {
 
   const exportModalPDF = async () => {
     try {
+      // jsPDF is ~390KB; load it when the export runs, not with the page.
+      const { default: jsPDF } = await import('jspdf');
       const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
       doc.setFontSize(14);
       doc.text(modalTitles[modalType || 'all']!, 14, 15);

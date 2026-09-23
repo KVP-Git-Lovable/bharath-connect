@@ -20,9 +20,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useActivities, type Activity as ActivityType } from "@/hooks/useActivities";
 import { useUserProfile } from "@/hooks/useUserProfile";
-import jsPDF from "jspdf";
 import { toast } from "sonner";
-import { downloadPDF as downloadPDFNative } from "@/utils/nativeDownload";
 import ActivityDetailsDialog from "@/components/activities/ActivityDetailsDialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -116,6 +114,12 @@ export default function ActivityTimeline() {
 
   const handleDownloadPDF = useCallback(async () => {
     try {
+      // jsPDF and the native download helper are ~400KB together. Loading them
+      // when the button is pressed keeps them off the page's first paint.
+      const [{ default: jsPDF }, { downloadPDF: downloadPDFNative }] = await Promise.all([
+        import("jspdf"),
+        import("@/utils/nativeDownload"),
+      ]);
       const doc = new jsPDF();
       const title = `Timeline - ${format(selectedDate, "MMM dd, yyyy")}`;
       doc.setFontSize(16);

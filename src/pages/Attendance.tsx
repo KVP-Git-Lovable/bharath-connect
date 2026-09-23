@@ -11,8 +11,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { CheckCircle, XCircle, LogOut, Loader2, Clock, Edit3, Camera, Shield, MapPin, Save, Upload, CalendarDays, Download, Users } from "lucide-react";
-import jsPDF from "jspdf";
-import { downloadPDF as downloadPDFNative } from "@/utils/nativeDownload";
 
 import { supabase } from "@/integrations/supabase/client";
 import { getCurrentPosition } from "@/utils/nativePermissions";
@@ -400,6 +398,11 @@ export default function Attendance() {
   const handleDownloadTimelinePDF = async () => {
     if (!timelineDate) return;
     try {
+      // Loaded on demand: see ActivityTimeline for the same reasoning.
+      const [{ default: jsPDF }, { downloadPDF: downloadPDFNative }] = await Promise.all([
+        import("jspdf"),
+        import("@/utils/nativeDownload"),
+      ]);
       const doc = new jsPDF();
       const dateLabel = format(new Date(timelineDate), "MMMM do, yyyy");
 

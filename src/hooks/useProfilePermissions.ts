@@ -111,7 +111,12 @@ export function useProfilePermissions() {
       if (error) throw error;
       return (data || []) as ProfilePermission[];
     },
-    refetchInterval: 5000, // Auto-refetch every 5 seconds for real-time updates
+    // Permission changes already arrive through the realtime subscription
+    // below, which invalidates this query the moment a row changes. This poll
+    // is the fallback for a dropped socket, so it does not need to be frequent:
+    // at 5s it was a round trip every five seconds, for every session, all day.
+    refetchInterval: 5 * 60 * 1000,
+    refetchIntervalInBackground: false,
   });
 
   // Kept in a ref so the effect below depends only on the profile id. The
