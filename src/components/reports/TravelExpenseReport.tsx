@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { resolveSignedUrl } from "@/utils/signedStorage";
+import { TRAVEL_PROOF_BUCKET } from "@/utils/activityTravel";
 import { supabase } from "@/integrations/supabase/client";
 import { SelectField, DateScopeFilter } from "./ReportFilters";
 import { useReportScope } from "./useReportScope";
@@ -39,9 +41,73 @@ interface Row {
   end_time: string | null;
   hours: number;
   amount: number;
+  /** Public transport fare, when this leg was a bus or cab. */
+  fare: number | null;
+  proofs: { url: string; name: string }[];
+}
+
+/** The activity columns this report reads. */
+export interface TravelSource {
+  id: string;
+  user_id: string;
+  lead_id: string | null;
+  activity_date: string;
+  activity_type: string | null;
+  outcome: string | null;
+  status: string | null;
+  travel_distance_km: number | null;
+  manual_distance_km: number | null;
+  manual_fare_amount?: number | null;
+  manual_distance_attachments?: { url: string; name: string }[] | null;
+  travel_time_mins: number | null;
+  start_time: string | null;
+  end_time: string | null;
+  total_hours: number | null;
+}
+
+/**
+ * One activity as a report row. Kept pure and exported so the fare rules can
+ * be tested: a public transport leg is worth the fare that was paid, not
+ * km x rate, and carries the receipt the rep attached.
+ */
+export function toTravelRow(
+  r: TravelSource,
+  ctx: { name: string; customer: string; rate: number },
+): Row {
+  const manual = r.manual_distance_km != null;
+  const km = Number((manual ? r.manual_distance_km : r.travel_distance_km) || 0);
+  const fare = r.manual_fare_amount == null ? null : Number(r.manual_fare_amount);
+  return {
+    id: r.id,
+    full_name: ctx.name,
+    activity_date: r.activity_date,
+    month: format(new Date(r.activity_date), "MMM yyyy"),
+    activity_type: r.activity_type || "-",
+    outcome: r.outcome || "-",
+    status: r.status || "-",
+    customer: ctx.customer,
+    km,
+    is_manual: manual,
+    travel_mins: Number(r.travel_time_mins || 0),
+    start_time: r.start_time,
+    end_time: r.end_time,
+    hours: Number(r.total_hours || 0),
+    rate: ctx.rate,
+    // A fare is what the rep actually paid, so it replaces km x rate.
+    amount: fare != null ? fare : km * ctx.rate,
+    fare,
+    proofs: r.manual_distance_attachments || [],
+  };
 }
 
 const inr = (n: number) => `₹${n.toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
+
+/** Attachments live in a private bucket, so they need a signed URL to open. */
+const openProof = async (path: string) => {
+  const url = await resolveSignedUrl(TRAVEL_PROOF_BUCKET, path);
+  if (url) window.open(url, "_blank", "noopener,noreferrer");
+  else toast.error("Could not open the attachment");
+};
 const hhmm = (t: string | null) => (t ? format(new Date(t), "dd MMM HH:mm") : "--");
 
 export default function TravelExpenseReport() {
@@ -82,7 +148,7 @@ export default function TravelExpenseReport() {
       let q = supabase
         .from("activity_events")
         .select(
-          "id, user_id, lead_id, activity_date, activity_type, outcome, status, travel_distance_km, manual_distance_km, travel_time_mins, start_time, end_time, total_hours, created_at"
+          "id, user_id, lead_id, activity_date, activity_type, outcome, status, travel_distance_km, manual_distance_km, manual_fare_amount, manual_distance_attachments, travel_time_mins, start_time, end_time, total_hours, created_at"
         )
         .order("activity_date", { ascending: false });
 
@@ -109,29 +175,13 @@ export default function TravelExpenseReport() {
       const nameMap = new Map(scope.users.map((u) => [u.id, u.full_name]));
 
       setRows(
-        (data || []).map((r) => {
-          const manual = r.manual_distance_km != null;
-          const km = Number((manual ? r.manual_distance_km : r.travel_distance_km) || 0);
-          const dayRate = taRates.length ? rateForDate(taRates, r.activity_date) : rate;
-          return {
-            id: r.id,
-            full_name: nameMap.get(r.user_id) || "Unknown",
-            activity_date: r.activity_date,
-            month: format(new Date(r.activity_date), "MMM yyyy"),
-            activity_type: r.activity_type || "-",
-            outcome: r.outcome || "-",
-            status: r.status || "-",
+        (data || []).map((r) =>
+          toTravelRow(r as TravelSource, {
+            name: nameMap.get(r.user_id) || "Unknown",
             customer: r.lead_id ? leadMap.get(r.lead_id) || "-" : "-",
-            km,
-            is_manual: manual,
-            travel_mins: Number(r.travel_time_mins || 0),
-            start_time: r.start_time,
-            end_time: r.end_time,
-            hours: Number(r.total_hours || 0),
-            rate: dayRate,
-            amount: km * dayRate,
-          };
-        })
+            rate: taRates.length ? rateForDate(taRates, r.activity_date) : rate,
+          }),
+        )
       );
       setGenerated(true);
     } catch {
@@ -202,10 +252,11 @@ export default function TravelExpenseReport() {
       {
         key: "rate",
         header: "Rate (/km)",
-        value: (r) => Number(r.rate.toFixed(2)),
+        // A fare leg is not priced per km, so it has no rate to show.
+        value: (r) => (r.fare != null ? "" : Number(r.rate.toFixed(2))),
         numeric: true,
         align: "right",
-        render: (r) => inr(r.rate),
+        render: (r) => (r.fare != null ? "—" : inr(r.rate)),
         pdfWidth: 1.3,
       },
       {
@@ -216,6 +267,39 @@ export default function TravelExpenseReport() {
         align: "right",
         render: (r) => inr(r.amount),
         pdfWidth: 1.8,
+      },
+      {
+        key: "fare",
+        header: "Fare paid",
+        value: (r) => (r.fare == null ? "" : Number(r.fare.toFixed(2))),
+        numeric: true,
+        align: "right",
+        render: (r) => (r.fare == null ? "—" : inr(r.fare)),
+        pdfWidth: 1.5,
+      },
+      {
+        key: "proofs",
+        header: "Receipt",
+        // PDF and CSV get a count; the table gets clickable links.
+        value: (r) => (r.proofs.length ? `${r.proofs.length} attached` : ""),
+        render: (r) =>
+          r.proofs.length === 0 ? (
+            <span className="text-muted-foreground">—</span>
+          ) : (
+            <span className="flex flex-wrap gap-2">
+              {r.proofs.map((p, i) => (
+                <button
+                  key={`${p.url}-${i}`}
+                  type="button"
+                  className="text-primary underline underline-offset-2"
+                  onClick={() => openProof(p.url)}
+                >
+                  {r.proofs.length > 1 ? `View ${i + 1}` : "View"}
+                </button>
+              ))}
+            </span>
+          ),
+        pdfWidth: 1.4,
       },
       { key: "status", header: "Status", value: (r) => r.status.replace(/_/g, " "), pdfWidth: 1.5, defaultHidden: true },
       { key: "month", header: "Month", value: (r) => r.month, pdfWidth: 1.6, defaultHidden: true },
