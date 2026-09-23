@@ -6,6 +6,7 @@ import {
 import { Plus, Camera, Download, Loader2, Pencil, Trash2, Eye, CheckCircle2, XCircle, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { resolveReceiptUrl } from "@/utils/receiptUrl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -140,12 +141,20 @@ interface Expense {
   expense_date: string;
   status: string;
   bill_url: string | null;
+  /** Set when the claim came from a public transport fare on an activity. */
+  activity_id: string | null;
   rejection_reason: string | null;
 }
 interface Category { id: string; name: string; auto_approval_limit: number | null; receipt_required_above: number | null; }
 
 export default function Expenses() {
   const { userId } = useCurrentUser();
+  // bill_url is a storage path in a private bucket, so it has to be signed.
+  const openReceipt = async (e: Expense) => {
+    const url = await resolveReceiptUrl(e);
+    if (url) window.open(url, "_blank", "noopener,noreferrer");
+    else toast.error("Could not open the receipt");
+  };
   const [preset, setPreset] = useState<ExpenseDatePreset>("this_month");
   const [customStart, setCustomStart] = useState(format(startOfMonth(new Date()), "yyyy-MM-dd"));
   const [customEnd, setCustomEnd] = useState(format(new Date(), "yyyy-MM-dd"));
@@ -425,7 +434,7 @@ export default function Expenses() {
                               <Button variant="ghost" size="sm" onClick={() => setRejectionView(e.rejection_reason)}><Eye className="h-3 w-3 mr-1" />Reason</Button>
                             )}
                             {e.bill_url && (
-                              <Button variant="ghost" size="sm" onClick={() => window.open(e.bill_url!, "_blank")}><Eye className="h-3 w-3 mr-1" />Receipt</Button>
+                              <Button variant="ghost" size="sm" onClick={() => openReceipt(e)}><Eye className="h-3 w-3 mr-1" />Receipt</Button>
                             )}
                           </div>
                         </div>

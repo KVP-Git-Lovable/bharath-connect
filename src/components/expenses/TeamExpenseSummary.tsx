@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Check, X, Clock, Loader2, IndianRupee, CheckCircle2, XCircle, Eye, ChevronLeft, ChevronRight, Users, Car, Utensils, Receipt, ChartNoAxesColumnIncreasing, CircleDollarSign } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useDaApplicable } from '@/hooks/useDaApplicable';
+import { resolveReceiptUrl } from '@/utils/receiptUrl';
 import { format, subMonths, addMonths, parse, endOfMonth } from 'date-fns';
 import { toast } from 'sonner';
 import RejectionReasonDialog from '@/components/RejectionReasonDialog';
@@ -20,11 +21,20 @@ interface TeamExpense {
   expense_date: string;
   status: string;
   bill_url: string | null;
+  /** Set when the claim came from a public transport fare on an activity. */
+  activity_id: string | null;
   rejection_reason: string | null;
   employee_name: string;
 }
 
 export default function TeamExpenseSummary() {
+  // bill_url is a storage path in a private bucket, so it has to be signed.
+  const openReceipt = async (exp: TeamExpense) => {
+    const url = await resolveReceiptUrl(exp);
+    if (url) window.open(url, '_blank', 'noopener,noreferrer');
+    else toast.error('Could not open the receipt');
+  };
+
   const [selectedMonth, setSelectedMonth] = useState(format(new Date(), 'yyyy-MM'));
   const [expenses, setExpenses] = useState<TeamExpense[]>([]);
   const [loading, setLoading] = useState(true);
@@ -312,7 +322,7 @@ export default function TeamExpenseSummary() {
                   <Button variant="ghost" size="sm" onClick={() => setRejectionView(exp.rejection_reason)}><Eye className="mr-1 h-3 w-3" />View Reason</Button>
                 )}
                 {exp.bill_url && (
-                  <Button variant="ghost" size="sm" onClick={() => exp.bill_url && window.open(exp.bill_url, '_blank')}><Eye className="mr-1 h-3 w-3" />Receipt</Button>
+                  <Button variant="ghost" size="sm" onClick={() => openReceipt(exp)}><Eye className="mr-1 h-3 w-3" />Receipt</Button>
                 )}
               </div>
             </CardContent>
