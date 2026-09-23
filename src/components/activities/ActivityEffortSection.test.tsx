@@ -28,7 +28,7 @@ vi.mock("@/hooks/useVehicleTypes", () => ({
   useVehicleTypes: () => ({ vehicleTypes: h.vehicles, loading: false, refetch: vi.fn() }),
 }));
 
-import ActivityEffortSection from "./ActivityEffortSection";
+import ActivityEffortSection, { TravelExpenseTile } from "./ActivityEffortSection";
 
 const activity = {
   id: "a1", user_id: "u1", activity_date: "2026-09-11",
@@ -162,5 +162,37 @@ describe("ActivityEffortSection travel", () => {
     expect(payload["vehicle_type_id"]).toBe("v-bus");
     // The day's vehicle lives in daily_vehicle_selections and must be untouched.
     expect(h.tables).toEqual(["activity_events"]);
+  });
+
+  it("does not keep claiming the old amount after the vehicle is changed", async () => {
+    // Reproduces the reported screenshot: saved as Bus with a Rs 48 fare, then
+    // the vehicle is switched to Bike. The tile must not still assert
+    // "Fare paid . Bus  Rs 48" while the picker says Bike.
+    h.vehicles = [
+      { id: "v-bus", name: "Bus", is_fare_based: true, is_no_vehicle: false },
+      { id: "v-bike", name: "Bike", is_fare_based: false, is_no_vehicle: false },
+    ];
+    h.expense = { method: "from_gps", vehicle_id: "v-bus", vehicle_name: "Bus", vehicle_source: "activity", is_no_vehicle: false, km: null, rate: 0, rate_source: "vehicle", amount: 0 };
+    h.compute.mockResolvedValue(null);
+    h.explain.mockResolvedValue("x");
+    renderIt({ vehicle_type_id: "v-bike", manual_fare_amount: 48 });
+
+    // Saved fare belongs to Bus; the activity now points at Bike.
+    await waitFor(() => expect(screen.getByRole("combobox")).toHaveTextContent("Bike"));
+    expect(screen.queryByText(/Fare paid · Bus/)).not.toBeInTheDocument();
+  });
+
+  // The picker change itself cannot be driven under jsdom, so the pending
+  // banner is asserted on the tile directly.
+  it("shows a pending banner instead of an amount for an unsaved vehicle", () => {
+    const exp = { method: "from_gps", vehicle_id: "v-bus", vehicle_name: "Bus", vehicle_source: "activity", is_no_vehicle: false, km: 4, rate: 7, rate_source: "vehicle", amount: 28 } as never;
+    render(<TravelExpenseTile exp={exp} km={4} fare={48} pendingVehicle="Bike" />);
+
+    expect(screen.getByText("Changed to Bike")).toBeInTheDocument();
+    expect(screen.getByText(/Save to work out the amount/)).toBeInTheDocument();
+    // Neither the old fare nor the old km x rate may be presented as this trip.
+    expect(screen.queryByText("₹48")).not.toBeInTheDocument();
+    expect(screen.queryByText("₹28")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Fare paid/)).not.toBeInTheDocument();
   });
 });

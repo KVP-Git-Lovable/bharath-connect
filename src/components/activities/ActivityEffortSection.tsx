@@ -73,7 +73,27 @@ function vehicleIcon(name: string | null, noVehicle: boolean) {
   return CarIcon;
 }
 
-function TravelExpenseTile({ exp, km, fare }: { exp: ActivityTravelExpense; km: number | null; fare: number | null }) {
+export function TravelExpenseTile({ exp, km, fare, pendingVehicle }: {
+  exp: ActivityTravelExpense; km: number | null; fare: number | null;
+  /** Set when the picker holds a vehicle that has not been saved yet. */
+  pendingVehicle: string | null;
+}) {
+  // The amount is priced server-side from the saved vehicle, so once the
+  // picker moves the old figure is no longer about this trip. Say that
+  // instead of showing a number for a vehicle the rep has moved away from.
+  if (pendingVehicle) {
+    return (
+      <div className="rounded-lg border-[1.5px] border-dashed border-amber-400 bg-amber-50/40 p-2.5 dark:bg-amber-950/10">
+        <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800 dark:text-amber-300">
+          <IndianRupee className="h-3 w-3" /> Travel expense
+        </p>
+        <p className="mt-0.5 text-sm font-semibold">Changed to {pendingVehicle}</p>
+        <p className="mt-1 text-[11px] text-muted-foreground">
+          Save to work out the amount for this vehicle.
+        </p>
+      </div>
+    );
+  }
   const vehicle = exp.vehicle_name || "No vehicle";
   const VIcon = vehicleIcon(exp.vehicle_name, exp.is_no_vehicle);
   const fixed = exp.method === "fixed";
@@ -150,6 +170,13 @@ export default function ActivityEffortSection({
   // rate per km to apply. Falls back to the normal km flow when the vehicle is
   // not marked fare based, or before the 2026-09-22 migration is applied.
   const fareBased = !!vehicleTypes.find((v) => v.id === vehicleId)?.is_fare_based;
+  // The RPC prices the saved vehicle. Once the picker differs, the amount on
+  // screen is about the old vehicle, not this trip.
+  const savedVehicleId = activity.vehicle_type_id ?? null;
+  const pendingVehicle =
+    vehicleId !== savedVehicleId
+      ? vehicleTypes.find((v) => v.id === vehicleId)?.name ?? "no vehicle"
+      : null;
   const [fare, setFare] = useState(
     activity.manual_fare_amount != null ? String(activity.manual_fare_amount) : ""
   );
@@ -380,7 +407,12 @@ export default function ActivityEffortSection({
           value={meetingMins != null ? `${meetingMins} min` : "—"}
         />
         {expense ? (
-          <TravelExpenseTile exp={expense} km={effectiveKm} fare={activity.manual_fare_amount != null ? Number(activity.manual_fare_amount) : null} />
+          <TravelExpenseTile
+            exp={expense}
+            km={effectiveKm}
+            fare={fareBased && activity.manual_fare_amount != null ? Number(activity.manual_fare_amount) : null}
+            pendingVehicle={pendingVehicle}
+          />
         ) : (
           <Field
             icon={<IndianRupee className="h-3 w-3" />}
