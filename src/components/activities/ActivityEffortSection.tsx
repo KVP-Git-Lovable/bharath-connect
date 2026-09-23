@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@/lib/router-compat";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +20,7 @@ import {
 import { resolveSignedUrl } from "@/utils/signedStorage";
 import { useTaRates } from "@/hooks/useTaRates";
 import { useVehicleTypes } from "@/hooks/useVehicleTypes";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useActivityTravelExpense, type ActivityTravelExpense } from "@/hooks/useActivityTravelExpense";
 import type { Activity } from "@/hooks/useActivities";
 
@@ -131,15 +133,23 @@ export default function ActivityEffortSection({
   onNavigateAway?: () => void;
 }) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { rateFor } = useTaRates();
   const { data: expense } = useActivityTravelExpense(activity.id);
   const existingProofs = (activity.manual_distance_attachments || []) as TravelProofEntry[];
 
+  // The vehicle is stamped from the day's pick at check-in, but a leg can
+  // differ from the rest of the day — public transport to one visit, own bike
+  // to the next — so it can be corrected per activity here. Changing it does
+  // not touch the day's selection.
+  const { vehicleTypes } = useVehicleTypes(true);
+  const [vehicleId, setVehicleId] = useState<string | null>(activity.vehicle_type_id ?? null);
+  useEffect(() => { setVehicleId(activity.vehicle_type_id ?? null); }, [activity.vehicle_type_id]);
+
   // Public transport (bus, cab): the employee paid a fare, so there is no
   // rate per km to apply. Falls back to the normal km flow when the vehicle is
   // not marked fare based, or before the 2026-09-22 migration is applied.
-  const { vehicleTypes } = useVehicleTypes(false);
-  const fareBased = !!vehicleTypes.find((v) => v.id === activity.vehicle_type_id)?.is_fare_based;
+  const fareBased = !!vehicleTypes.find((v) => v.id === vehicleId)?.is_fare_based;
   const [fare, setFare] = useState(
     activity.manual_fare_amount != null ? String(activity.manual_fare_amount) : ""
   );
@@ -318,7 +328,10 @@ export default function ActivityEffortSection({
           manual_distance_km: km,
           manual_distance_note: note.trim() || null,
           manual_distance_attachments: proofs as any,
-          ...(fareBased ? { manual_fare_amount: fareAmount } : {}),
+          // Only this activity — the day's vehicle selection is left alone.
+          vehicle_type_id: vehicleId,
+          // Clear any fare left over from a previous vehicle choice.
+          ...(fareBased ? { manual_fare_amount: fareAmount } : { manual_fare_amount: null }),
         })
         .eq("id", activity.id);
       if (error) {
@@ -326,6 +339,9 @@ export default function ActivityEffortSection({
           ? new Error("Apply the 2026-09-22 public transport migration to save fares")
           : error;
       }
+      // The amount is priced server-side from the activity's vehicle, so it has
+      // to be re-fetched once the vehicle or fare changes.
+      queryClient.invalidateQueries({ queryKey: ["activity-travel-expense", activity.id] });
       toast.success("Effort details saved");
       onSaved?.();
     } catch (e: any) {
@@ -412,6 +428,26 @@ export default function ActivityEffortSection({
 
       {/* Manual (contested) distance */}
       <div className="space-y-2 rounded-lg border border-dashed p-2.5">
+        <div className="space-y-1.5">
+          <Label className="flex items-center gap-1.5 text-xs">
+            <CarIcon className="h-3.5 w-3.5" /> Vehicle used for this trip
+            <Help text="Defaults to the vehicle you picked for the day. Change it here if this one leg was different — a bus or cab to this visit, your own vehicle to the next. Your day's vehicle is not affected." />
+          </Label>
+          <Select value={vehicleId ?? ""} onValueChange={(v) => setVehicleId(v || null)}>
+            <SelectTrigger className="h-9 text-sm">
+              <SelectValue placeholder="No vehicle recorded" />
+            </SelectTrigger>
+            <SelectContent>
+              {vehicleTypes.map((v) => (
+                <SelectItem key={v.id} value={v.id}>
+                  {v.name}
+                  {v.is_fare_based ? " · fare" : v.is_no_vehicle ? " · no TA" : ""}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
         {fareBased ? (
           <>
             <Label className="flex items-center gap-1.5 text-xs">
