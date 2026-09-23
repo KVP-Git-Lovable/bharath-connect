@@ -19,7 +19,7 @@ export default function AdminExpenseManagement() {
   if (!hasAdminAccess) return <Navigate to="/" replace />;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="bg-background">
       <div className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur-sm">
         <div className="flex items-center gap-3 px-4 py-3 sm:px-6 sm:py-4 lg:px-8">
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xs border border-primary/10 bg-primary/10 shadow-card">
