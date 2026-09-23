@@ -174,6 +174,10 @@ export default function ActivityEffortSection({
   // The RPC prices the saved vehicle. Once the picker differs, the amount on
   // screen is about the old vehicle, not this trip.
   const savedVehicleId = activity.vehicle_type_id ?? null;
+  // Only public transport may use this block. The vehicle picker stays live so
+  // the rep can switch to Bus or Cab, and Save stays live while a vehicle
+  // change is pending, otherwise a switch back to Car could never be saved.
+  const effortLocked = !fareBased;
   const pendingVehicle =
     vehicleId !== savedVehicleId
       ? vehicleTypes.find((v) => v.id === vehicleId)?.name ?? "no vehicle"
@@ -521,6 +525,15 @@ export default function ActivityEffortSection({
           </Select>
         </div>
 
+        <div
+          className={effortLocked ? "space-y-2 opacity-50" : "space-y-2"}
+          aria-disabled={effortLocked}
+        >
+        {effortLocked && (
+          <p className="text-[11px] text-muted-foreground">
+            Available for public transport only. Choose Bus or Cab above to enter a fare and attach the ticket.
+          </p>
+        )}
         {fareBased ? (
           <>
             <Label className="flex items-center gap-1.5 text-xs">
@@ -553,6 +566,7 @@ export default function ActivityEffortSection({
               onChange={(e) => setManualKm(e.target.value)}
               placeholder="e.g. 18.4"
               className="h-9 text-sm"
+              disabled={effortLocked}
             />
           </>
         )}
@@ -562,6 +576,7 @@ export default function ActivityEffortSection({
           onChange={(e) => setNote(e.target.value)}
           placeholder="Reason / remarks (optional)"
           className="text-xs"
+          disabled={effortLocked}
         />
 
         <div className="space-y-1.5">
@@ -575,8 +590,8 @@ export default function ActivityEffortSection({
               size="sm"
               variant="outline"
               className="h-7 text-xs"
+              disabled={effortLocked || uploading}
               onClick={() => fileRef.current?.click()}
-              disabled={uploading}
             >
               {uploading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Paperclip className="h-3 w-3 mr-1" />}
               Attach
@@ -606,7 +621,8 @@ export default function ActivityEffortSection({
                   <button
                     type="button"
                     aria-label="Remove attachment"
-                    className="text-destructive"
+                    className="text-destructive disabled:opacity-40"
+                    disabled={effortLocked}
                     onClick={() => setProofs((list) => list.filter((_, idx) => idx !== i))}
                   >
                     <X className="h-3 w-3" />
@@ -617,7 +633,14 @@ export default function ActivityEffortSection({
           )}
         </div>
 
-        <Button size="sm" className="h-8 w-full text-xs" onClick={save} disabled={saving || uploading}>
+        </div>
+
+        <Button
+          size="sm"
+          className="h-8 w-full text-xs"
+          onClick={save}
+          disabled={saving || uploading || (effortLocked && !pendingVehicle)}
+        >
           {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Save effort details"}
         </Button>
       </div>

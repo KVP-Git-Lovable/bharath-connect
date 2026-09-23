@@ -203,4 +203,46 @@ describe("ActivityEffortSection travel", () => {
     expect(screen.queryByText("₹28")).not.toBeInTheDocument();
     expect(screen.queryByText(/Fare paid/)).not.toBeInTheDocument();
   });
+
+  it("locks the effort block for a per-km vehicle", async () => {
+    h.vehicles = [{ id: "v1", name: "Car", is_fare_based: false, is_no_vehicle: false }];
+    h.expense = { method: "from_gps", vehicle_id: "v1", vehicle_name: "Car", vehicle_source: "activity", is_no_vehicle: false, km: 8, rate: 25, rate_source: "vehicle", amount: 200 };
+    h.compute.mockResolvedValue(null);
+    h.explain.mockResolvedValue("x");
+    renderIt({ vehicle_type_id: "v1" });
+
+    await waitFor(() => expect(screen.getByText(/Available for public transport only/)).toBeInTheDocument());
+    expect(screen.getByPlaceholderText("e.g. 18.4")).toBeDisabled();
+    expect(screen.getByPlaceholderText(/Reason \/ remarks/)).toBeDisabled();
+    expect(screen.getByText("Attach").closest("button")).toBeDisabled();
+    // Nothing to commit, so Save is closed too.
+    expect(screen.getByText("Save effort details").closest("button")).toBeDisabled();
+  });
+
+  it("leaves the block open for public transport", async () => {
+    h.vehicles = [{ id: "v-cab", name: "Cab", is_fare_based: true, is_no_vehicle: false }];
+    h.expense = { method: "from_gps", vehicle_id: "v-cab", vehicle_name: "Cab", vehicle_source: "activity", is_no_vehicle: false, km: null, rate: 0, rate_source: "vehicle", amount: 0 };
+    h.compute.mockResolvedValue(null);
+    h.explain.mockResolvedValue("x");
+    renderIt({ vehicle_type_id: "v-cab" });
+
+    await waitFor(() => expect(screen.getByText(/Fare paid for this trip/)).toBeInTheDocument());
+    expect(screen.queryByText(/Available for public transport only/)).not.toBeInTheDocument();
+    expect(screen.getByText("Attach").closest("button")).not.toBeDisabled();
+    expect(screen.getByText("Save effort details").closest("button")).not.toBeDisabled();
+  });
+
+  it("still allows saving a vehicle change away from public transport", async () => {
+    h.vehicles = [{ id: "v1", name: "Car", is_fare_based: false, is_no_vehicle: false }];
+    h.expense = { method: "from_gps", vehicle_id: "v1", vehicle_name: "Car", vehicle_source: "activity", is_no_vehicle: false, km: 8, rate: 25, rate_source: "vehicle", amount: 200 };
+    h.compute.mockResolvedValue(null);
+    h.explain.mockResolvedValue("x");
+    // Saved with no vehicle, picker seeded null -> differs from nothing, so the
+    // pending case is exercised by a saved vehicle the picker does not hold.
+    renderIt({ vehicle_type_id: null });
+
+    await waitFor(() => expect(screen.getByText(/Available for public transport only/)).toBeInTheDocument());
+    // Locked, and with no pending change there is nothing to save.
+    expect(screen.getByText("Save effort details").closest("button")).toBeDisabled();
+  });
 });
