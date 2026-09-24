@@ -501,12 +501,16 @@ export default function ExpensePolicyConfig() {
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary"><GitBranch className="h-5 w-5" /></span>
             <div className="min-w-0">
               <CardTitle className="text-lg">Approval Workflows</CardTitle>
-              <CardDescription className="mt-0.5">Define the sequence used to review submitted claims.</CardDescription>
+              <CardDescription className="mt-0.5">Define the review sequences, and the rules that pick one for a claim.</CardDescription>
             </div>
           </div>
-          <Button size="sm" className="shrink-0" onClick={openAddWf}><Plus className="h-4 w-4 mr-1" />Add</Button>
+          <div className="flex shrink-0 gap-2">
+            <Button size="sm" variant="outline" onClick={openAddWf}><Plus className="h-4 w-4 mr-1" />Workflow</Button>
+            <Button size="sm" onClick={() => setShowRuleForm(true)}><Plus className="h-4 w-4 mr-1" />Rule</Button>
+          </div>
         </CardHeader>
         <CardContent className="space-y-2 p-4 sm:p-6">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Workflows</p>
           {workflows.map((wf) => (
             <Collapsible key={wf.id} open={expandedWf === wf.id} onOpenChange={() => setExpandedWf(expandedWf === wf.id ? null : wf.id)}>
               <CollapsibleTrigger className="w-full">
@@ -529,22 +533,12 @@ export default function ExpensePolicyConfig() {
             </Collapsible>
           ))}
           {!workflows.length && <p className="text-center text-muted-foreground py-6 text-sm">No workflows configured.</p>}
-        </CardContent>
-      </Card>
 
-      {/* Approval Rules */}
-      <Card className="overflow-hidden border-border/70 shadow-card">
-        <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0 border-b border-border/60 bg-muted/30 px-5 py-4 sm:px-7">
-          <div className="flex min-w-0 items-center gap-3">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary"><Scale className="h-5 w-5" /></span>
-            <div className="min-w-0">
-              <CardTitle className="text-lg">Approval Rules</CardTitle>
-              <CardDescription className="mt-0.5">Match expense amounts to the appropriate workflow.</CardDescription>
-            </div>
-          </div>
-          <Button size="sm" className="shrink-0" onClick={() => setShowRuleForm(true)}><Plus className="h-4 w-4 mr-1" />Add Rule</Button>
-        </CardHeader>
-        <CardContent className="space-y-3 overflow-x-auto p-4 sm:p-6">
+          {/* Rules sit with the workflows they point at, not in a card of their own. */}
+          <div className="space-y-3 overflow-x-auto border-t border-border/60 pt-4">
+          <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <Scale className="h-3.5 w-3.5" />Rules
+          </p>
           <p className="text-sm text-muted-foreground flex items-start gap-1.5"><Info className="h-3.5 w-3.5 mt-0.5" />Rules are checked in priority order (lowest first). First match wins.</p>
 
           {showRuleForm && (
@@ -594,6 +588,7 @@ export default function ExpensePolicyConfig() {
               </TableBody>
             </Table>
           )}
+          </div>
         </CardContent>
       </Card>
       </div>
