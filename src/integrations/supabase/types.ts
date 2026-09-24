@@ -416,6 +416,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "additional_expenses_activity_id_fkey"
+            columns: ["activity_id"]
+            isOneToOne: false
+            referencedRelation: "activity_events"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "additional_expenses_category_id_fkey"
             columns: ["category_id"]
             isOneToOne: false
