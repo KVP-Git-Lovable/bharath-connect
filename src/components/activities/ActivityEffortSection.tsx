@@ -379,19 +379,29 @@ export default function ActivityEffortSection({
         return;
       }
 
-      const { error } = await supabase
-        .from("activity_events")
-        .update({
+      const sharedTravelFields = { travel_role: travelRole };
+      const baseFields = {
           manual_distance_km: km,
           manual_distance_note: note.trim() || null,
           manual_distance_attachments: proofs as any,
           // Only this activity — the day's vehicle selection is left alone.
           vehicle_type_id: vehicleId,
-          travel_role: travelRole,
           // Clear any fare left over from a previous vehicle or role choice.
           ...(fareBased && !isPassenger ? { manual_fare_amount: fareAmount } : { manual_fare_amount: null }),
-        })
+      };
+
+      let { error } = await supabase
+        .from("activity_events")
+        .update({ ...baseFields, ...sharedTravelFields })
         .eq("id", activity.id);
+
+      // Before the shared-travel migration that column does not exist. Save
+      // everything else rather than losing the rep's distance, note and proofs,
+      // and say why the travel role did not stick.
+      if (error && /travel_role/.test(error.message)) {
+        ({ error } = await supabase.from("activity_events").update(baseFields).eq("id", activity.id));
+        if (!error) toast.warning("Apply the 2026-09-24 shared travel migration to record who paid");
+      }
       if (error) {
         throw /manual_fare_amount/.test(error.message)
           ? new Error("Apply the 2026-09-22 public transport migration to save fares")

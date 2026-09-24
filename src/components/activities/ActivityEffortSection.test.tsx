@@ -6,7 +6,13 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 const h = vi.hoisted(() => ({
   compute: vi.fn(),
   explain: vi.fn(),
-  update: vi.fn((_payload?: Record<string, unknown>) => ({ eq: vi.fn().mockResolvedValue({ error: null }) })),
+  updateError: null as { message: string } | null,
+  update: vi.fn((payload?: Record<string, unknown>) => ({
+    eq: vi.fn().mockResolvedValue({
+      // Simulate the column being absent: only the payload carrying it fails.
+      error: h.updateError && payload && "travel_role" in payload ? h.updateError : null,
+    }),
+  })),
   expense: null as any,
   vehicles: [] as any[],
   tables: [] as string[],
@@ -53,7 +59,7 @@ const renderIt = (extra: Record<string, unknown> = {}) => {
 };
 
 describe("ActivityEffortSection travel", () => {
-  beforeEach(() => { h.compute.mockReset(); h.explain.mockReset(); h.expense = null; h.vehicles = []; h.tables = []; h.update.mockClear(); });
+  beforeEach(() => { h.compute.mockReset(); h.explain.mockReset(); h.expense = null; h.vehicles = []; h.tables = []; h.updateError = null; h.update.mockClear(); });
 
   it("shows recalculated values immediately, even without a parent refresh", async () => {
     h.compute.mockResolvedValue({ travel_distance_km: 8.6, travel_time_mins: 25, travel_from_type: "attendance", travel_from_activity_id: null, travel_from_at: "x" });
@@ -286,5 +292,24 @@ describe("ActivityEffortSection travel", () => {
     renderIt({ vehicle_type_id: "v1" });
 
     await waitFor(() => expect(screen.getByText("Who paid for this journey")).toBeInTheDocument());
+  });
+
+  it("still saves the effort details when the shared-travel column is missing", async () => {
+    h.updateError = { message: 'column "travel_role" does not exist' };
+    // A fare vehicle, so the block is not greyed out and Save is reachable.
+    h.vehicles = [{ id: "v-cab", name: "Cab", is_fare_based: true, is_no_vehicle: false }];
+    h.expense = { method: "from_gps", vehicle_id: "v-cab", vehicle_name: "Cab", vehicle_source: "activity", is_no_vehicle: false, km: null, rate: 0, rate_source: "vehicle", amount: 0 };
+    h.compute.mockResolvedValue(null);
+    h.explain.mockResolvedValue("x");
+    renderIt({ vehicle_type_id: "v-cab" });
+
+    await waitFor(() => expect(screen.getByText("Who paid for this journey")).toBeInTheDocument());
+    fireEvent.click(screen.getByText("Save effort details"));
+
+    // Retried without the new column, so the distance/note/proofs still land.
+    await waitFor(() => expect(h.update).toHaveBeenCalledTimes(2));
+    const retry = h.update.mock.calls[1]?.[0] ?? {};
+    expect("travel_role" in retry).toBe(false);
+    expect("manual_distance_km" in retry).toBe(true);
   });
 });
