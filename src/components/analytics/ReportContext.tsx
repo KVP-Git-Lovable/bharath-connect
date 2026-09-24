@@ -15,7 +15,8 @@ export type ReportTabKey =
   | "leads"
   | "opportunities"
   | "quotations"
-  | "travel";
+  | "travel"
+  | "claims";
 
 interface ReportContextValue {
   from: string;
