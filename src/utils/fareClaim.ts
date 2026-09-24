@@ -37,13 +37,45 @@ interface ExistingClaim {
   amount: number;
 }
 
+export interface FareLock {
+  amount: number;
+  /** Shown to the rep so they know why the fare will not budge. */
+  reason: string;
+}
+
 /**
- * The approved claim for this activity, if there is one. Callers check this
- * before writing the fare so an approved amount is never silently changed.
+ * Whether this activity's fare is settled and must not be rewritten.
+ *
+ * Two things can settle it. The expense itself may be approved. Or it may have
+ * been pulled into a day claim (expense_claims) that is awaiting approval or
+ * already decided — approving that claim rewrites the expense status, so
+ * editing the fare underneath it would put the two out of step.
+ *
+ * A rejected claim does not lock: that is the case where the rep is meant to
+ * correct the fare and it goes round again.
  */
-export async function approvedFareClaim(activityId: string): Promise<{ amount: number } | null> {
+export async function lockedFareClaim(activityId: string): Promise<FareLock | null> {
   const claim = await findClaim(activityId);
-  return claim && claim.status === "approved" ? { amount: claim.amount } : null;
+  if (!claim) return null;
+
+  if (claim.status === "approved") {
+    return { amount: claim.amount, reason: "already approved" };
+  }
+
+  const { data: line } = await supabase
+    .from("expense_claim_lines")
+    .select("claim_id, expense_claims!inner(status)")
+    .eq("expense_id", claim.id)
+    .maybeSingle();
+
+  const claimStatus = (line as { expense_claims?: { status?: string } } | null)?.expense_claims?.status;
+  if (claimStatus === "submitted" || claimStatus === "approved") {
+    return {
+      amount: claim.amount,
+      reason: claimStatus === "approved" ? "part of an approved day claim" : "part of a claim awaiting approval",
+    };
+  }
+  return null;
 }
 
 async function findClaim(activityId: string): Promise<ExistingClaim | null> {

@@ -20,7 +20,7 @@ import {
 import { resolveSignedUrl } from "@/utils/signedStorage";
 import { useTaRates } from "@/hooks/useTaRates";
 import { useVehicleTypes } from "@/hooks/useVehicleTypes";
-import { approvedFareClaim, syncFareClaim, type FareClaimOutcome } from "@/utils/fareClaim";
+import { lockedFareClaim, syncFareClaim, type FareClaimOutcome } from "@/utils/fareClaim";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useActivityTravelExpense, type ActivityTravelExpense } from "@/hooks/useActivityTravelExpense";
 import type { Activity } from "@/hooks/useActivities";
@@ -357,10 +357,10 @@ export default function ActivityEffortSection({
       // An approved fare is a settled reimbursement. Refuse the edit before
       // anything is written, rather than leaving the activity and the claim
       // disagreeing about the amount.
-      const approved = await approvedFareClaim(activity.id);
-      if (approved && (!fareBased || fareAmount !== approved.amount)) {
+      const locked = await lockedFareClaim(activity.id);
+      if (locked && (!fareBased || fareAmount !== locked.amount)) {
         toast.warning(
-          `This fare is already approved at ${inr(approved.amount)}. Ask an admin to reject it first if it needs changing.`,
+          `This fare is ${locked.reason} at ${inr(locked.amount)}. Ask an admin to reject it first if it needs changing.`,
         );
         setSaving(false);
         return;

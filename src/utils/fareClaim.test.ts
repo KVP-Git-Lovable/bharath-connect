@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const h = vi.hoisted(() => ({
   claim: null as { id: string; status: string; amount: number } | null,
+  claimLine: null as { claim_id: string; expense_claims: { status: string } } | null,
   category: null as { id: string; auto_approval_limit: number | null } | null,
   inserted: [] as Record<string, unknown>[],
   updated: [] as Record<string, unknown>[],
@@ -16,7 +17,10 @@ vi.mock("@/integrations/supabase/client", () => ({
           return {
             eq: () => ({ maybeSingle: async () => ({ data: h.category }) }),
             maybeSingle: async () => ({
-              data: table === "additional_expenses" ? h.claim : h.category,
+              data:
+                table === "additional_expenses" ? h.claim
+                : table === "expense_claim_lines" ? h.claimLine
+                : h.category,
             }),
           };
         },
@@ -32,7 +36,7 @@ vi.mock("@/integrations/supabase/client", () => ({
   },
 }));
 
-const { syncFareClaim, approvedFareClaim, FARE_CATEGORY } = await import("./fareClaim");
+const { syncFareClaim, lockedFareClaim, FARE_CATEGORY } = await import("./fareClaim");
 
 const input = {
   activityId: "act-1",
@@ -47,6 +51,7 @@ describe("syncFareClaim", () => {
   beforeEach(() => {
     h.claim = null;
     h.category = { id: "cat-1", auto_approval_limit: null };
+    h.claimLine = null;
     h.inserted = []; h.updated = []; h.deleted = [];
   });
 
@@ -127,20 +132,42 @@ describe("syncFareClaim", () => {
   });
 });
 
-describe("approvedFareClaim", () => {
-  beforeEach(() => { h.claim = null; });
+describe("lockedFareClaim", () => {
+  beforeEach(() => { h.claim = null; h.claimLine = null; });
 
-  it("reports an approved claim so the caller can block the edit", async () => {
+  it("locks a fare whose expense is already approved", async () => {
     h.claim = { id: "exp-1", status: "approved", amount: 180 };
-    expect(await approvedFareClaim("act-1")).toEqual({ amount: 180 });
+    expect(await lockedFareClaim("act-1")).toEqual({ amount: 180, reason: "already approved" });
   });
 
-  it("is null for a claim still awaiting approval", async () => {
+  it("locks a fare sitting in a day claim that is awaiting approval", async () => {
     h.claim = { id: "exp-1", status: "submitted", amount: 180 };
-    expect(await approvedFareClaim("act-1")).toBeNull();
+    h.claimLine = { claim_id: "c-1", expense_claims: { status: "submitted" } };
+    expect(await lockedFareClaim("act-1")).toEqual({
+      amount: 180,
+      reason: "part of a claim awaiting approval",
+    });
   });
 
-  it("is null when there is no claim", async () => {
-    expect(await approvedFareClaim("act-1")).toBeNull();
+  it("locks a fare sitting in an approved day claim", async () => {
+    h.claim = { id: "exp-1", status: "submitted", amount: 180 };
+    h.claimLine = { claim_id: "c-1", expense_claims: { status: "approved" } };
+    expect((await lockedFareClaim("act-1"))?.reason).toBe("part of an approved day claim");
+  });
+
+  it("leaves a fare editable when its day claim was rejected", async () => {
+    h.claim = { id: "exp-1", status: "rejected", amount: 180 };
+    h.claimLine = { claim_id: "c-1", expense_claims: { status: "rejected" } };
+    expect(await lockedFareClaim("act-1")).toBeNull();
+  });
+
+  it("leaves a fare editable while its day claim is still a draft", async () => {
+    h.claim = { id: "exp-1", status: "submitted", amount: 180 };
+    h.claimLine = { claim_id: "c-1", expense_claims: { status: "draft" } };
+    expect(await lockedFareClaim("act-1")).toBeNull();
+  });
+
+  it("is null when there is no claim at all", async () => {
+    expect(await lockedFareClaim("act-1")).toBeNull();
   });
 });

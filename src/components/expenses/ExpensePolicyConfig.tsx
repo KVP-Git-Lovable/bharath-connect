@@ -510,7 +510,18 @@ export default function ExpensePolicyConfig() {
           </div>
         </CardHeader>
         <CardContent className="space-y-2 p-4 sm:p-6">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Workflows</p>
+          {/* Nothing reads these tables yet: approval is a single decision by a
+              manager or admin. Saying so beats letting an admin believe they
+              have configured routing that is not in force. */}
+          <div className="flex items-start gap-2 rounded-md border border-warning/30 bg-warning/5 p-3 text-sm">
+            <Info className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
+            <p className="text-muted-foreground">
+              <span className="font-medium text-foreground">Not in force yet.</span>{" "}
+              Claims today are approved in one step by the reporting manager or an admin.
+              Workflows and rules saved here are stored but not yet applied.
+            </p>
+          </div>
+          <p className="pt-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Workflows</p>
           {workflows.map((wf) => (
             <Collapsible key={wf.id} open={expandedWf === wf.id} onOpenChange={() => setExpandedWf(expandedWf === wf.id ? null : wf.id)}>
               <CollapsibleTrigger className="w-full">

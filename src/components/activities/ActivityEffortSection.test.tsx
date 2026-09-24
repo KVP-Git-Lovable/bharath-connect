@@ -25,7 +25,7 @@ vi.mock("@/hooks/useTaRates", () => ({ useTaRates: () => ({ rateFor: () => 5 }) 
 vi.mock("@/hooks/useActivityTravelExpense", () => ({ useActivityTravelExpense: () => ({ data: h.expense }) }));
 vi.mock("@/utils/signedStorage", () => ({ resolveSignedUrl: vi.fn() }));
 vi.mock("@/utils/fareClaim", () => ({
-  approvedFareClaim: vi.fn().mockResolvedValue(null),
+  lockedFareClaim: vi.fn().mockResolvedValue(null),
   syncFareClaim: vi.fn().mockResolvedValue({ kind: "none" }),
   FARE_CATEGORY: "Public Transport",
 }));
