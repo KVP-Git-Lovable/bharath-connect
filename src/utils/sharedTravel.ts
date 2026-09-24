@@ -58,3 +58,37 @@ export function travelAmountFor(activity: SharedTravel, ownAmount: number | null
 export function canEnterFare(activity: SharedTravel): boolean {
   return earnsTravel(activity);
 }
+
+export interface TravelCompanion {
+  activity_id: string;
+  user_id: string;
+  full_name: string;
+  activity_label: string | null;
+  start_time: string | null;
+}
+
+/**
+ * The group is the id of the activity that carries the cost, so every leg of
+ * one journey lands on the same value without anyone coordinating. A driver or
+ * solo leg is its own group; a passenger joins the payer's.
+ */
+export function travelGroupFor(
+  role: TravelRole,
+  ownActivityId: string,
+  companionActivityId: string | null,
+): string | null {
+  if (role === "solo") return null;
+  if (role === "passenger") return companionActivityId;
+  // driver or shared: this leg pays, so it anchors the group.
+  return ownActivityId;
+}
+
+/** Only a passenger points at the activity that paid for them. */
+export function sharedWithFor(role: TravelRole, companionActivityId: string | null): string | null {
+  return role === "passenger" ? companionActivityId : null;
+}
+
+/** A companion must be named before a role that depends on one can be saved. */
+export function needsCompanion(role: TravelRole): boolean {
+  return role === "passenger" || role === "shared";
+}

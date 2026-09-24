@@ -2,9 +2,12 @@ import { describe, expect, it } from "vitest";
 import {
   canEnterFare,
   earnsTravel,
+  needsCompanion,
   roleOf,
   rolesFor,
+  sharedWithFor,
   travelAmountFor,
+  travelGroupFor,
 } from "./sharedTravel";
 
 describe("shared travel", () => {
@@ -47,5 +50,31 @@ describe("shared travel", () => {
     expect(rolesFor(false)).not.toContain("shared");
     // A per-km rate reimburses the vehicle owner, so there is nothing to split.
     expect(rolesFor(false)).toEqual(["solo", "driver", "passenger"]);
+  });
+
+  it("anchors the group on whichever leg pays", () => {
+    // Driver pays, so the group is the driver's own activity.
+    expect(travelGroupFor("driver", "act-driver", null)).toBe("act-driver");
+    // Passenger joins the payer's group, so both legs share one value without
+    // either side having to coordinate.
+    expect(travelGroupFor("passenger", "act-me", "act-driver")).toBe("act-driver");
+    // A split leg pays its own share, so it anchors its own.
+    expect(travelGroupFor("shared", "act-me", "act-other")).toBe("act-me");
+    // Travelling alone is not a journey anyone shares.
+    expect(travelGroupFor("solo", "act-me", null)).toBeNull();
+  });
+
+  it("points only a passenger at the activity that paid", () => {
+    expect(sharedWithFor("passenger", "act-driver")).toBe("act-driver");
+    expect(sharedWithFor("driver", "act-driver")).toBeNull();
+    expect(sharedWithFor("solo", "act-driver")).toBeNull();
+    expect(sharedWithFor("shared", "act-other")).toBeNull();
+  });
+
+  it("requires a colleague only for the roles that mean one", () => {
+    expect(needsCompanion("passenger")).toBe(true);
+    expect(needsCompanion("shared")).toBe(true);
+    expect(needsCompanion("driver")).toBe(false);
+    expect(needsCompanion("solo")).toBe(false);
   });
 });

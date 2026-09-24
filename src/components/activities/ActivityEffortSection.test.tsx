@@ -16,6 +16,7 @@ const h = vi.hoisted(() => ({
   expense: null as any,
   vehicles: [] as any[],
   tables: [] as string[],
+  companions: [] as unknown[],
 }));
 
 vi.mock("@/utils/activityTravel", () => ({
@@ -25,7 +26,10 @@ vi.mock("@/utils/activityTravel", () => ({
   TRAVEL_PROOF_BUCKET: "x",
 }));
 vi.mock("@/integrations/supabase/client", () => ({
-  supabase: { from: (t: string) => { h.tables.push(t); return { update: h.update }; } },
+  supabase: {
+    from: (t: string) => { h.tables.push(t); return { update: h.update }; },
+    rpc: async () => ({ data: h.companions }),
+  },
 }));
 vi.mock("@/hooks/useTaRates", () => ({ useTaRates: () => ({ rateFor: () => 5 }) }));
 vi.mock("@/hooks/useActivityTravelExpense", () => ({ useActivityTravelExpense: () => ({ data: h.expense }) }));
@@ -59,7 +63,7 @@ const renderIt = (extra: Record<string, unknown> = {}) => {
 };
 
 describe("ActivityEffortSection travel", () => {
-  beforeEach(() => { h.compute.mockReset(); h.explain.mockReset(); h.expense = null; h.vehicles = []; h.tables = []; h.updateError = null; h.update.mockClear(); });
+  beforeEach(() => { h.compute.mockReset(); h.explain.mockReset(); h.expense = null; h.vehicles = []; h.tables = []; h.updateError = null; h.companions = []; h.update.mockClear(); });
 
   it("shows recalculated values immediately, even without a parent refresh", async () => {
     h.compute.mockResolvedValue({ travel_distance_km: 8.6, travel_time_mins: 25, travel_from_type: "attendance", travel_from_activity_id: null, travel_from_at: "x" });
@@ -258,7 +262,9 @@ describe("ActivityEffortSection travel", () => {
     h.expense = { method: "from_gps", vehicle_id: "v-cab", vehicle_name: "Cab", vehicle_source: "activity", is_no_vehicle: false, km: 6, rate: 0, rate_source: "vehicle", amount: 0 };
     h.compute.mockResolvedValue(null);
     h.explain.mockResolvedValue("x");
-    renderIt({ vehicle_type_id: "v-cab", travel_role: "passenger", manual_fare_amount: 180 });
+    // A passenger must name who they rode with, so seed that too.
+    h.companions = [{ activity_id: "act-driver", user_id: "u2", full_name: "Prajwal C", activity_label: null, start_time: null }];
+    renderIt({ vehicle_type_id: "v-cab", travel_role: "passenger", manual_fare_amount: 180, shared_with_activity_id: "act-driver" });
 
     await waitFor(() => expect(screen.getByText(/your colleague is claiming the fare/i)).toBeInTheDocument());
     // The fare field is replaced, not merely disabled.
@@ -311,5 +317,49 @@ describe("ActivityEffortSection travel", () => {
     const retry = h.update.mock.calls[1]?.[0] ?? {};
     expect("travel_role" in retry).toBe(false);
     expect("manual_distance_km" in retry).toBe(true);
+  });
+
+  it("will not save a passenger without naming who they travelled with", async () => {
+    h.vehicles = [{ id: "v-cab", name: "Cab", is_fare_based: true, is_no_vehicle: false }];
+    h.expense = { method: "from_gps", vehicle_id: "v-cab", vehicle_name: "Cab", vehicle_source: "activity", is_no_vehicle: false, km: null, rate: 0, rate_source: "vehicle", amount: 0 };
+    h.compute.mockResolvedValue(null);
+    h.explain.mockResolvedValue("x");
+    renderIt({ vehicle_type_id: "v-cab", travel_role: "passenger" });
+
+    await waitFor(() => expect(screen.getByText("Travelled with")).toBeInTheDocument());
+    fireEvent.click(screen.getByText("Save effort details"));
+
+    // Nothing written: a passenger with no companion is an unfinished answer.
+    await waitFor(() => expect(h.update).not.toHaveBeenCalled());
+  });
+
+  it("explains when nobody else went there, rather than showing an empty list", async () => {
+    h.companions = [];
+    h.vehicles = [{ id: "v-cab", name: "Cab", is_fare_based: true, is_no_vehicle: false }];
+    h.expense = { method: "from_gps", vehicle_id: "v-cab", vehicle_name: "Cab", vehicle_source: "activity", is_no_vehicle: false, km: null, rate: 0, rate_source: "vehicle", amount: 0 };
+    h.compute.mockResolvedValue(null);
+    h.explain.mockResolvedValue("x");
+    renderIt({ vehicle_type_id: "v-cab", travel_role: "passenger" });
+
+    await waitFor(() => expect(screen.getByText(/Nobody else has an activity at this destination/)).toBeInTheDocument());
+  });
+
+  it("saves the link so both legs share one journey", async () => {
+    h.companions = [{ activity_id: "act-driver", user_id: "u2", full_name: "Prajwal C", activity_label: "ACT-1 · Visit", start_time: null }];
+    h.vehicles = [{ id: "v-cab", name: "Cab", is_fare_based: true, is_no_vehicle: false }];
+    h.expense = { method: "from_gps", vehicle_id: "v-cab", vehicle_name: "Cab", vehicle_source: "activity", is_no_vehicle: false, km: null, rate: 0, rate_source: "vehicle", amount: 0 };
+    h.compute.mockResolvedValue(null);
+    h.explain.mockResolvedValue("x");
+    renderIt({ vehicle_type_id: "v-cab", travel_role: "passenger", shared_with_activity_id: "act-driver" });
+
+    await waitFor(() => expect(screen.getByText("Travelled with")).toBeInTheDocument());
+    fireEvent.click(screen.getByText("Save effort details"));
+
+    await waitFor(() => expect(h.update).toHaveBeenCalled());
+    const payload = h.update.mock.calls[0]?.[0] ?? {};
+    expect(payload["shared_with_activity_id"]).toBe("act-driver");
+    // The group is the paying activity, so the driver's leg matches without
+    // anyone writing to the driver's row.
+    expect(payload["travel_group_id"]).toBe("act-driver");
   });
 });

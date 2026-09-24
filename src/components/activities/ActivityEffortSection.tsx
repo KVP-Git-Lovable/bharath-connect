@@ -21,7 +21,7 @@ import { resolveSignedUrl } from "@/utils/signedStorage";
 import { useTaRates } from "@/hooks/useTaRates";
 import { useVehicleTypes } from "@/hooks/useVehicleTypes";
 import { lockedFareClaim, syncFareClaim, type FareClaimOutcome } from "@/utils/fareClaim";
-import { TRAVEL_ROLE_LABEL, canEnterFare, earnsTravel, rolesFor, roleOf, travelAmountFor, type TravelRole } from "@/utils/sharedTravel";
+import { TRAVEL_ROLE_LABEL, canEnterFare, earnsTravel, needsCompanion, rolesFor, roleOf, sharedWithFor, travelAmountFor, travelGroupFor, type TravelCompanion, type TravelRole } from "@/utils/sharedTravel";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useActivityTravelExpense, type ActivityTravelExpense } from "@/hooks/useActivityTravelExpense";
 import type { Activity } from "@/hooks/useActivities";
@@ -197,6 +197,20 @@ export default function ActivityEffortSection({
   useEffect(() => { setTravelRole(roleOf(activity)); }, [activity.travel_role]);
   const isPassenger = travelRole === "passenger";
 
+  // Who else went to this destination today. A rep cannot read a colleague's
+  // activities, so the database answers this through a definer function.
+  const [companions, setCompanions] = useState<TravelCompanion[]>([]);
+  const [companionId, setCompanionId] = useState<string | null>(activity.shared_with_activity_id ?? null);
+  useEffect(() => { setCompanionId(activity.shared_with_activity_id ?? null); }, [activity.shared_with_activity_id]);
+  useEffect(() => {
+    if (!needsCompanion(travelRole)) return;
+    let cancelled = false;
+    supabase
+      .rpc("find_travel_companions" as never, { _activity_id: activity.id } as never)
+      .then(({ data }) => { if (!cancelled) setCompanions((data as unknown as TravelCompanion[] | null) ?? []); });
+    return () => { cancelled = true; };
+  }, [travelRole, activity.id]);
+
   const [manualKm, setManualKm] = useState(
     activity.manual_distance_km != null ? String(activity.manual_distance_km) : ""
   );
@@ -353,6 +367,11 @@ export default function ActivityEffortSection({
       toast.error("Attach at least one proof for the manually entered distance");
       return;
     }
+    if (needsCompanion(travelRole) && !companionId) {
+      toast.error("Choose the colleague you travelled with");
+      setSaving(false);
+      return;
+    }
     // A passenger claims nothing, so a fare left over from before they were
     // marked as one must not be validated or saved.
     const fareAmount = isPassenger || fare.trim() === "" ? null : Number(fare);
@@ -379,7 +398,11 @@ export default function ActivityEffortSection({
         return;
       }
 
-      const sharedTravelFields = { travel_role: travelRole };
+      const sharedTravelFields = {
+        travel_role: travelRole,
+        shared_with_activity_id: sharedWithFor(travelRole, companionId),
+        travel_group_id: travelGroupFor(travelRole, activity.id, companionId),
+      };
       const baseFields = {
           manual_distance_km: km,
           manual_distance_note: note.trim() || null,
@@ -567,6 +590,30 @@ export default function ActivityEffortSection({
             <p className="text-[11px] text-muted-foreground">
               No travel allowance on this leg — it is paid on your colleague&apos;s activity. Your daily allowance is unchanged.
             </p>
+          )}
+
+          {needsCompanion(travelRole) && (
+            <div className="space-y-1.5 pt-1">
+              <Label className="text-xs">Travelled with</Label>
+              {companions.length === 0 ? (
+                <p className="text-[11px] text-muted-foreground">
+                  Nobody else has an activity at this destination today. Ask them to save theirs first, then choose them here.
+                </p>
+              ) : (
+                <Select value={companionId ?? ""} onValueChange={(v) => setCompanionId(v || null)}>
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue placeholder="Choose the colleague" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {companions.map((c) => (
+                      <SelectItem key={c.activity_id} value={c.activity_id}>
+                        {c.full_name}{c.activity_label ? ` · ${c.activity_label}` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
           )}
         </div>
 
