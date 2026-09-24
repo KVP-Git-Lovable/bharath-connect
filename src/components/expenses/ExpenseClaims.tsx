@@ -52,7 +52,7 @@ function LineList({ lines, editable, onRemove }: { lines: ClaimLine[]; editable:
 }
 
 export default function ExpenseClaims() {
-  const { data: me } = useCurrentUser();
+  const { user: me } = useCurrentUser();
   const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [claim, setClaim] = useState<Claim | null>(null);
   const [lines, setLines] = useState<ClaimLine[]>([]);
