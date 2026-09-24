@@ -19,6 +19,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import CameraCapture from "@/components/CameraCapture";
 import TeamExpenseSummary from "@/components/expenses/TeamExpenseSummary";
+import ExpenseClaims from "@/components/expenses/ExpenseClaims";
 import ExpenseDateRangeFilter, { type ExpenseDatePreset } from "@/components/expenses/ExpenseDateRangeFilter";
 import Pager from "@/components/expenses/Pager";
 import ExpenseSummaryCards from "@/components/expenses/ExpenseSummaryCards";
@@ -459,16 +460,16 @@ export default function Expenses() {
     <motion.div className="p-4 space-y-4" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
       <h1 className="text-xl font-bold">Expenses</h1>
 
-      {hasTeam ? (
-        <Tabs defaultValue="my" className="w-full">
-          <TabsList className="w-full">
-            <TabsTrigger value="my" className="flex-1">My Expenses</TabsTrigger>
-            <TabsTrigger value="team" className="flex-1">Team Summary</TabsTrigger>
-          </TabsList>
-          <TabsContent value="my">{myContent}</TabsContent>
-          <TabsContent value="team"><TeamExpenseSummary /></TabsContent>
-        </Tabs>
-      ) : myContent}
+      <Tabs defaultValue="my" className="w-full">
+        <TabsList className="w-full">
+          <TabsTrigger value="my" className="flex-1">My Expenses</TabsTrigger>
+          <TabsTrigger value="claims" className="flex-1">Claims</TabsTrigger>
+          {hasTeam && <TabsTrigger value="team" className="flex-1">Team Summary</TabsTrigger>}
+        </TabsList>
+        <TabsContent value="my">{myContent}</TabsContent>
+        <TabsContent value="claims"><ExpenseClaims /></TabsContent>
+        {hasTeam && <TabsContent value="team"><TeamExpenseSummary /></TabsContent>}
+      </Tabs>
 
       {/* Add/Edit Dialog */}
       <Dialog open={addOpen} onOpenChange={(o) => { if (!o) { setAddOpen(false); resetForm(); } }}>
