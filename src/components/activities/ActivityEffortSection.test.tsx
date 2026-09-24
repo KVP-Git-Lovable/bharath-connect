@@ -147,7 +147,8 @@ describe("ActivityEffortSection travel", () => {
     renderIt({ vehicle_type_id: "v-bike" });
 
     await waitFor(() => expect(screen.getByText("Vehicle used for this trip")).toBeInTheDocument());
-    expect(screen.getByRole("combobox")).toHaveTextContent("Bike");
+    // Two selects now: vehicle first, then who paid.
+    expect(screen.getAllByRole("combobox")[0]).toHaveTextContent("Bike");
     // Stamped vehicle is a Bike, so the km flow is shown.
     expect(screen.getByText(/enter meter reading distance/)).toBeInTheDocument();
   });
@@ -186,7 +187,7 @@ describe("ActivityEffortSection travel", () => {
     renderIt({ vehicle_type_id: "v-bike", manual_fare_amount: 48 });
 
     // Saved fare belongs to Bus; the activity now points at Bike.
-    await waitFor(() => expect(screen.getByRole("combobox")).toHaveTextContent("Bike"));
+    await waitFor(() => expect(screen.getAllByRole("combobox")[0]).toHaveTextContent("Bike"));
     expect(screen.queryByText(/Fare paid · Bus/)).not.toBeInTheDocument();
   });
 
@@ -244,5 +245,46 @@ describe("ActivityEffortSection travel", () => {
     await waitFor(() => expect(screen.getByText(/Available for public transport only/)).toBeInTheDocument());
     // Locked, and with no pending change there is nothing to save.
     expect(screen.getByText("Save effort details").closest("button")).toBeDisabled();
+  });
+
+  it("shows nothing to claim, and files no claim, for a passenger", async () => {
+    h.vehicles = [{ id: "v-cab", name: "Cab", is_fare_based: true, is_no_vehicle: false }];
+    h.expense = { method: "from_gps", vehicle_id: "v-cab", vehicle_name: "Cab", vehicle_source: "activity", is_no_vehicle: false, km: 6, rate: 0, rate_source: "vehicle", amount: 0 };
+    h.compute.mockResolvedValue(null);
+    h.explain.mockResolvedValue("x");
+    renderIt({ vehicle_type_id: "v-cab", travel_role: "passenger", manual_fare_amount: 180 });
+
+    await waitFor(() => expect(screen.getByText(/your colleague is claiming the fare/i)).toBeInTheDocument());
+    // The fare field is replaced, not merely disabled.
+    expect(screen.queryByPlaceholderText("e.g. 180")).not.toBeInTheDocument();
+    expect(screen.getByText(/Travelled with a colleague/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("Save effort details"));
+    await waitFor(() => expect(h.update).toHaveBeenCalled());
+    const payload = h.update.mock.calls[0]?.[0] ?? {};
+    expect(payload["travel_role"]).toBe("passenger");
+    // A passenger keeps no fare of their own.
+    expect(payload["manual_fare_amount"]).toBeNull();
+  });
+
+  it("keeps the fare field for someone who paid", async () => {
+    h.vehicles = [{ id: "v-cab", name: "Cab", is_fare_based: true, is_no_vehicle: false }];
+    h.expense = { method: "from_gps", vehicle_id: "v-cab", vehicle_name: "Cab", vehicle_source: "activity", is_no_vehicle: false, km: 6, rate: 0, rate_source: "vehicle", amount: 0 };
+    h.compute.mockResolvedValue(null);
+    h.explain.mockResolvedValue("x");
+    renderIt({ vehicle_type_id: "v-cab", travel_role: "driver", manual_fare_amount: 180 });
+
+    await waitFor(() => expect(screen.getByText(/Fare paid for this trip/)).toBeInTheDocument());
+    expect(screen.queryByText(/your colleague is claiming the fare/i)).not.toBeInTheDocument();
+  });
+
+  it("offers a way to say who paid", async () => {
+    h.vehicles = [{ id: "v1", name: "Car", is_fare_based: false, is_no_vehicle: false }];
+    h.expense = { method: "from_gps", vehicle_id: "v1", vehicle_name: "Car", vehicle_source: "activity", is_no_vehicle: false, km: 8, rate: 25, rate_source: "vehicle", amount: 200 };
+    h.compute.mockResolvedValue(null);
+    h.explain.mockResolvedValue("x");
+    renderIt({ vehicle_type_id: "v1" });
+
+    await waitFor(() => expect(screen.getByText("Who paid for this journey")).toBeInTheDocument());
   });
 });

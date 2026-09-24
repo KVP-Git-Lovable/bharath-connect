@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
-import { Bike, Bus, Car as CarIcon, Gauge, HelpCircle, IndianRupee, MapPinOff, Truck, Loader2, Paperclip, RefreshCw, Route, Timer, X } from "lucide-react";
+import { Bike, Bus, Car as CarIcon, Gauge, HelpCircle, IndianRupee, MapPinOff, Truck, Loader2, Paperclip, RefreshCw, Route, Timer, Users, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   computeTravelForCheckIn,
@@ -21,6 +21,7 @@ import { resolveSignedUrl } from "@/utils/signedStorage";
 import { useTaRates } from "@/hooks/useTaRates";
 import { useVehicleTypes } from "@/hooks/useVehicleTypes";
 import { lockedFareClaim, syncFareClaim, type FareClaimOutcome } from "@/utils/fareClaim";
+import { TRAVEL_ROLE_LABEL, canEnterFare, earnsTravel, rolesFor, roleOf, travelAmountFor, type TravelRole } from "@/utils/sharedTravel";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useActivityTravelExpense, type ActivityTravelExpense } from "@/hooks/useActivityTravelExpense";
 import type { Activity } from "@/hooks/useActivities";
@@ -74,10 +75,12 @@ function vehicleIcon(name: string | null, noVehicle: boolean) {
   return CarIcon;
 }
 
-export function TravelExpenseTile({ exp, km, fare, pendingVehicle }: {
+export function TravelExpenseTile({ exp, km, fare, pendingVehicle, passenger = false }: {
   exp: ActivityTravelExpense; km: number | null; fare: number | null;
   /** Set when the picker holds a vehicle that has not been saved yet. */
   pendingVehicle: string | null;
+  /** Rode with a colleague: this leg earns no travel allowance. */
+  passenger?: boolean;
 }) {
   // The amount is priced server-side from the saved vehicle, so once the
   // picker moves the old figure is no longer about this trip. Say that
@@ -98,9 +101,10 @@ export function TravelExpenseTile({ exp, km, fare, pendingVehicle }: {
   const vehicle = exp.vehicle_name || "No vehicle";
   const VIcon = vehicleIcon(exp.vehicle_name, exp.is_no_vehicle);
   const fixed = exp.method === "fixed";
-  const amount = fare != null
+  const ownAmount = fare != null
     ? fare
     : exp.is_no_vehicle ? 0 : fixed ? exp.rate : km != null ? Math.round(km * exp.rate * 100) / 100 : null;
+  const amount = travelAmountFor({ travel_role: passenger ? "passenger" : "solo" }, ownAmount);
   const source = SOURCE_LABEL[exp.rate_source]?.(vehicle) ?? "";
   const vehicleWhen = exp.vehicle_source === "activity" ? "saved when this activity was checked in"
     : exp.vehicle_source === "day" ? "the vehicle recorded for this day" : "no vehicle was chosen";
@@ -121,7 +125,9 @@ export function TravelExpenseTile({ exp, km, fare, pendingVehicle }: {
         </span>
       </div>
       <div className="mt-1.5 space-y-0.5 border-t border-dashed border-amber-300 pt-1.5 text-[11px]">
-        {fare != null ? (
+        {passenger ? (
+          <p className="flex justify-between"><span className="text-muted-foreground">Travelled with a colleague</span><span className="font-semibold">paid on their activity</span></p>
+        ) : fare != null ? (
           <p className="flex justify-between"><span className="text-muted-foreground">Fare paid · {vehicle}</span><span className="font-semibold">{inr(fare)}</span></p>
         ) : exp.is_no_vehicle ? (
           <p className="flex justify-between"><span className="text-muted-foreground">No vehicle used</span><span className="font-semibold">no TA</span></p>
@@ -185,6 +191,11 @@ export default function ActivityEffortSection({
   const [fare, setFare] = useState(
     activity.manual_fare_amount != null ? String(activity.manual_fare_amount) : ""
   );
+  // Who paid for this journey. A passenger rode with a colleague, so this leg
+  // earns nothing; their DA is unaffected.
+  const [travelRole, setTravelRole] = useState<TravelRole>(roleOf(activity));
+  useEffect(() => { setTravelRole(roleOf(activity)); }, [activity.travel_role]);
+  const isPassenger = travelRole === "passenger";
 
   const [manualKm, setManualKm] = useState(
     activity.manual_distance_km != null ? String(activity.manual_distance_km) : ""
@@ -342,7 +353,9 @@ export default function ActivityEffortSection({
       toast.error("Attach at least one proof for the manually entered distance");
       return;
     }
-    const fareAmount = fare.trim() === "" ? null : Number(fare);
+    // A passenger claims nothing, so a fare left over from before they were
+    // marked as one must not be validated or saved.
+    const fareAmount = isPassenger || fare.trim() === "" ? null : Number(fare);
     if (fareAmount != null && (!Number.isFinite(fareAmount) || fareAmount < 0)) {
       toast.error("Enter a valid fare");
       return;
@@ -374,8 +387,9 @@ export default function ActivityEffortSection({
           manual_distance_attachments: proofs as any,
           // Only this activity — the day's vehicle selection is left alone.
           vehicle_type_id: vehicleId,
-          // Clear any fare left over from a previous vehicle choice.
-          ...(fareBased ? { manual_fare_amount: fareAmount } : { manual_fare_amount: null }),
+          travel_role: travelRole,
+          // Clear any fare left over from a previous vehicle or role choice.
+          ...(fareBased && !isPassenger ? { manual_fare_amount: fareAmount } : { manual_fare_amount: null }),
         })
         .eq("id", activity.id);
       if (error) {
@@ -391,7 +405,7 @@ export default function ActivityEffortSection({
           activityId: activity.id,
           userId: activity.user_id,
           activityDate: activity.activity_date,
-          fare: fareBased ? fareAmount : null,
+          fare: fareBased && !isPassenger ? fareAmount : null,
           billPath: proofs[0]?.url ?? null,
           description: `${activity.activity_code || "Activity"} · ${activity.activity_name || "travel"}`,
         });
@@ -455,7 +469,8 @@ export default function ActivityEffortSection({
           <TravelExpenseTile
             exp={expense}
             km={effectiveKm}
-            fare={fareBased && activity.manual_fare_amount != null ? Number(activity.manual_fare_amount) : null}
+            fare={fareBased && !isPassenger && activity.manual_fare_amount != null ? Number(activity.manual_fare_amount) : null}
+            passenger={isPassenger}
             pendingVehicle={pendingVehicle}
           />
         ) : (
@@ -525,6 +540,26 @@ export default function ActivityEffortSection({
           </Select>
         </div>
 
+        <div className="space-y-1.5">
+          <Label className="flex items-center gap-1.5 text-xs">
+            <Users className="h-3.5 w-3.5" /> Who paid for this journey
+            <Help text="Travel allowance covers the cost of getting there, so it is paid once per journey. If you rode with a colleague, their activity carries it and this one earns nothing. Your daily allowance is not affected." />
+          </Label>
+          <Select value={travelRole} onValueChange={(v) => setTravelRole(v as TravelRole)}>
+            <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {rolesFor(fareBased).map((r) => (
+                <SelectItem key={r} value={r}>{TRAVEL_ROLE_LABEL[r]}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {isPassenger && (
+            <p className="text-[11px] text-muted-foreground">
+              No travel allowance on this leg — it is paid on your colleague&apos;s activity. Your daily allowance is unchanged.
+            </p>
+          )}
+        </div>
+
         <div
           className={effortLocked ? "space-y-2 opacity-50" : "space-y-2"}
           aria-disabled={effortLocked}
@@ -534,7 +569,11 @@ export default function ActivityEffortSection({
             Available for public transport only. Choose Bus or Cab above to enter a fare and attach the ticket.
           </p>
         )}
-        {fareBased ? (
+        {fareBased && !canEnterFare({ travel_role: travelRole }) ? (
+          <p className="text-[11px] text-muted-foreground">
+            Nothing to claim on this leg — your colleague is claiming the fare.
+          </p>
+        ) : fareBased ? (
           <>
             <Label className="flex items-center gap-1.5 text-xs">
               <IndianRupee className="h-3.5 w-3.5" /> Fare paid for this trip (₹)

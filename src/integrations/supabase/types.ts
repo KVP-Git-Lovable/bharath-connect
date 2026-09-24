@@ -93,6 +93,7 @@ export type Database = {
           remarks: string | null
           retailer_id: string | null
           risk: string | null
+          shared_with_activity_id: string | null
           site_id: string | null
           start_time: string | null
           status: string
@@ -107,6 +108,8 @@ export type Database = {
           travel_from_activity_id: string | null
           travel_from_at: string | null
           travel_from_type: string | null
+          travel_group_id: string | null
+          travel_role: string
           travel_time_mins: number | null
           user_id: string
           vehicle_type_id: string | null
@@ -146,6 +149,7 @@ export type Database = {
           remarks?: string | null
           retailer_id?: string | null
           risk?: string | null
+          shared_with_activity_id?: string | null
           site_id?: string | null
           start_time?: string | null
           status?: string
@@ -160,6 +164,8 @@ export type Database = {
           travel_from_activity_id?: string | null
           travel_from_at?: string | null
           travel_from_type?: string | null
+          travel_group_id?: string | null
+          travel_role?: string
           travel_time_mins?: number | null
           user_id: string
           vehicle_type_id?: string | null
@@ -199,6 +205,7 @@ export type Database = {
           remarks?: string | null
           retailer_id?: string | null
           risk?: string | null
+          shared_with_activity_id?: string | null
           site_id?: string | null
           start_time?: string | null
           status?: string
@@ -213,6 +220,8 @@ export type Database = {
           travel_from_activity_id?: string | null
           travel_from_at?: string | null
           travel_from_type?: string | null
+          travel_group_id?: string | null
+          travel_role?: string
           travel_time_mins?: number | null
           user_id?: string
           vehicle_type_id?: string | null

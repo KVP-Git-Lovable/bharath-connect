@@ -1,5 +1,6 @@
 import { Bike, Bus, Car as CarIcon, IndianRupee, MapPinOff, Route, Timer, Truck } from "lucide-react";
 import { useActivityTravelExpense } from "@/hooks/useActivityTravelExpense";
+import { earnsTravel, travelAmountFor } from "@/utils/sharedTravel";
 
 const inr = (n: number) => `₹${n.toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
 
@@ -18,6 +19,7 @@ interface Props {
     travel_distance_km?: number | null;
     manual_distance_km?: number | null;
     manual_fare_amount?: number | null;
+    travel_role?: string | null;
     travel_time_mins?: number | null;
     start_time?: string | null;
     end_time?: string | null;
@@ -51,7 +53,7 @@ export function ActivityExpenseStrip({ activity, className = "" }: Props) {
   // A public transport fare is what the employee paid, so it wins over the
   // km x rate the server calculated.
   const fareAmount = activity.manual_fare_amount != null ? Number(activity.manual_fare_amount) : null;
-  const amount = fareAmount != null
+  const ownAmount = fareAmount != null
     ? fareAmount
     : expense
       ? expense.is_no_vehicle
@@ -62,6 +64,8 @@ export function ActivityExpenseStrip({ activity, className = "" }: Props) {
             ? Math.round(km * expense.rate * 100) / 100
             : null
       : null;
+  // A passenger's journey was paid on the driver's activity.
+  const amount = travelAmountFor(activity, ownAmount);
 
   // Nothing measured yet — keep the card clean.
   if (km == null && travelMins == null && meetingMins == null && amount == null) return null;
@@ -104,7 +108,9 @@ export function ActivityExpenseStrip({ activity, className = "" }: Props) {
         </span>
       </div>
 
-      {fareAmount != null ? (
+      {!earnsTravel(activity) ? (
+        <p className="mt-0.5 text-right text-[10px] text-muted-foreground">Travelled with a colleague</p>
+      ) : fareAmount != null ? (
         <p className="mt-0.5 text-right text-[10px] text-muted-foreground">Fare paid</p>
       ) : expense && !expense.is_no_vehicle && (
         <p className="mt-0.5 text-right text-[10px] text-muted-foreground">
