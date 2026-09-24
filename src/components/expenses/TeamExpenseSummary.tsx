@@ -10,6 +10,7 @@ import { format, subMonths, addMonths, parse, endOfMonth } from 'date-fns';
 import { toast } from 'sonner';
 import RejectionReasonDialog from '@/components/RejectionReasonDialog';
 import ExpenseReportGenerator from '@/components/expenses/ExpenseReportGenerator';
+import SharedTravelFlags from '@/components/expenses/SharedTravelFlags';
 
 interface TeamExpense {
   id: string;
@@ -362,6 +363,8 @@ export default function TeamExpenseSummary() {
             </section>
 
             <section className="rounded-xs border bg-card p-4 shadow-card sm:p-5"><ExpenseReportGenerator isAdmin={isAdmin} /></section>
+
+            <SharedTravelFlags yearMonth={selectedMonth} />
 
             <section aria-labelledby="pending-approvals-heading">
               <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between"><div><h3 id="pending-approvals-heading" className="text-lg font-bold">Pending Approvals</h3></div><p className="text-xs text-muted-foreground">{pendingExpenses.length} expense{pendingExpenses.length === 1 ? '' : 's'} awaiting review</p></div>
