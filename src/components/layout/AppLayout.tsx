@@ -104,7 +104,10 @@ export function AppLayout() {
   const showProfileSetup = userId && !mustChangePassword && onboardingCompleted === false && profilePictureUrl === null;
 
   return (
-    <div className="min-h-screen flex flex-col w-full max-w-full bg-background overflow-x-hidden">
+    // h-full, not min-h-screen: html/body/#root are already height:100%, and a
+    // minimum let this grow past the viewport, so the document scrolled as well
+    // as <main> below and the page showed two scrollbars.
+    <div className="h-full flex flex-col w-full max-w-full bg-background overflow-x-hidden">
       <AppHeader />
       <OfflineActivityBanner />
       <main className="flex-1 overflow-y-auto">
