@@ -278,6 +278,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "activity_events_shared_with_activity_id_fkey"
+            columns: ["shared_with_activity_id"]
+            isOneToOne: false
+            referencedRelation: "activity_events"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "activity_events_site_id_fkey"
             columns: ["site_id"]
             isOneToOne: false
