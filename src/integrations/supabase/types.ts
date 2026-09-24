@@ -1609,6 +1609,111 @@ export type Database = {
         }
         Relationships: []
       }
+      expense_claim_lines: {
+        Row: {
+          activity_id: string | null
+          amount: number
+          bill_url: string | null
+          claim_id: string
+          created_at: string
+          description: string | null
+          distance_km: number | null
+          expense_id: string | null
+          id: string
+          line_type: string
+          minutes: number | null
+        }
+        Insert: {
+          activity_id?: string | null
+          amount?: number
+          bill_url?: string | null
+          claim_id: string
+          created_at?: string
+          description?: string | null
+          distance_km?: number | null
+          expense_id?: string | null
+          id?: string
+          line_type: string
+          minutes?: number | null
+        }
+        Update: {
+          activity_id?: string | null
+          amount?: number
+          bill_url?: string | null
+          claim_id?: string
+          created_at?: string
+          description?: string | null
+          distance_km?: number | null
+          expense_id?: string | null
+          id?: string
+          line_type?: string
+          minutes?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expense_claim_lines_claim_id_fkey"
+            columns: ["claim_id"]
+            isOneToOne: false
+            referencedRelation: "expense_claims"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_claim_lines_expense_id_fkey"
+            columns: ["expense_id"]
+            isOneToOne: false
+            referencedRelation: "additional_expenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expense_claims: {
+        Row: {
+          approver_id: string | null
+          claim_date: string
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          id: string
+          notes: string | null
+          rejection_reason: string | null
+          status: string
+          submitted_at: string | null
+          total_amount: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          approver_id?: string | null
+          claim_date: string
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          id?: string
+          notes?: string | null
+          rejection_reason?: string | null
+          status?: string
+          submitted_at?: string | null
+          total_amount?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          approver_id?: string | null
+          claim_date?: string
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          id?: string
+          notes?: string | null
+          rejection_reason?: string | null
+          status?: string
+          submitted_at?: string | null
+          total_amount?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       expense_group_members: {
         Row: {
           created_at: string
@@ -6906,6 +7011,7 @@ export type Database = {
         Args: { _object_name: string; _permission: string; _user_id: string }
         Returns: boolean
       }
+      can_view_claim_user: { Args: { _owner: string }; Returns: boolean }
       compute_filtered_distance_km: {
         Args: { _date: string; _user_id: string }
         Returns: number
@@ -6913,6 +7019,10 @@ export type Database = {
       convert_lead: {
         Args: { _lead_id: string; _payload: Json }
         Returns: string
+      }
+      decide_expense_claim: {
+        Args: { _approve: boolean; _claim_id: string; _reason?: string }
+        Returns: undefined
       }
       emit_notification_event: {
         Args: {
@@ -7182,6 +7292,7 @@ export type Database = {
         }
         Returns: string
       }
+      submit_expense_claim: { Args: { _claim_id: string }; Returns: undefined }
       upsert_company_profile: {
         Args: { _payload: Json }
         Returns: {
