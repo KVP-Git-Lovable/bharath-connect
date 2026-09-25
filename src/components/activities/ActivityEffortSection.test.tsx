@@ -18,6 +18,7 @@ const h = vi.hoisted(() => ({
   tables: [] as string[],
   companions: [] as unknown[],
   rpcError: null as { message: string } | null,
+  headlines: {} as Record<string, string | null>,
 }));
 
 vi.mock("@/utils/activityTravel", () => ({
@@ -43,6 +44,9 @@ vi.mock("@/utils/fareClaim", () => ({
 vi.mock("@/hooks/useVehicleTypes", () => ({
   useVehicleTypes: () => ({ vehicleTypes: h.vehicles, loading: false, refetch: vi.fn() }),
 }));
+vi.mock("@/hooks/useActivityHeadline", () => ({
+  useActivityHeadline: (id: string | null) => ({ data: id ? h.headlines[id] ?? null : null }),
+}));
 
 import ActivityEffortSection, { TravelExpenseTile } from "./ActivityEffortSection";
 
@@ -64,7 +68,7 @@ const renderIt = (extra: Record<string, unknown> = {}) => {
 };
 
 describe("ActivityEffortSection travel", () => {
-  beforeEach(() => { h.compute.mockReset(); h.explain.mockReset(); h.expense = null; h.vehicles = []; h.tables = []; h.updateError = null; h.companions = []; h.rpcError = null; h.update.mockClear(); });
+  beforeEach(() => { h.compute.mockReset(); h.explain.mockReset(); h.expense = null; h.vehicles = []; h.tables = []; h.updateError = null; h.companions = []; h.rpcError = null; h.headlines = {}; h.update.mockClear(); });
 
   it("shows recalculated values immediately, even without a parent refresh", async () => {
     h.compute.mockResolvedValue({ travel_distance_km: 8.6, travel_time_mins: 25, travel_from_type: "attendance", travel_from_activity_id: null, travel_from_at: "x" });
@@ -74,6 +78,35 @@ describe("ActivityEffortSection travel", () => {
     expect(screen.getByText("Attendance (day check-in)")).toBeInTheDocument();
     expect(screen.getByText("32 min")).toBeInTheDocument(); // meeting time unchanged
     expect(screen.getByText("₹43")).toBeInTheDocument(); // 8.6 km × ₹5
+  });
+
+  it("names the activity the travel was measured from", async () => {
+    h.headlines = { "prev-1": "General Activity - Dibyanshi Associates" };
+    h.compute.mockResolvedValue({ travel_distance_km: 1.1, travel_time_mins: 3, travel_from_type: "activity", travel_from_activity_id: "prev-1", travel_from_at: "x" });
+    renderIt();
+
+    await waitFor(() =>
+      expect(screen.getByText("General Activity - Dibyanshi Associates")).toBeInTheDocument(),
+    );
+    // The generic words were the bug: they made two different starting points
+    // read identically.
+    expect(screen.queryByText("Previous activity")).not.toBeInTheDocument();
+  });
+
+  it("falls back to the neutral wording rather than showing nothing", async () => {
+    h.headlines = {}; // name not resolved yet, or no longer readable
+    h.compute.mockResolvedValue({ travel_distance_km: 1.1, travel_time_mins: 3, travel_from_type: "activity", travel_from_activity_id: "prev-1", travel_from_at: "x" });
+    renderIt();
+
+    await waitFor(() => expect(screen.getByText("Previous activity")).toBeInTheDocument());
+  });
+
+  it("still says attendance when the day check-in was the starting point", async () => {
+    h.headlines = { "prev-1": "Should not be used" };
+    h.compute.mockResolvedValue({ travel_distance_km: 1.1, travel_time_mins: 3, travel_from_type: "attendance", travel_from_activity_id: null, travel_from_at: "x" });
+    renderIt();
+
+    await waitFor(() => expect(screen.getByText("Attendance (day check-in)")).toBeInTheDocument());
   });
 
   it("explains why travel is blank and offers Recalculate", async () => {

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { activityHeadline } from "@/utils/activityHeadline";
 import { useNavigate } from "@/lib/router-compat";
 import { format, parseISO } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
@@ -370,9 +371,7 @@ export default function ActivityTimeline() {
               const leadDesignation = (a as any).lead_designation as string | undefined;
               const outcome = (a as any).outcome as string | undefined;
               const followUp = (a as any).next_follow_up_date as string | undefined;
-              const label = a.activity_type || a.activity_name || "Activity";
-              const context = leadCompany || leadName || a.site_name || a.project_name || "";
-              const headline = context ? `${label} - ${context}` : label;
+              const headline = activityHeadline({ ...a, lead_company: leadCompany, lead_name: leadName });
               const subLine = [leadName, leadDesignation].filter(Boolean).join(" - ");
               const lat = a.status_change_lat ?? a.location_lat;
               const lng = a.status_change_lng ?? a.location_lng;

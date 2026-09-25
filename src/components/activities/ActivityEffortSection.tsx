@@ -25,6 +25,7 @@ import { lockedFareClaim, syncFareClaim, type FareClaimOutcome } from "@/utils/f
 import { TRAVEL_ROLE_LABEL, canEnterFare, earnsTravel, needsCompanion, rolesFor, roleOf, sharedWithFor, travelAmountFor, travelGroupFor, type TravelCompanion, type TravelRole } from "@/utils/sharedTravel";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useActivityTravelExpense, type ActivityTravelExpense } from "@/hooks/useActivityTravelExpense";
+import { useActivityHeadline } from "@/hooks/useActivityHeadline";
 import type { Activity } from "@/hooks/useActivities";
 
 
@@ -348,11 +349,15 @@ export default function ActivityEffortSection({
     })();
   }, [activity.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Name the record the travel was measured from. The id decides which record
+  // it is -- two activities on one day can share a name, and the link has
+  // always carried the id -- this only replaces the words the reader sees.
+  const { data: prevHeadline } = useActivityHeadline(travel.fromActivityId);
   const prevLabel =
     travel.fromType === "attendance"
       ? "Attendance (day check-in)"
       : travel.fromActivityId
-        ? "Previous activity"
+        ? prevHeadline || "Previous activity"
         : "Not available";
 
   const handleFiles = async (files: FileList | null) => {

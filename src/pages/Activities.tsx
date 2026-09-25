@@ -1,4 +1,5 @@
 import { computeTravelForCheckIn } from "@/utils/activityTravel";
+import { activityHeadline } from "@/utils/activityHeadline";
 import { SignedAudio, SignedImage } from "@/components/ui/signed-image";
 import { useState, useEffect, useMemo, useRef, Suspense, lazy, useCallback } from "react";
 import { motion } from "framer-motion";
@@ -2016,9 +2017,7 @@ function ActivityCard({ a, isAdmin, onEdit, onDelete, onOpenDetails, onReceiveGo
   const leadCompany = (a as any).lead_company as string | undefined;
   const leadDesignation = (a as any).lead_designation as string | undefined;
   const outcome = (a as any).outcome as string | undefined;
-  const activityLabel = a.activity_type || a.activity_name || "Activity";
-  const contextName = leadCompany || leadName || a.site_name || a.project_name || "";
-  const headline = contextName ? `${activityLabel} - ${contextName}` : activityLabel;
+  const headline = activityHeadline({ ...a, lead_company: leadCompany, lead_name: leadName });
   const subLine = [leadName, leadDesignation].filter(Boolean).join(" - ");
   const followUpDate = (a as any).next_follow_up_date as string | undefined;
   const audioUrls = (a.attachment_urls || []).filter((url: string) => url.includes("activity-audio"));

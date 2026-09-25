@@ -42,6 +42,25 @@ describe("travel checkpoints", () => {
     expect(p3?.at).toBe("2026-09-11T05:30:00Z");
   });
 
+  it("tells apart two activities that carry the same name", () => {
+    // The 18 Sep case: two "General Activity - INDO PROFILES" records. The
+    // checkpoint is chosen by check-out time and reported by id, so a name
+    // collision cannot send the third activity back to the first.
+    const named = (id: string, at: string) => ({ ...out(id, at), activity_name: "General Activity" });
+    const first = named("indo-1", "2026-09-11T04:05:00Z");
+    const second = named("indo-2", "2026-09-11T05:30:00Z");
+    expect(pickPreviousCheckout([first, second], "2026-09-11T05:45:00Z", session)?.row.id).toBe("indo-2");
+  });
+
+  it("orders by check-out time, not by the order rows came back in", () => {
+    const a1 = out("a1", "2026-09-11T04:05:00Z");
+    const a2 = out("a2", "2026-09-11T05:30:00Z");
+    const forwards = pickPreviousCheckout([a1, a2], "2026-09-11T05:45:00Z", session)?.row.id;
+    const backwards = pickPreviousCheckout([a2, a1], "2026-09-11T05:45:00Z", session)?.row.id;
+    expect(forwards).toBe("a2");
+    expect(backwards).toBe("a2");
+  });
+
   it("ignores check-outs from before this attendance session or after this check-in", () => {
     const before = out("old", "2026-09-11T02:00:00Z");
     const later = out("later", "2026-09-11T06:00:00Z");
