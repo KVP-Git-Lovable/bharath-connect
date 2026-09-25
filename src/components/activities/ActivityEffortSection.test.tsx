@@ -17,6 +17,7 @@ const h = vi.hoisted(() => ({
   vehicles: [] as any[],
   tables: [] as string[],
   companions: [] as unknown[],
+  rpcError: null as { message: string } | null,
 }));
 
 vi.mock("@/utils/activityTravel", () => ({
@@ -28,7 +29,7 @@ vi.mock("@/utils/activityTravel", () => ({
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
     from: (t: string) => { h.tables.push(t); return { update: h.update }; },
-    rpc: async () => ({ data: h.companions }),
+    rpc: async () => ({ data: h.companions, error: h.rpcError }),
   },
 }));
 vi.mock("@/hooks/useTaRates", () => ({ useTaRates: () => ({ rateFor: () => 5 }) }));
@@ -46,7 +47,7 @@ vi.mock("@/hooks/useVehicleTypes", () => ({
 import ActivityEffortSection, { TravelExpenseTile } from "./ActivityEffortSection";
 
 const activity = {
-  id: "a1", user_id: "u1", activity_date: "2026-09-11",
+  id: "a1", user_id: "u1", activity_date: "2026-09-11", customer_id: "c1",
   start_time: "2026-09-11T04:10:00Z", end_time: "2026-09-11T04:42:00Z",
   status_history: [{ status: "in_progress", at: "2026-09-11T04:10:00Z", lat: 12.88, lng: 74.84 }],
   travel_distance_km: null, travel_time_mins: null, travel_from_type: null, travel_from_activity_id: null,
@@ -63,7 +64,7 @@ const renderIt = (extra: Record<string, unknown> = {}) => {
 };
 
 describe("ActivityEffortSection travel", () => {
-  beforeEach(() => { h.compute.mockReset(); h.explain.mockReset(); h.expense = null; h.vehicles = []; h.tables = []; h.updateError = null; h.companions = []; h.update.mockClear(); });
+  beforeEach(() => { h.compute.mockReset(); h.explain.mockReset(); h.expense = null; h.vehicles = []; h.tables = []; h.updateError = null; h.companions = []; h.rpcError = null; h.update.mockClear(); });
 
   it("shows recalculated values immediately, even without a parent refresh", async () => {
     h.compute.mockResolvedValue({ travel_distance_km: 8.6, travel_time_mins: 25, travel_from_type: "attendance", travel_from_activity_id: null, travel_from_at: "x" });
@@ -342,6 +343,44 @@ describe("ActivityEffortSection travel", () => {
     renderIt({ vehicle_type_id: "v-cab", travel_role: "passenger" });
 
     await waitFor(() => expect(screen.getByText(/Nobody else has an activity at this destination/)).toBeInTheDocument());
+  });
+
+  it("names the date it searched, so a wrong date is visible", async () => {
+    h.companions = [];
+    h.vehicles = [{ id: "v-cab", name: "Cab", is_fare_based: true, is_no_vehicle: false }];
+    h.expense = { method: "from_gps", vehicle_id: "v-cab", vehicle_name: "Cab", vehicle_source: "activity", is_no_vehicle: false, km: null, rate: 0, rate_source: "vehicle", amount: 0 };
+    h.compute.mockResolvedValue(null);
+    h.explain.mockResolvedValue("x");
+    renderIt({ vehicle_type_id: "v-cab", travel_role: "passenger" });
+
+    // "today" would be a lie on an activity being filled in days later.
+    await waitFor(() => expect(screen.getByText(/11 Sep 2026/)).toBeInTheDocument());
+  });
+
+  it("says the lookup failed instead of claiming nobody was there", async () => {
+    h.rpcError = { message: "function find_travel_companions does not exist" };
+    h.vehicles = [{ id: "v-cab", name: "Cab", is_fare_based: true, is_no_vehicle: false }];
+    h.expense = { method: "from_gps", vehicle_id: "v-cab", vehicle_name: "Cab", vehicle_source: "activity", is_no_vehicle: false, km: null, rate: 0, rate_source: "vehicle", amount: 0 };
+    h.compute.mockResolvedValue(null);
+    h.explain.mockResolvedValue("x");
+    renderIt({ vehicle_type_id: "v-cab", travel_role: "passenger" });
+
+    await waitFor(() => expect(screen.getByText(/Could not look up colleagues/)).toBeInTheDocument());
+    expect(screen.queryByText(/Nobody else has an activity/)).not.toBeInTheDocument();
+  });
+
+  it("says so when the activity has nowhere to match a colleague against", async () => {
+    h.companions = [{ activity_id: "act-driver", user_id: "u2", full_name: "Prajwal C", activity_label: null, start_time: null }];
+    h.vehicles = [{ id: "v-cab", name: "Cab", is_fare_based: true, is_no_vehicle: false }];
+    h.expense = { method: "from_gps", vehicle_id: "v-cab", vehicle_name: "Cab", vehicle_source: "activity", is_no_vehicle: false, km: null, rate: 0, rate_source: "vehicle", amount: 0 };
+    h.compute.mockResolvedValue(null);
+    h.explain.mockResolvedValue("x");
+    // No customer, site or lead: there is nothing to match on, so asking the
+    // database would only ever return nobody.
+    renderIt({ vehicle_type_id: "v-cab", travel_role: "passenger", customer_id: null });
+
+    await waitFor(() => expect(screen.getByText(/nothing to match a colleague against/)).toBeInTheDocument());
+    expect(screen.queryByText(/Nobody else has an activity/)).not.toBeInTheDocument();
   });
 
   it("saves the link so both legs share one journey", async () => {

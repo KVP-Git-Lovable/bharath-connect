@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { format } from "date-fns";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@/lib/router-compat";
 import { Button } from "@/components/ui/button";
@@ -200,16 +201,34 @@ export default function ActivityEffortSection({
   // Who else went to this destination today. A rep cannot read a colleague's
   // activities, so the database answers this through a definer function.
   const [companions, setCompanions] = useState<TravelCompanion[]>([]);
+  // An empty list has three very different causes and the rep has to be able
+  // to tell them apart: a lookup that failed, one still running, and a genuine
+  // nobody-was-there.
+  const [companionState, setCompanionState] = useState<"loading" | "ready" | "error">("loading");
   const [companionId, setCompanionId] = useState<string | null>(activity.shared_with_activity_id ?? null);
   useEffect(() => { setCompanionId(activity.shared_with_activity_id ?? null); }, [activity.shared_with_activity_id]);
+  // Colleagues are matched on where the activity went. With no customer, site
+  // or lead there is nothing to match against, so do not even ask.
+  const hasDestination = !!(activity.lead_id || activity.site_id || activity.customer_id);
   useEffect(() => {
-    if (!needsCompanion(travelRole)) return;
+    if (!needsCompanion(travelRole) || !hasDestination) return;
     let cancelled = false;
+    setCompanionState("loading");
     supabase
       .rpc("find_travel_companions" as never, { _activity_id: activity.id } as never)
-      .then(({ data }) => { if (!cancelled) setCompanions((data as unknown as TravelCompanion[] | null) ?? []); });
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        if (error) {
+          console.error("find_travel_companions failed", error);
+          setCompanions([]);
+          setCompanionState("error");
+          return;
+        }
+        setCompanions((data as unknown as TravelCompanion[] | null) ?? []);
+        setCompanionState("ready");
+      });
     return () => { cancelled = true; };
-  }, [travelRole, activity.id]);
+  }, [travelRole, activity.id, hasDestination]);
 
   const [manualKm, setManualKm] = useState(
     activity.manual_distance_km != null ? String(activity.manual_distance_km) : ""
@@ -595,9 +614,21 @@ export default function ActivityEffortSection({
           {needsCompanion(travelRole) && (
             <div className="space-y-1.5 pt-1">
               <Label className="text-xs">Travelled with</Label>
-              {companions.length === 0 ? (
+              {!hasDestination ? (
                 <p className="text-[11px] text-muted-foreground">
-                  Nobody else has an activity at this destination today. Ask them to save theirs first, then choose them here.
+                  This activity has no customer, site or lead on it, so there is nothing to match a colleague against.
+                </p>
+              ) : companionState === "loading" ? (
+                <p className="text-[11px] text-muted-foreground">Looking for colleagues&hellip;</p>
+              ) : companionState === "error" ? (
+                <p className="text-[11px] text-destructive">
+                  Could not look up colleagues. The shared travel function may not be installed yet.
+                </p>
+              ) : companions.length === 0 ? (
+                <p className="text-[11px] text-muted-foreground">
+                  Nobody else has an activity at this destination on{" "}
+                  {format(new Date(activity.activity_date), "dd MMM yyyy")}. Ask them to save theirs first, then choose
+                  them here.
                 </p>
               ) : (
                 <Select value={companionId ?? ""} onValueChange={(v) => setCompanionId(v || null)}>
