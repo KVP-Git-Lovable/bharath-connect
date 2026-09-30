@@ -7060,6 +7060,31 @@ export type Database = {
           username: string
         }[]
       }
+      find_travel_companions: {
+        Args: { _activity_id: string }
+        Returns: {
+          activity_id: string
+          activity_label: string
+          full_name: string
+          start_time: string
+          user_id: string
+        }[]
+      }
+      find_undeclared_shared_travel: {
+        Args: { _year_month: string }
+        Returns: {
+          a_activity_id: string
+          a_amount: number
+          a_name: string
+          a_user_id: string
+          activity_date: string
+          b_activity_id: string
+          b_amount: number
+          b_name: string
+          b_user_id: string
+          destination: string
+        }[]
+      }
       get_activity_travel_expense: {
         Args: { _activity_id: string }
         Returns: Json
