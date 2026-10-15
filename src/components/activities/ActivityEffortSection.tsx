@@ -653,15 +653,9 @@ export default function ActivityEffortSection({
           )}
         </div>
 
-        <div
-          className={effortLocked ? "space-y-2 opacity-50" : "space-y-2"}
-          aria-disabled={effortLocked}
-        >
-        {effortLocked && (
-          <p className="text-[11px] text-muted-foreground">
-            Available for public transport only. Choose Bus or Cab above to enter a fare and attach the ticket.
-          </p>
-        )}
+        {/* Fare / remarks / proof apply to public transport only — hidden for other vehicles */}
+        {!effortLocked && (
+        <div className="space-y-2">
         {fareBased && !canEnterFare({ travel_role: travelRole }) ? (
           <p className="text-[11px] text-muted-foreground">
             Nothing to claim on this leg — your colleague is claiming the fare.
@@ -766,6 +760,7 @@ export default function ActivityEffortSection({
         </div>
 
         </div>
+        )}
 
         <Button
           size="sm"

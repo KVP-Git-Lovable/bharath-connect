@@ -151,14 +151,16 @@ describe("ActivityEffortSection travel", () => {
     expect(screen.getByText(/Ticket \/ meter \/ invoice/)).toBeInTheDocument();
   });
 
-  it("keeps the meter-reading flow for a normal vehicle", async () => {
+  it("hides the meter-reading / proof block for a normal vehicle", async () => {
     h.vehicles = [{ id: "v1", name: "Car", is_fare_based: false }];
     h.expense = { method: "from_gps", vehicle_id: "v1", vehicle_name: "Car", vehicle_source: "activity", is_no_vehicle: false, km: 8.6, rate: 25, rate_source: "vehicle", amount: 215 };
     h.compute.mockResolvedValue(null);
     h.explain.mockResolvedValue("x");
     renderIt({ vehicle_type_id: "v1" });
 
-    await waitFor(() => expect(screen.getByText(/enter meter reading distance/)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Vehicle used for this trip")).toBeInTheDocument());
+    expect(screen.queryByText(/enter meter reading distance/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Proof attachments/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Fare paid for this trip/)).not.toBeInTheDocument();
   });
 
@@ -193,8 +195,8 @@ describe("ActivityEffortSection travel", () => {
     await waitFor(() => expect(screen.getByText("Vehicle used for this trip")).toBeInTheDocument());
     // Two selects now: vehicle first, then who paid.
     expect(screen.getAllByRole("combobox")[0]).toHaveTextContent("Bike");
-    // Stamped vehicle is a Bike, so the km flow is shown.
-    expect(screen.getByText(/enter meter reading distance/)).toBeInTheDocument();
+    // Stamped vehicle is a Bike (not public transport), so no fare/proof block.
+    expect(screen.queryByText(/enter meter reading distance/)).not.toBeInTheDocument();
   });
 
   it("writes the vehicle only to this activity, never to the day's selection", async () => {
