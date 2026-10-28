@@ -115,8 +115,23 @@ export async function requestBackgroundLocationAccess(): Promise<NativeLocationP
  * or disable Battery Optimization. This helper requests what Android permits
  * directly and opens the exact system screen for the user-controlled settings.
  */
-export async function prepareNativeLocationSettings(): Promise<NativeLocationPowerStatus | null> {
-  if (!isNative()) return null;
+let prepareInFlight: Promise<NativeLocationPowerStatus | null> | null = null;
+
+/**
+ * Single ordered, idempotent tracking-permission flow:
+ * location → notifications → battery exemption → background location.
+ * Concurrent callers share one run, so two dialogs can never race.
+ */
+export function prepareNativeLocationSettings(): Promise<NativeLocationPowerStatus | null> {
+  if (!isNative()) return Promise.resolve(null);
+  if (prepareInFlight) return prepareInFlight;
+  prepareInFlight = runPrepareNativeLocationSettings().finally(() => {
+    prepareInFlight = null;
+  });
+  return prepareInFlight;
+}
+
+async function runPrepareNativeLocationSettings(): Promise<NativeLocationPowerStatus | null> {
 
   try {
     const { Geolocation } = await import('@capacitor/geolocation');
@@ -292,6 +307,9 @@ export async function requestMicrophonePermission(): Promise<'granted' | 'denied
 
 /** Request all needed permissions — tries native, silently skips on failure */
 export async function requestNativePermissions() {
+  // On the phone app the ordered startup flow (useNativeStartup) owns these
+  // requests; running a second copy here raced it and lost dialog results.
+  if (isNative()) return;
   // Try native geolocation permission
   try {
     const { Geolocation } = await import('@capacitor/geolocation');
@@ -356,4 +374,43 @@ export async function openAutoStartSettings(): Promise<boolean> {
     console.warn('Could not open autostart settings:', e);
     return false;
   }
+}
+
+
+/**
+ * Tell the Android app whether an attendance day is open. The reboot receiver
+ * and the periodic watchdog read this flag to restart tracking when the app
+ * UI isn't running. No-op on web and on older app builds without the method.
+ */
+export async function setNativeTrackingDay(open: boolean): Promise<void> {
+  if (!isNative()) return;
+  try {
+    const DeviceSettings = await getDeviceSettingsPlugin();
+    await DeviceSettings.setTrackingDayOpen({ open });
+  } catch {
+    /* older APK without the method — app-side recovery still applies */
+  }
+}
+
+export type PhoneBrand = 'xiaomi' | 'oppo' | 'vivo' | 'samsung' | 'other';
+
+/** Phone maker, from the Android build info (needs the new APK; else 'other'). */
+export async function getPhoneBrand(): Promise<{ brand: PhoneBrand; manufacturer: string }> {
+  if (!isNative()) return { brand: 'other', manufacturer: '' };
+  try {
+    const DeviceSettings = await getDeviceSettingsPlugin();
+    const info = await DeviceSettings.getDeviceBrand();
+    return { brand: classifyBrand(`${info?.manufacturer ?? ''} ${info?.brand ?? ''}`), manufacturer: info?.manufacturer ?? '' };
+  } catch {
+    return { brand: 'other', manufacturer: '' };
+  }
+}
+
+export function classifyBrand(raw: string): PhoneBrand {
+  const s = raw.toLowerCase();
+  if (/xiaomi|redmi|poco/.test(s)) return 'xiaomi';
+  if (/oppo|realme|oneplus/.test(s)) return 'oppo';
+  if (/vivo|iqoo/.test(s)) return 'vivo';
+  if (/samsung/.test(s)) return 'samsung';
+  return 'other';
 }

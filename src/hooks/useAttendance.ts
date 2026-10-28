@@ -223,10 +223,19 @@ export function useAttendance(userId: string | undefined) {
       // remain unflushable, proceed anyway — same exposure as a failed write
       // before buffering existed, and the SQL fallback still covers the day.
       try {
-        const { flushPendingGpsPoints, getQueueSize } = await import("@/services/gpsSyncQueue");
-        await flushPendingGpsPoints();
-        if (getQueueSize() > 0) {
-          console.warn(`[Attendance] ${getQueueSize()} GPS points still unsynced at checkout`);
+        const { flushWithRetry } = await import("@/services/checkoutDistanceRelock");
+        const remaining = await flushWithRetry(10_000);
+        if (remaining > 0) {
+          // Lock now with what has arrived; a one-time recompute runs once the
+          // remaining points upload (see checkoutDistanceRelock).
+          const { scheduleDistanceRelock } = await import("@/services/checkoutDistanceRelock");
+          scheduleDistanceRelock({
+            attendanceId: todayRecord.id,
+            userId,
+            date: today,
+            checkInTime: todayRecord.check_in_time!,
+            checkOutTime: now,
+          });
         }
       } catch { /* queue module unavailable — nothing buffered */ }
       const { data: track } = await supabase

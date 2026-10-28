@@ -11,11 +11,29 @@ import {
   isNative,
   getNativeLocationPowerStatus,
   prepareNativeLocationSettings,
-  openAutoStartSettings,
   openLocationSettings,
   openAppSettings,
   type NativeLocationPowerStatus,
 } from "@/utils/nativePermissions";
+import { GPS_QUEUE_WARNING_EVENT, getGpsQueueStats } from "@/services/gpsSyncQueue";
+import AutostartGuide from "@/components/attendance/AutostartGuide";
+
+/** Ask the tracker to re-acquire right away (after the user fixed settings). */
+function requestReacquire() {
+  window.dispatchEvent(new Event("gps-retry-acquisition"));
+}
+
+/** Run a settings action, then re-acquire once the user is back in the app. */
+async function fixThenReacquire(action: () => Promise<unknown>) {
+  await action();
+  if (document.visibilityState === "visible") requestReacquire();
+  const onBack = () => {
+    if (document.visibilityState !== "visible") return;
+    document.removeEventListener("visibilitychange", onBack);
+    requestReacquire();
+  };
+  document.addEventListener("visibilitychange", onBack);
+}
 
 function ago(ts: number | null): string {
   if (!ts) return "none yet";
@@ -35,6 +53,26 @@ export default function TrackingHealthCard() {
   const status: TrackerStatus = useSyncExternalStore(subscribeTrackerStatus, getTrackerStatus, getTrackerStatus);
   const [power, setPower] = useState<NativeLocationPowerStatus | null>(null);
   const [, setTick] = useState(0);
+  const [guideOpen, setGuideOpen] = useState(false);
+  const [queueWarning, setQueueWarning] = useState<string | null>(null);
+
+  useEffect(() => {
+    const onWarn = (e: Event) => {
+      const d = (e as CustomEvent).detail as { kind: string; count: number } | undefined;
+      if (!d) return;
+      setQueueWarning(
+        d.kind === "dropped"
+          ? `${d.count} location points could not be saved on this phone (storage full). Free up space so tracking can keep your route.`
+          : `${d.count} location points couldn't upload yet. They're kept on this phone and will retry.`
+      );
+    };
+    window.addEventListener(GPS_QUEUE_WARNING_EVENT, onWarn);
+    const s = getGpsQueueStats();
+    if (s.setAside > 0) {
+      setQueueWarning(`${s.setAside} location points couldn't upload yet. They're kept on this phone and will retry.`);
+    }
+    return () => window.removeEventListener(GPS_QUEUE_WARNING_EVENT, onWarn);
+  }, []);
 
   useEffect(() => {
     const id = window.setInterval(() => setTick((t) => t + 1), 30_000);
@@ -83,6 +121,28 @@ export default function TrackingHealthCard() {
           </div>
         </div>
 
+        {status.foregroundOnly && (
+          <div className="rounded-md border border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-950/40 p-3 space-y-2">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="h-4 w-4 text-orange-600 mt-0.5 shrink-0" />
+              <p className="text-xs text-orange-800 dark:text-orange-200">
+                Background tracking isn't running — your route only records while
+                the app is open. Retrying automatically.
+              </p>
+            </div>
+            <Button size="sm" variant="outline" onClick={() => void fixThenReacquire(prepareNativeLocationSettings)}>
+              Fix now
+            </Button>
+          </div>
+        )}
+
+        {queueWarning && (
+          <div className="rounded-md border border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-950/40 p-3 flex items-start gap-2">
+            <AlertTriangle className="h-4 w-4 text-orange-600 mt-0.5 shrink-0" />
+            <p className="text-xs text-orange-800 dark:text-orange-200">{queueWarning}</p>
+          </div>
+        )}
+
         {locationOff && (
           <div className="rounded-md border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/40 p-3 space-y-2">
             <div className="flex items-start gap-2">
@@ -92,7 +152,7 @@ export default function TrackingHealthCard() {
                 route until it is switched on.
               </p>
             </div>
-            <Button size="sm" variant="outline" onClick={() => void openLocationSettings()}>
+            <Button size="sm" variant="outline" onClick={() => void fixThenReacquire(openLocationSettings)}>
               Turn on Location
             </Button>
           </div>
@@ -107,7 +167,7 @@ export default function TrackingHealthCard() {
                 tracking needs “Precise” — enable it in Location permission.
               </p>
             </div>
-            <Button size="sm" variant="outline" onClick={() => void openAppSettings()}>
+            <Button size="sm" variant="outline" onClick={() => void fixThenReacquire(openAppSettings)}>
               Enable Precise location
             </Button>
           </div>
@@ -123,15 +183,21 @@ export default function TrackingHealthCard() {
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button size="sm" variant="outline" onClick={() => void prepareNativeLocationSettings()}>
+              <Button size="sm" variant="outline" onClick={() => void fixThenReacquire(prepareNativeLocationSettings)}>
                 Fix settings
               </Button>
-              <Button size="sm" variant="ghost" onClick={() => void openAutoStartSettings()}>
+              <Button size="sm" variant="ghost" onClick={() => setGuideOpen(true)}>
                 Autostart
               </Button>
             </div>
           </div>
         )}
+        {isNative() && !(needsBackground || needsBattery) && (
+          <Button size="sm" variant="ghost" className="px-0 h-auto text-xs" onClick={() => setGuideOpen(true)}>
+            Stop my phone from pausing tracking
+          </Button>
+        )}
+        <AutostartGuide open={guideOpen} onOpenChange={setGuideOpen} onReturn={() => void fixThenReacquire(async () => {})} />
       </CardContent>
     </Card>
   );

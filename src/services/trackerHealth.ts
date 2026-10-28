@@ -24,6 +24,7 @@ export type TrackerEvent =
   | "resume_recovery"
   | "native_buffer_drained"
   | "permission_status"
+  | "native_recovered"
   | "tracking_stopped";
 
 /** Don't spam the table: identical events are rate-limited per session. */

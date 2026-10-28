@@ -241,4 +241,47 @@ public class DeviceSettingsPlugin extends Plugin {
         // closest useful destination.
         openAppSettings(call);
     }
+
+    /**
+     * App marks the attendance day open/closed. Read natively by the location
+     * service (sticky restart / headless recording), the boot receiver and
+     * the periodic watchdog.
+     */
+    @PluginMethod
+    public void setTrackingDayOpen(PluginCall call) {
+        boolean open = Boolean.TRUE.equals(call.getBoolean("open", false));
+        Context ctx = getContext();
+        android.content.SharedPreferences.Editor ed = TrackingRestarter.prefs(ctx).edit()
+                .putBoolean(com.equimaps.capacitor_background_geolocation.BackgroundGeolocationService.PREF_DAY_OPEN, open);
+        if (open) {
+            // Keep the original open time across repeated calls the same day.
+            if (!TrackingRestarter.isDayOpen(ctx)) {
+                ed.putLong(com.equimaps.capacitor_background_geolocation.BackgroundGeolocationService.PREF_DAY_OPENED_AT,
+                        System.currentTimeMillis());
+            }
+        }
+        ed.commit();
+        try {
+            if (open) {
+                TrackingRestarter.scheduleWatchdog(ctx);
+            } else {
+                TrackingRestarter.cancelWatchdog(ctx);
+                com.equimaps.capacitor_background_geolocation.BackgroundGeolocationService.onDayClosed();
+            }
+        } catch (Exception ignored) {
+            // Scheduling must never block check-in/check-out.
+        }
+        JSObject ret = new JSObject();
+        ret.put("open", open);
+        call.resolve(ret);
+    }
+
+    /** Phone maker, for the per-brand autostart guide. */
+    @PluginMethod
+    public void getDeviceBrand(PluginCall call) {
+        JSObject ret = new JSObject();
+        ret.put("manufacturer", Build.MANUFACTURER);
+        ret.put("brand", Build.BRAND);
+        call.resolve(ret);
+    }
 }

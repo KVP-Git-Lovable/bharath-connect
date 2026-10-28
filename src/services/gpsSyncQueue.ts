@@ -35,6 +35,14 @@ export interface QueuedGpsPoint {
 }
 
 const STORAGE_KEY = "gps-sync-queue:v1";
+/** Points set aside after repeated real rejections — kept, never deleted. */
+const QUARANTINE_KEY = "gps-sync-queue:quarantine:v1";
+/** Oldest points spilled here when the main queue hits its cap. */
+const OVERFLOW_KEY = "gps-sync-queue:overflow:v1";
+/** Event fired whenever points are set aside or genuinely lost (UI warning). */
+export const GPS_QUEUE_WARNING_EVENT = "gps-queue-warning";
+/** Permission-looking failures retried (after a session refresh) before set-aside. */
+const MAX_AUTH_RETRIES = 3;
 const CFG = GPS_CAPTURE_CONFIG.QUEUE;
 
 let queue: QueuedGpsPoint[] = [];
@@ -50,6 +58,39 @@ let droppedPoints = 0;
 let lastFlushAt = Date.now();
 /** Last upload error message (diagnostics — "capture works, sync stuck"). */
 let lastError: string | null = null;
+/** Consecutive permission-looking failures for the head chunk. */
+let authFailures = 0;
+/** Points set aside (quarantined/spilled) — still on the device, not lost. */
+let setAsidePoints = 0;
+
+function readList(key: string): QueuedGpsPoint[] {
+  try {
+    const raw = localStorage.getItem(key);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Append to a side store. Returns false only if the device refused to save. */
+function appendList(key: string, pts: QueuedGpsPoint[]): boolean {
+  try {
+    localStorage.setItem(key, JSON.stringify([...readList(key), ...pts]));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function warn(kind: "set_aside" | "dropped", count: number, detail: string) {
+  console.warn(`[gpsSyncQueue] ${kind}: ${count} points — ${detail}`);
+  try {
+    window.dispatchEvent(
+      new CustomEvent(GPS_QUEUE_WARNING_EVENT, { detail: { kind, count, detail } })
+    );
+  } catch { /* non-DOM */ }
+}
 
 
 function persistNow() {
@@ -64,9 +105,11 @@ function persistNow() {
   }
 }
 
-function persistDebounced() {
+
+const IMMEDIATE_PERSIST_LIMIT = 1_000;
+function persistSoon() {
   if (persistTimer) return;
-  persistTimer = setTimeout(persistNow, CFG.PERSIST_DEBOUNCE_MS);
+  persistTimer = setTimeout(persistNow, 1_000);
 }
 
 function restore() {
@@ -92,7 +135,11 @@ function scheduleRetry() {
   }, backoffMs());
 }
 
-/** Permission failures never resolve by retrying — drop, don't block. */
+/**
+ * Permission-looking failures. PGRST301 / expired-JWT style errors are usually
+ * a stale token, so they are retried after a session refresh before the chunk
+ * is set aside (never deleted).
+ */
 function isPermissionError(error: { code?: string; message?: string } | null): boolean {
   if (!error) return false;
   const code = error.code ?? "";
@@ -116,6 +163,8 @@ export function setGpsQueueOwner(userId: string): void {
   queue = queue.filter((p) => p.user_id === userId);
   const removed = before - queue.length;
   if (removed > 0) {
+    // Another user's points can never upload under this account; they are
+    // not this user's data. Counted and logged as before.
     droppedPoints += removed;
     persistNow();
     console.warn(`[gpsSyncQueue] dropped ${removed} queued points belonging to a previous user`);
@@ -132,14 +181,29 @@ async function flushOnce(): Promise<{ remaining: number }> {
       .upsert(chunk, { onConflict: "id", ignoreDuplicates: true });
     if (error) {
       if (isPermissionError(error)) {
-        // Unacceptable to the server no matter how often we retry — discard
-        // this chunk (counted) and keep the rest of the queue moving.
+        authFailures++;
+        lastError = `rejected (attempt ${authFailures}): ${error.message}`;
+        if (authFailures < MAX_AUTH_RETRIES) {
+          // Most often a stale/expired token: refresh the session and retry
+          // with backoff. The chunk stays queued.
+          try { await supabase.auth.refreshSession(); } catch { /* offline */ }
+          consecutiveFailures++;
+          scheduleRetry();
+          return { remaining: queue.length };
+        }
+        // Repeated real rejection: move the chunk aside (kept on the device,
+        // re-tried on next start) so it can't block newer points.
         const sent = new Set(chunk.map((c) => c.id));
         queue = queue.filter((p) => !sent.has(p.id));
-        droppedPoints += chunk.length;
+        authFailures = 0;
+        if (appendList(QUARANTINE_KEY, chunk)) {
+          setAsidePoints += chunk.length;
+          warn("set_aside", chunk.length, `upload refused: ${error.message}`);
+        } else {
+          droppedPoints += chunk.length;
+          warn("dropped", chunk.length, "device storage full");
+        }
         persistNow();
-        lastError = `rejected: ${error.message}`;
-        console.warn(`[gpsSyncQueue] dropped ${chunk.length} rejected points`, error.message);
         continue;
       }
       consecutiveFailures++;
@@ -159,11 +223,16 @@ async function flushOnce(): Promise<{ remaining: number }> {
     persistNow();
     lastFlushAt = Date.now();
     consecutiveFailures = 0;
+    authFailures = 0;
     lastError = null;
     if (retryTimer) {
       clearTimeout(retryTimer);
       retryTimer = null;
     }
+  }
+  if (setAsidePoints > 0) {
+    reloadSideStores(false);
+    if (queue.length > 0) return flushOnce();
   }
   return { remaining: 0 };
 }
@@ -203,13 +272,23 @@ export function enqueueGpsPoint(p: Omit<QueuedGpsPoint, "id">): void {
     // is still down, drop the oldest — counted, never silent.
     void flushPendingGpsPoints();
     if (queue.length > CFG.MAX_POINTS) {
+      // Spill the oldest to a side store instead of discarding them; they
+      // re-enter the queue once it drains.
       const overflow = queue.length - CFG.MAX_POINTS;
-      queue.splice(0, overflow);
-      droppedPoints += overflow;
-      console.warn(`[gpsSyncQueue] queue cap hit — dropped ${overflow} oldest points (total ${droppedPoints})`);
+      const spilled = queue.splice(0, overflow);
+      if (appendList(OVERFLOW_KEY, spilled)) {
+        setAsidePoints += spilled.length;
+      } else {
+        droppedPoints += spilled.length;
+        warn("dropped", spilled.length, "device storage full — oldest points lost");
+      }
     }
   }
-  persistDebounced();
+  // Save on every point (was a 3 s debounce) so an app kill can't lose the
+  // last few seconds of fixes. Only a very large offline backlog falls back
+  // to a short 1 s debounce, to keep saving cheap.
+  if (queue.length <= IMMEDIATE_PERSIST_LIMIT) persistNow();
+  else persistSoon();
   // Batch trigger, plus a freshness trigger: after a quiet spell send the
   // point straight away so live/admin views aren't a full interval behind.
   if (queue.length >= CFG.BATCH_SIZE || Date.now() - lastFlushAt >= CFG.IDLE_FLUSH_MS) {
@@ -222,6 +301,38 @@ export function getQueueSize(): number {
   return queue.length;
 }
 
+/**
+ * Move spilled + quarantined points back into the queue (overflow first when
+ * there is room; quarantine once per start so a fixed permission recovers).
+ */
+function reloadSideStores(includeQuarantine: boolean) {
+  const room = CFG.MAX_POINTS - queue.length;
+  if (room <= 0) return;
+  const keys = includeQuarantine ? [OVERFLOW_KEY, QUARANTINE_KEY] : [OVERFLOW_KEY];
+  let space = room;
+  for (const key of keys) {
+    if (space <= 0) break;
+    const list = readList(key);
+    if (list.length === 0) continue;
+    const take = list.slice(0, space);
+    const rest = list.slice(take.length);
+    const have = new Set(queue.map((p) => p.id));
+    queue.unshift(...take.filter((p) => !have.has(p.id)));
+    space -= take.length;
+    setAsidePoints = Math.max(0, setAsidePoints - take.length);
+    try {
+      if (rest.length) localStorage.setItem(key, JSON.stringify(rest));
+      else localStorage.removeItem(key);
+    } catch { /* keep going */ }
+  }
+  queue.sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp));
+  persistNow();
+}
+
+export function getSetAsidePointCount(): number {
+  return setAsidePoints;
+}
+
 export function getDroppedPointCount(): number {
   return droppedPoints;
 }
@@ -231,6 +342,8 @@ export interface GpsQueueStats {
   pending: number;
   /** Points discarded (hard cap, foreign user, or permanent rejection). */
   dropped: number;
+  /** Points kept aside on the device (overflow / refused uploads). */
+  setAside: number;
   /** Consecutive failed upload attempts (0 when healthy). */
   failures: number;
   /** Message of the last upload failure, cleared on the next success. */
@@ -248,6 +361,7 @@ export function getGpsQueueStats(): GpsQueueStats {
   return {
     pending: queue.length,
     dropped: droppedPoints,
+    setAside: setAsidePoints,
     failures: consecutiveFailures,
     lastError,
     lastFlushAt,
@@ -270,6 +384,8 @@ export function initGpsSyncQueue(): void {
   initialized = true;
   lastFlushAt = Date.now();
   restore();
+  setAsidePoints = readList(OVERFLOW_KEY).length + readList(QUARANTINE_KEY).length;
+  reloadSideStores(true);
 
   // Best-effort interval flush (timers can be throttled while backgrounded;
   // the batch-size trigger rides native watcher callbacks and covers that).
@@ -307,6 +423,8 @@ export function __resetGpsSyncQueueForTests(): void {
   inFlight = null;
   consecutiveFailures = 0;
   droppedPoints = 0;
+  setAsidePoints = 0;
+  authFailures = 0;
   lastFlushAt = Date.now();
   lastError = null;
 
