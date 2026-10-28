@@ -152,10 +152,10 @@ describe("gpsSyncQueue", () => {
     await new Promise((r) => setTimeout(r, 0));
     upsertMock.mockResolvedValue({ error: null });
     await flushPendingGpsPoints();
-    const uploaded = upsertMock.mock.calls
-      .filter((c) => c[0] === "gps_tracking")
-      .reduce((n, c) => n, 0);
-    expect(uploaded).toBe(0);
+    const uploadedIds = new Set(
+      upsertMock.mock.calls.slice(-200).flatMap((c) => (c[1] as { id: string }[]).map((r) => r.id))
+    );
+    expect(uploadedIds.size).toBeGreaterThan(0);
     expect(getQueueSize()).toBe(0);
     expect(getSetAsidePointCount()).toBe(0);
   });

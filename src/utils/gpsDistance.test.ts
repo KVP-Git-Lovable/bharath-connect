@@ -433,3 +433,31 @@ describe("config", () => {
     expect(GPS_PROCESSING_CONFIG.SESSION_GRACE_MS).toBe(15 * 60 * 1000);
   });
 });
+
+describe("computeSnappedDistanceKm — total road-snap failure", () => {
+  it("keeps gap-leg distance in the total instead of zeroing it", async () => {
+    vi.doMock("@/utils/googleRoute", () => ({
+      getSnappedRoute: async () => {
+        throw new Error("snap-roads unavailable");
+      },
+    }));
+    const { computeSnappedDistanceKm, processTrajectory } = await import("./gpsDistance");
+    const base = Date.parse("2026-08-26T09:00:00Z");
+    const pts: any[] = [];
+    // Segment 1: ~1 km straight drive, fix every 15 s
+    for (let i = 0; i <= 10; i++) {
+      pts.push({ latitude: 12.9 + i * 0.0009, longitude: 74.85, accuracy: 8, speed: 7, heading: 0, timestamp: new Date(base + i * 15_000).toISOString() });
+    }
+    // 30-minute tracking gap, then segment 2 ~5 km further on
+    const t2 = base + 10 * 15_000 + 30 * 60_000;
+    for (let i = 0; i <= 10; i++) {
+      pts.push({ latitude: 12.95 + i * 0.0009, longitude: 74.85, accuracy: 8, speed: 7, heading: 0, timestamp: new Date(t2 + i * 15_000).toISOString() });
+    }
+    const t = processTrajectory(pts);
+    expect(t.gapLegsKm).toBeGreaterThan(0);
+    const r = await computeSnappedDistanceKm(pts);
+    expect(r.estimatedKm).toBeCloseTo(t.gapLegsKm, 6);
+    expect(r.totalKm).toBeCloseTo(t.trackedDistanceKm + t.gapLegsKm, 6);
+    vi.doUnmock("@/utils/googleRoute");
+  });
+});
