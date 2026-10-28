@@ -630,6 +630,7 @@ export function useGPSTracker(userId: string | null | undefined) {
     // checks in later). Single-flight + idempotent-start guards make it safe
     // to call from every evaluate() — it can never create a second stream.
     let startingAcquisition = false;
+    let nativeDayFlagSent: boolean | null = null;
     // Native recovery loop: when the background watcher can't start (e.g.
     // permission not granted yet) we no longer settle for foreground-only
     // polling forever — keep retrying while the day is open.
@@ -697,7 +698,10 @@ export function useGPSTracker(userId: string | null | undefined) {
       setTrackerStatus({ active: open, native: isNative() });
       // Native "day open" flag: lets the reboot receiver and the periodic
       // watchdog restart tracking even when the app UI is not running.
-      if (open !== wasActive) void setNativeTrackingDay(open);
+      if (open !== nativeDayFlagSent) {
+        nativeDayFlagSent = open;
+        void setNativeTrackingDay(open);
+      }
       if (!open) {
         clearNativeRetry();
         setTrackerStatus({ foregroundOnly: false });
