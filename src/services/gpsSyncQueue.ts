@@ -106,6 +106,12 @@ function persistNow() {
 }
 
 
+const IMMEDIATE_PERSIST_LIMIT = 1_000;
+function persistSoon() {
+  if (persistTimer) return;
+  persistTimer = setTimeout(persistNow, 1_000);
+}
+
 function restore() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -278,9 +284,11 @@ export function enqueueGpsPoint(p: Omit<QueuedGpsPoint, "id">): void {
       }
     }
   }
-  // Save on every point (was a 3 s debounce): an app kill can no longer lose
-  // the last few seconds of captured fixes.
-  persistNow();
+  // Save on every point (was a 3 s debounce) so an app kill can't lose the
+  // last few seconds of fixes. Only a very large offline backlog falls back
+  // to a short 1 s debounce, to keep saving cheap.
+  if (queue.length <= IMMEDIATE_PERSIST_LIMIT) persistNow();
+  else persistSoon();
   // Batch trigger, plus a freshness trigger: after a quiet spell send the
   // point straight away so live/admin views aren't a full interval behind.
   if (queue.length >= CFG.BATCH_SIZE || Date.now() - lastFlushAt >= CFG.IDLE_FLUSH_MS) {
