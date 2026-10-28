@@ -14,7 +14,6 @@ public class BootReceiver extends BroadcastReceiver {
     public void onReceive(Context ctx, Intent intent) {
         String action = intent != null ? intent.getAction() : null;
         if (!Intent.ACTION_BOOT_COMPLETED.equals(action)
-                && !"android.intent.action.LOCKED_BOOT_COMPLETED".equals(action)
                 && !Intent.ACTION_MY_PACKAGE_REPLACED.equals(action)) {
             return;
         }
