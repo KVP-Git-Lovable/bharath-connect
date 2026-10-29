@@ -70,7 +70,12 @@ jobs:
         run: |
           SDK_ROOT="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
           echo "Using Android SDK root: $SDK_ROOT"
-          SDKMANAGER="$(find "$SDK_ROOT/cmdline-tools" -maxdepth 2 -name sdkmanager -type f | sort -r | head -1)"
+          SDKMANAGER="$(find "$SDK_ROOT/cmdline-tools" -maxdepth 4 -name sdkmanager -type f | sort -r | head -1)"
+          if [ -z "$SDKMANAGER" ]; then
+            echo "::error::No sdkmanager found under $SDK_ROOT/cmdline-tools"
+            find "$SDK_ROOT" -maxdepth 3
+            exit 1
+          fi
           echo "Using sdkmanager: $SDKMANAGER"
           echo "$(dirname "$SDKMANAGER")" >> "$GITHUB_PATH"
           echo "$SDK_ROOT/platform-tools" >> "$GITHUB_PATH"
