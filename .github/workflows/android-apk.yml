@@ -19,12 +19,22 @@ name: Build Android APK
 # ("bundle local dist/ into the APK") can't work against that output shape —
 # it would fail identically for a local build, not just CI. So this workflow
 # builds with CAP_REMOTE=1, capacitor.config.ts's own documented escape
-# hatch, which points the APK at the live hosted site instead of a local
-# bundle. A minimal placeholder dist/index.html is created in the runner
-# only (never committed) purely so `cap sync`'s asset-copy step has
-# something to copy — it's not what the installed app actually shows.
+# hatch, which points the APK at a hosted site instead of a local bundle. A
+# minimal placeholder dist/index.html is created in the runner only (never
+# committed) purely so `cap sync`'s asset-copy step has something to copy —
+# it's not what the installed app actually shows.
+#
+# remote_url defaults to this project's staging deployment. The production
+# custom domain (locate.quickapp.ai) is a DIFFERENT app/database — do not
+# point this at it unless you specifically want a production-data build.
 on:
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      remote_url:
+        description: "Web content URL the APK loads at runtime"
+        required: false
+        default: "https://sbeestaging.lovable.app"
+        type: string
 
 jobs:
   build-debug-apk:
@@ -55,6 +65,7 @@ jobs:
       - name: Sync Capacitor Android (patches + cap sync, remote web content)
         env:
           CAP_REMOTE: "1"
+          CAP_REMOTE_URL: ${{ inputs.remote_url }}
         run: bun run sync:android
 
       - name: Accept SDK licenses & install required platform
@@ -102,7 +113,7 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: bharath-connect-debug-apk
+          name: bharath-connect-staging-debug-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 14
           if-no-files-found: error

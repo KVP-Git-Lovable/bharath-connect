@@ -8,16 +8,24 @@ const RELEASE_TOKEN = '20260821-1';
 //
 //   default          -> bundles the local `dist` build into the APK.
 //                       Always the code in this repo. Needs a new APK per change.
-//   CAP_REMOTE=1     -> loads https://locate.quickapp.ai instead, so web fixes
-//                       ship without a new APK.
+//   CAP_REMOTE=1     -> loads a hosted site instead, so web fixes ship
+//                       without a new APK. Defaults to the production custom
+//                       domain (https://locate.quickapp.ai); override with
+//                       CAP_REMOTE_URL for a staging/preview build, e.g.
+//                       CAP_REMOTE_URL=https://sbeestaging.lovable.app
 //
-// Remote is OFF by default. Before enabling it, confirm locate.quickapp.ai has
-// actually been republished from this codebase (a stale remote build can
-// white-screen inside the Android WebView):
+// Remote is OFF by default. Before enabling it, confirm the target URL has
+// actually been republished from the codebase you expect (a stale remote
+// build can white-screen inside the Android WebView, and the production
+// domain vs. a staging preview are NOT the same app/data):
 //
 //   CAP_REMOTE=1 npm run sync:android
+//   CAP_REMOTE=1 CAP_REMOTE_URL=https://sbeestaging.lovable.app npm run sync:android
 //
 const USE_REMOTE = process.env.CAP_REMOTE === '1';
+const REMOTE_BASE_URL = process.env.CAP_REMOTE_URL || 'https://locate.quickapp.ai';
+const REMOTE_HOST = new URL(REMOTE_BASE_URL).hostname;
+const REMOTE_PARENT_DOMAIN = REMOTE_HOST.split('.').slice(-2).join('.');
 
 const config: CapacitorConfig = {
   appId: 'ai.quickapp.fieldforce',
@@ -26,9 +34,9 @@ const config: CapacitorConfig = {
   ...(USE_REMOTE
     ? {
         server: {
-          url: `https://locate.quickapp.ai?v=${RELEASE_TOKEN}&forceHideBadge=true`,
+          url: `${REMOTE_BASE_URL}?v=${RELEASE_TOKEN}&forceHideBadge=true`,
           androidScheme: 'https',
-          allowNavigation: ['locate.quickapp.ai', '*.quickapp.ai'],
+          allowNavigation: [REMOTE_HOST, `*.${REMOTE_PARENT_DOMAIN}`],
         },
       }
     : {}),
