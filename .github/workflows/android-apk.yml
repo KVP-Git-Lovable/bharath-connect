@@ -57,13 +57,15 @@ jobs:
           CAP_REMOTE: "1"
         run: bun run sync:android
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Pre-install SDK platform (best effort — AGP can also auto-download)
+      - name: Accept SDK licenses & install required platform
+        # ubuntu-latest runners ship with the Android SDK pre-installed
+        # (ANDROID_HOME already set, sdkmanager already on PATH) — no setup
+        # action needed. android-actions/setup-android@v3 was tried here and
+        # crashes: it tries to install the long-removed legacy "tools"
+        # package, which Google's SDK repository no longer serves.
         run: |
           yes | sdkmanager --licenses >/dev/null 2>&1 || true
-          sdkmanager "platform-tools" "platforms;android-36" || true
+          sdkmanager "platform-tools" "platforms;android-36"
 
       - name: Cache Gradle
         uses: actions/cache@v4
