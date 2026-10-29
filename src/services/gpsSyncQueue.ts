@@ -21,6 +21,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { GPS_CAPTURE_CONFIG } from "@/utils/gpsCaptureGate";
+import { logTrackerEvent } from "@/services/trackerHealth";
 
 export interface QueuedGpsPoint {
   id: string;
@@ -83,8 +84,11 @@ function appendList(key: string, pts: QueuedGpsPoint[]): boolean {
   }
 }
 
-function warn(kind: "set_aside" | "dropped", count: number, detail: string) {
+function warn(kind: "set_aside" | "dropped", count: number, detail: string, userId?: string) {
   console.warn(`[gpsSyncQueue] ${kind}: ${count} points — ${detail}`);
+  if (userId) {
+    void logTrackerEvent(userId, "gps_points_discarded", { kind, count, detail });
+  }
   try {
     window.dispatchEvent(
       new CustomEvent(GPS_QUEUE_WARNING_EVENT, { detail: { kind, count, detail } })
@@ -198,10 +202,10 @@ async function flushOnce(): Promise<{ remaining: number }> {
         authFailures = 0;
         if (appendList(QUARANTINE_KEY, chunk)) {
           setAsidePoints += chunk.length;
-          warn("set_aside", chunk.length, `upload refused: ${error.message}`);
+          warn("set_aside", chunk.length, `upload refused: ${error.message}`, chunk[0]?.user_id);
         } else {
           droppedPoints += chunk.length;
-          warn("dropped", chunk.length, "device storage full");
+          warn("dropped", chunk.length, "device storage full", chunk[0]?.user_id);
         }
         persistNow();
         continue;
@@ -280,7 +284,7 @@ export function enqueueGpsPoint(p: Omit<QueuedGpsPoint, "id">): void {
         setAsidePoints += spilled.length;
       } else {
         droppedPoints += spilled.length;
-        warn("dropped", spilled.length, "device storage full — oldest points lost");
+        warn("dropped", spilled.length, "device storage full — oldest points lost", spilled[0]?.user_id);
       }
     }
   }

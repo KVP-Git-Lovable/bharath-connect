@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { getCurrentPosition } from "@/utils/nativePermissions";
+import { logTrackerEvent } from "@/services/trackerHealth";
 
 interface AttendanceRecord {
   id: string;
@@ -235,6 +236,11 @@ export function useAttendance(userId: string | undefined) {
             date: today,
             checkInTime: todayRecord.check_in_time!,
             checkOutTime: now,
+          });
+          void logTrackerEvent(userId, "checkout_points_unsynced", {
+            remaining,
+            attendance_id: todayRecord.id,
+            date: today,
           });
         }
       } catch { /* queue module unavailable — nothing buffered */ }

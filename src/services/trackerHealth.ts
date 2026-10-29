@@ -25,7 +25,12 @@ export type TrackerEvent =
   | "native_buffer_drained"
   | "permission_status"
   | "native_recovered"
-  | "tracking_stopped";
+  | "tracking_stopped"
+  // Sync/distance-loss side (gpsSyncQueue.ts, useAttendance.ts) — distinct
+  // from the capture-side events above, surfaced together in the "Check user
+  // tracking issues" dialog on /gps-tracking.
+  | "gps_points_discarded"
+  | "checkout_points_unsynced";
 
 /** Don't spam the table: identical events are rate-limited per session. */
 const MIN_GAP_MS: Partial<Record<TrackerEvent, number>> = {

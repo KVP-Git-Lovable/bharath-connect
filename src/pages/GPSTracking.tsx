@@ -20,6 +20,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { MapPin, AlertTriangle, RefreshCw, Clock, Navigation, CalendarIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppUsageCards, type AppUsageSummary } from "@/components/gps/AppUsageCards";
+import { TrackingIssuesButton } from "@/components/gps/TrackingIssuesButton";
 import { getCurrentPosition, openAppSettings, isNative, prepareNativeLocationSettings } from "@/utils/nativePermissions";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -548,6 +549,11 @@ export default function GPSTracking() {
     ? "My Location"
     : teamMembers.find(m => m.id === currentSelectedUser)?.full_name || "Selected User";
 
+  const trackingSelectedUserId = selectedUser === "me" ? currentUserId : selectedUser;
+  const trackingSelectedUserName = selectedUser === "me"
+    ? "My Data"
+    : teamMembers.find(m => m.id === selectedUser)?.full_name || "Selected User";
+
   return (
     <motion.div
       className="p-4 space-y-4 max-w-4xl mx-auto"
@@ -743,6 +749,19 @@ export default function GPSTracking() {
               </Card>
             </div>
           )}
+
+          {/* Historical, per-user tracking-issue log — distinct from the
+              live "tracking gap" card below (which only reflects the
+              currently-loaded points) and the "sync health" card (which
+              only reflects this viewing device's own queue). Reads
+              gps_tracker_events, already written continuously by
+              useGPSTracker.ts, scoped to the selected team member + range. */}
+          <TrackingIssuesButton
+            userId={trackingSelectedUserId}
+            userLabel={trackingSelectedUserName}
+            from={displayFrom}
+            to={displayTo}
+          />
 
           {/* App usage. Deliberately outside the gpsPoints guard above: time in
               the app and location fixes fail independently, and "used the app
