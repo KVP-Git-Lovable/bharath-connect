@@ -10,8 +10,19 @@ name: Build Android APK
 # with "install unknown apps" enabled and is sufficient for internal testing.
 #
 # Nothing about the app (name, icon, permissions, package id) is changed by
-# this workflow — it builds exactly what's committed on the branch you run it
-# from, via this repo's own existing `sync:android` script.
+# this workflow — those all come from capacitor.config.ts / AndroidManifest /
+# assets, untouched here either way.
+#
+# Web content source: this repo migrated to TanStack Start (full SSR, builds
+# a Cloudflare Worker bundle to .output/, no static dist/ or index.html is
+# produced anywhere, and none exists in git). capacitor.config.ts's default
+# ("bundle local dist/ into the APK") can't work against that output shape —
+# it would fail identically for a local build, not just CI. So this workflow
+# builds with CAP_REMOTE=1, capacitor.config.ts's own documented escape
+# hatch, which points the APK at the live hosted site instead of a local
+# bundle. A minimal placeholder dist/index.html is created in the runner
+# only (never committed) purely so `cap sync`'s asset-copy step has
+# something to copy — it's not what the installed app actually shows.
 on:
   workflow_dispatch: {}
 
@@ -36,10 +47,14 @@ jobs:
       - name: Install JS dependencies
         run: bun install
 
-      - name: Build web assets
-        run: bun run build
+      - name: Create placeholder dist/ (CAP_REMOTE mode doesn't use local web assets)
+        run: |
+          mkdir -p dist
+          echo '<!doctype html><html><head><meta charset="utf-8"></head><body></body></html>' > dist/index.html
 
-      - name: Sync Capacitor Android (patches + cap sync)
+      - name: Sync Capacitor Android (patches + cap sync, remote web content)
+        env:
+          CAP_REMOTE: "1"
         run: bun run sync:android
 
       - name: Set up Android SDK
