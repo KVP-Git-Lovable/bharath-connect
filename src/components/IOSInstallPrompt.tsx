@@ -83,6 +83,12 @@ export default function IOSInstallPrompt({ open, onClose }: Props) {
               </li>
             </ol>
 
+            <p className="text-xs text-muted-foreground mb-5">
+              Note for location tracking: iPhone can only track your location while this app is
+              open and on screen — it pauses the moment you switch apps or lock your phone, same
+              as any website. Keep it open during work hours for a complete trail.
+            </p>
+
             <Button className="w-full h-11" onClick={onClose}>
               Got it
             </Button>

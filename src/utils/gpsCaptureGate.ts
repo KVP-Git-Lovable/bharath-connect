@@ -34,6 +34,30 @@ export const GPS_CAPTURE_CONFIG = {
     fastestIntervalMs: 2000,
     maxWaitMs: 8000,
   },
+  /**
+   * Web / non-native fallback only (iOS Safari/PWA, or any browser): there is
+   * no native watcher, so a JS `setInterval` + `getCurrentPosition` loop IS
+   * the acquisition source. This is far more battery-expensive than MOVING —
+   * every poll forces a fresh `enableHighAccuracy` fix with no OS-level
+   * duty-cycling — so it is paused whenever the page isn't visible (iOS can't
+   * usefully track while hidden anyway) and capped at a shorter cumulative
+   * active-time budget than the native day cap (MAX_OPEN_DAY_MS in
+   * useGPSTracker.ts, which native can tolerate for longer since it duty-
+   * cycles its acquisition).
+   */
+  WEB_FALLBACK: {
+    POLL_MS: 15_000,
+    /** Reuse a fix this fresh instead of forcing a brand-new one every poll. */
+    POSITION_MAX_AGE_MS: 5_000,
+    /**
+     * Cumulative VISIBLE polling time before the web fallback stops itself
+     * for the day — distinct from MAX_OPEN_DAY_MS below (wall-clock since
+     * check-in), since time spent hidden/paused never counts against this.
+     * Native duty-cycles its acquisition and can safely tolerate a much
+     * longer day; this loop cannot.
+     */
+    MAX_ACTIVE_MS: 8 * 60 * 60_000,
+  },
   /** No watcher callback for this long while the day is open ⇒ health probe. */
   WATCHDOG_MS: 5 * 60_000,
   /** Cadence of the watchdog check (holds NO GPS acquisition of its own). */

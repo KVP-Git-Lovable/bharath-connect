@@ -89,6 +89,11 @@ export default function InstallApp() {
                   <p>Tap <strong>Add</strong> to confirm</p>
                 </div>
               </div>
+              <p className="text-xs text-muted-foreground border-t border-border pt-3">
+                Location tracking on iPhone only works while the app is open and on screen — it
+                pauses as soon as you switch apps or lock your phone. Keep it open during work
+                hours for a complete trail.
+              </p>
             </CardContent>
           </Card>
         ) : (

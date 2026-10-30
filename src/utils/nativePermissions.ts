@@ -174,7 +174,7 @@ type PositionFix = {
   heading: number | null;
 };
 
-function webGetPosition(opts: { enableHighAccuracy: boolean; timeout: number }): Promise<PositionFix> {
+function webGetPosition(opts: { enableHighAccuracy: boolean; timeout: number; maximumAge: number }): Promise<PositionFix> {
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) {
       return reject(new Error('Geolocation not supported'));
@@ -214,7 +214,7 @@ function webGetPosition(opts: { enableHighAccuracy: boolean; timeout: number }):
       {
         enableHighAccuracy: opts.enableHighAccuracy,
         timeout: opts.timeout,
-        maximumAge: 0, // never accept a stale cached fix
+        maximumAge: opts.maximumAge, // 0 (default) = never accept a stale cached fix
       }
     );
 
@@ -223,9 +223,18 @@ function webGetPosition(opts: { enableHighAccuracy: boolean; timeout: number }):
   });
 }
 
-/** Get current position — tries native plugin, falls back to web API */
-export async function getCurrentPosition(options?: { enableHighAccuracy?: boolean; timeout?: number }) {
-  const opts = { enableHighAccuracy: true, timeout: 15000, ...options };
+/**
+ * Get current position — tries native plugin, falls back to web API.
+ *
+ * `maximumAge` defaults to 0 (never accept a stale fix) to preserve exact
+ * existing behavior for every caller that wants a genuinely fresh reading
+ * (check-in/out, visit check-in, "Current Location"). Only a recurring
+ * poller with its own cadence (useGPSTracker.ts's web fallback) should ever
+ * pass a non-zero value — reusing a fix a few seconds old there avoids
+ * forcing the GPS radio to re-acquire from scratch every single cycle.
+ */
+export async function getCurrentPosition(options?: { enableHighAccuracy?: boolean; timeout?: number; maximumAge?: number }) {
+  const opts = { enableHighAccuracy: true, timeout: 15000, maximumAge: 0, ...options };
 
   // Try native plugin first
   if (isNative()) {

@@ -18,7 +18,15 @@ import { format } from "date-fns";
 
 
 const MIN_FORCED_WRITE_MS = 15_000;  // min spacing for non-moving trail-density writes
-const FOREGROUND_POLL_MS = 15_000;   // web / non-native fallback (screen-on only)
+// Web / non-native fallback (screen-on only) — see GPS_CAPTURE_CONFIG.WEB_FALLBACK
+// for why this path is tuned separately from the native MOVING profile.
+const FOREGROUND_POLL_MS = GPS_CAPTURE_CONFIG.WEB_FALLBACK.POLL_MS;
+const FOREGROUND_POSITION_MAX_AGE_MS = GPS_CAPTURE_CONFIG.WEB_FALLBACK.POSITION_MAX_AGE_MS;
+// Cumulative VISIBLE polling time before the web fallback stops itself for
+// the day (resets on the next open-day transition). Distinct from
+// MAX_OPEN_DAY_MS below, which is wall-clock since check-in and applies to
+// both platforms — this one only counts time actually spent polling.
+const WEB_FALLBACK_MAX_ACTIVE_MS = GPS_CAPTURE_CONFIG.WEB_FALLBACK.MAX_ACTIVE_MS;
 // Watcher-health: no watcher CALLBACK for this long while the day is open ⇒
 // the OS killed the watcher: re-register. (Checked on a slow tick that does
 // NOT acquire GPS itself — the watcher is the single acquisition source.)
@@ -79,6 +87,8 @@ export function useGPSTracker(userId: string | null | undefined) {
   const timerRef = useRef<number | null>(null);
   const watcherIdRef = useRef<string | null>(null);
   const foregroundBusyRef = useRef(false);
+  /** Web fallback only: cumulative VISIBLE polling time for the open day. */
+  const webActivePollMsRef = useRef(0);
   const lastWriteRef = useRef<number>(0);
   // Watcher-health signal: updated on EVERY watcher delivery, even fixes the
   // gates reject — write recency no longer proxies callback receipt now that
@@ -140,6 +150,19 @@ export function useGPSTracker(userId: string | null | undefined) {
           "[GPSTracker] attendance open for",
           Math.round(openMs / 3_600_000),
           "h with no check-out — stopping tracking"
+        );
+        return false;
+      }
+      // Web fallback only: its polling has no OS-level duty-cycling, so it
+      // gets a shorter cumulative-active-time budget than native's wall-clock
+      // MAX_OPEN_DAY_MS — exhausting it stops tracking the same way a
+      // forgotten check-out does (this condition is a no-op on native, where
+      // webActivePollMsRef never advances).
+      if (!isNative() && webActivePollMsRef.current > WEB_FALLBACK_MAX_ACTIVE_MS) {
+        console.warn(
+          "[GPSTracker] web fallback active-poll budget exhausted (",
+          Math.round(webActivePollMsRef.current / 3_600_000),
+          "h visible) — stopping tracking for the day"
         );
         return false;
       }
@@ -607,9 +630,19 @@ export function useGPSTracker(userId: string | null | undefined) {
       const tick = async () => {
         if (cancelled || foregroundBusyRef.current) return;
         if (!activeRef.current) return;
+        // Battery: never acquire while the page isn't visible. iOS (and any
+        // browser) cannot usefully continue tracking once hidden anyway — no
+        // JS keeps running in a way that could deliver fixes to a hidden
+        // page's UI — so this costs zero tracking capability and prevents
+        // the GPS radio from being kept hot for no benefit.
+        if (document.hidden) return;
         foregroundBusyRef.current = true;
         try {
-          const pos = await getCurrentPosition({ enableHighAccuracy: true, timeout: 15000 });
+          const pos = await getCurrentPosition({
+            enableHighAccuracy: true,
+            timeout: 15000,
+            maximumAge: FOREGROUND_POSITION_MAX_AGE_MS,
+          });
           insertPoint(
             pos.latitude,
             pos.longitude,
@@ -620,6 +653,7 @@ export function useGPSTracker(userId: string | null | undefined) {
         } catch { /* ignore */ } finally {
           foregroundBusyRef.current = false;
         }
+        webActivePollMsRef.current += FOREGROUND_POLL_MS;
       };
       tick();
       timerRef.current = window.setInterval(tick, FOREGROUND_POLL_MS);
@@ -716,7 +750,10 @@ export function useGPSTracker(userId: string | null | undefined) {
         if (wasActive) void logTrackerEvent(userId, "tracking_stopped", {});
         void flushPendingGpsPoints();
       } else {
-        if (!wasActive) void logTrackerEvent(userId, "tracker_started", {});
+        if (!wasActive) {
+          void logTrackerEvent(userId, "tracker_started", {});
+          webActivePollMsRef.current = 0;
+        }
         void ensureAcquisitionRunning();
       }
     }
