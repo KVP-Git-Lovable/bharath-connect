@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import type { LucideIcon } from "lucide-react";
-import { ShieldAlert, WifiOff, PowerOff, AlertTriangle, CloudOff, Clock3, LogOut } from "lucide-react";
+import { ShieldAlert, WifiOff, PowerOff, AlertTriangle, CloudOff, Clock3, LogOut, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { format } from "date-fns";
@@ -85,6 +85,33 @@ function classify(rows: TrackerEventRow[]): IssueBucket[] {
       detail: `${countLabel(degraded.length, "permission_status")} — device location, precise location, background access, or the battery exemption was off`,
       severity: "high",
       latest: degraded[0].occurred_at,
+    });
+  }
+
+  // Fires right before prepareNativeLocationSettings redirects to a Settings
+  // screen for battery exemption / background location — if the app gets
+  // backgrounded-and-killed before the user completes that and returns,
+  // this is the ONLY event this flow ever manages to log: everything after
+  // the redirect (including watcher registration) never runs. A user stuck
+  // here shows zero other tracker_health events and zero GPS points despite
+  // a long checked-in day — without this bucket, "Check user tracking
+  // issues" would read as empty for exactly the users who need it most.
+  const setupRedirects = rows.filter((r) => r.event === "location_setup_redirect");
+  if (setupRedirects.length > 0) {
+    const steps = new Set(setupRedirects.map((r) => r.details?.step).filter(Boolean));
+    const stepLabel =
+      steps.has("battery_exemption") && steps.has("background_location")
+        ? "battery exemption and background location"
+        : steps.has("battery_exemption")
+          ? "battery exemption"
+          : 'background location ("Allow all the time")';
+    buckets.push({
+      key: "setup_redirect",
+      icon: Settings,
+      title: "Location setup was never completed",
+      detail: `Sent to Android Settings for ${stepLabel} (${setupRedirects.length} time${setupRedirects.length === 1 ? "" : "s"}), but tracking never started afterward — the app was likely backgrounded or killed before setup finished. Ask them to reopen the app and finish granting permissions in Settings.`,
+      severity: "high",
+      latest: setupRedirects[0].occurred_at,
     });
   }
 

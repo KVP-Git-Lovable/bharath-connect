@@ -519,7 +519,10 @@ export default function GPSTracking() {
   // leaving the user to find Battery/Permissions themselves.
   const handleFixTrackingGap = async () => {
     if (isNative()) {
-      await prepareNativeLocationSettings();
+      // Explicit, user-initiated retry — bypass the automatic flow's
+      // redirect cooldown (see nativePermissions.ts) so tapping this button
+      // always actually does something.
+      await prepareNativeLocationSettings(currentUserId, { force: true });
       toast({
         title: "Device settings opened",
         description: "Allow the battery prompt if shown, then set Location to \"Allow all the time\" and Battery to Unrestricted.",

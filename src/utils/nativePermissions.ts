@@ -117,21 +117,70 @@ export async function requestBackgroundLocationAccess(): Promise<NativeLocationP
  */
 let prepareInFlight: Promise<NativeLocationPowerStatus | null> | null = null;
 
+// Both the battery-exemption and background-location requests below fire a
+// real startActivity() to a system Settings screen (confirmed in
+// DeviceSettingsPlugin.java) — not a lightweight dialog. That backgrounds
+// this app's Activity immediately. If the user doesn't complete the detour
+// and return, the backgrounded process can be killed by the OS within
+// minutes (observed: ApplicationExitInfo reasons SIGNALED/OTHER, not a user
+// Force Stop) before the JS side ever runs its next line — so chaining BOTH
+// redirects in one pass risked losing the whole flow (and the watcher
+// registration gated behind it) to a single Settings bounce, repeating
+// identically on every reopen with nothing persisted in between. Firing at
+// most one redirect per call, and cooling down afterward, keeps a half-
+// completed setup from re-bouncing the user every single time they reopen
+// the app, and lets the watcher registration that follows proceed on
+// whatever is already granted instead of blocking on the full chain.
+const SETTINGS_REDIRECT_COOLDOWN_MS = 5 * 60_000;
+const SETTINGS_REDIRECT_STORAGE_KEY = 'gps_last_settings_redirect_at';
+
+function msSinceLastSettingsRedirect(): number {
+  try {
+    const last = Number(localStorage.getItem(SETTINGS_REDIRECT_STORAGE_KEY)) || 0;
+    return Date.now() - last;
+  } catch {
+    return Infinity; // storage unavailable — never block on a cooldown we can't track
+  }
+}
+
+function markSettingsRedirect() {
+  try {
+    localStorage.setItem(SETTINGS_REDIRECT_STORAGE_KEY, String(Date.now()));
+  } catch { /* ignore */ }
+}
+
 /**
  * Single ordered, idempotent tracking-permission flow:
  * location → notifications → battery exemption → background location.
  * Concurrent callers share one run, so two dialogs can never race.
+ *
+ * `userId` is optional and used only to log a `location_setup_redirect`
+ * tracker-health event immediately before a Settings redirect fires — the
+ * one point in this flow guaranteed to run even if everything after it
+ * (including the function's own return) never gets the chance to.
+ *
+ * `force` bypasses the redirect cooldown — only pass it from an explicit,
+ * user-initiated retry (e.g. a "Fix settings" button the user just tapped).
+ * The cooldown exists to stop the SILENT automatic flow from re-bouncing an
+ * unaware user to Settings on every app reopen; it was never meant to make
+ * a deliberate retry a no-op.
  */
-export function prepareNativeLocationSettings(): Promise<NativeLocationPowerStatus | null> {
+export function prepareNativeLocationSettings(
+  userId?: string | null,
+  opts?: { force?: boolean }
+): Promise<NativeLocationPowerStatus | null> {
   if (!isNative()) return Promise.resolve(null);
   if (prepareInFlight) return prepareInFlight;
-  prepareInFlight = runPrepareNativeLocationSettings().finally(() => {
+  prepareInFlight = runPrepareNativeLocationSettings(userId, opts?.force ?? false).finally(() => {
     prepareInFlight = null;
   });
   return prepareInFlight;
 }
 
-async function runPrepareNativeLocationSettings(): Promise<NativeLocationPowerStatus | null> {
+async function runPrepareNativeLocationSettings(
+  userId?: string | null,
+  force = false
+): Promise<NativeLocationPowerStatus | null> {
 
   try {
     const { Geolocation } = await import('@capacitor/geolocation');
@@ -143,6 +192,7 @@ async function runPrepareNativeLocationSettings(): Promise<NativeLocationPowerSt
   const status = await getNativeLocationPowerStatus();
   // Android 13+: the tracking foreground-service notification is invisible
   // until POST_NOTIFICATIONS is granted — request it in the same flow.
+  // (A plain permission dialog, not a Settings redirect — safe to keep here.)
   if (status?.notificationsEnabled === false) {
     try {
       const DeviceSettings = await getDeviceSettingsPlugin();
@@ -151,10 +201,21 @@ async function runPrepareNativeLocationSettings(): Promise<NativeLocationPowerSt
       console.warn('Could not request notification permission:', e);
     }
   }
+
+  const cooldownActive = !force && msSinceLastSettingsRedirect() < SETTINGS_REDIRECT_COOLDOWN_MS;
+
   if (status?.ignoringBatteryOptimizations === false) {
-    await requestBatteryOptimizationExemption();
+    if (cooldownActive) return status;
+    const { logTrackerEvent } = await import('@/services/trackerHealth');
+    void logTrackerEvent(userId, 'location_setup_redirect', { step: 'battery_exemption', forced: force });
+    markSettingsRedirect();
+    return requestBatteryOptimizationExemption();
   }
   if (status?.backgroundLocation !== 'granted') {
+    if (cooldownActive) return status;
+    const { logTrackerEvent } = await import('@/services/trackerHealth');
+    void logTrackerEvent(userId, 'location_setup_redirect', { step: 'background_location', forced: force });
+    markSettingsRedirect();
     return requestBackgroundLocationAccess();
   }
   return getNativeLocationPowerStatus();

@@ -30,7 +30,12 @@ export type TrackerEvent =
   // from the capture-side events above, surfaced together in the "Check user
   // tracking issues" dialog on /gps-tracking.
   | "gps_points_discarded"
-  | "checkout_points_unsynced";
+  | "checkout_points_unsynced"
+  // Fired immediately before prepareNativeLocationSettings (nativePermissions.ts)
+  // redirects the user to a Settings screen for battery-exemption or
+  // background-location setup — the one point in that flow guaranteed to run
+  // even if the app gets backgrounded-and-killed before setup completes.
+  | "location_setup_redirect";
 
 /** Don't spam the table: identical events are rate-limited per session. */
 const MIN_GAP_MS: Partial<Record<TrackerEvent, number>> = {

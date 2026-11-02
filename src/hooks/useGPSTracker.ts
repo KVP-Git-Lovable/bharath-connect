@@ -353,7 +353,7 @@ export function useGPSTracker(userId: string | null | undefined) {
         // re-opens permission/battery screens over and over.
         const powerStatus = opts.quiet
           ? await getNativeLocationPowerStatus()
-          : await prepareNativeLocationSettings();
+          : await prepareNativeLocationSettings(userId);
         console.info("[GPSTracker] native location power status", powerStatus);
         void logTrackerEvent(userId, "permission_status", { ...(powerStatus ?? {}) });
 
