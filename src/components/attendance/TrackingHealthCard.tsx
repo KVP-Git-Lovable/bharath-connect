@@ -17,6 +17,7 @@ import {
 } from "@/utils/nativePermissions";
 import { GPS_QUEUE_WARNING_EVENT, getGpsQueueStats } from "@/services/gpsSyncQueue";
 import AutostartGuide from "@/components/attendance/AutostartGuide";
+import { supabase } from "@/integrations/supabase/client";
 
 /** Ask the tracker to re-acquire right away (after the user fixed settings). */
 function requestReacquire() {
@@ -55,6 +56,20 @@ export default function TrackingHealthCard() {
   const [, setTick] = useState(0);
   const [guideOpen, setGuideOpen] = useState(false);
   const [queueWarning, setQueueWarning] = useState<string | null>(null);
+  // For the location_setup_redirect diagnostic log only — these buttons are
+  // explicit, user-initiated retries, so they always pass force:true to
+  // prepareNativeLocationSettings (bypassing its automatic-flow cooldown).
+  const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    supabase.auth.getUser().then(({ data }) => {
+      if (!cancelled) setUserId(data.user?.id ?? null);
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  const fixNativeSettings = () => prepareNativeLocationSettings(userId, { force: true });
 
   useEffect(() => {
     const onWarn = (e: Event) => {
@@ -130,7 +145,7 @@ export default function TrackingHealthCard() {
                 the app is open. Retrying automatically.
               </p>
             </div>
-            <Button size="sm" variant="outline" onClick={() => void fixThenReacquire(prepareNativeLocationSettings)}>
+            <Button size="sm" variant="outline" onClick={() => void fixThenReacquire(fixNativeSettings)}>
               Fix now
             </Button>
           </div>
@@ -183,7 +198,7 @@ export default function TrackingHealthCard() {
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button size="sm" variant="outline" onClick={() => void fixThenReacquire(prepareNativeLocationSettings)}>
+              <Button size="sm" variant="outline" onClick={() => void fixThenReacquire(fixNativeSettings)}>
                 Fix settings
               </Button>
               <Button size="sm" variant="ghost" onClick={() => setGuideOpen(true)}>

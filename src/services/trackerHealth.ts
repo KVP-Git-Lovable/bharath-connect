@@ -35,7 +35,12 @@ export type TrackerEvent =
   // redirects the user to a Settings screen for battery-exemption or
   // background-location setup — the one point in that flow guaranteed to run
   // even if the app gets backgrounded-and-killed before setup completes.
-  | "location_setup_redirect";
+  | "location_setup_redirect"
+  // Fired at the very top of that same flow, before anything else runs.
+  // Present with no location_setup_redirect/permission_status after it ⇒
+  // the stall is in the foreground-location request or the native status
+  // read itself, not in a Settings redirect.
+  | "location_setup_started";
 
 /** Don't spam the table: identical events are rate-limited per session. */
 const MIN_GAP_MS: Partial<Record<TrackerEvent, number>> = {

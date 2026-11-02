@@ -8,6 +8,8 @@
  * Strategy: always try native plugin first, catch errors, fall back to web API.
  */
 
+import type { TrackerEvent } from '@/services/trackerHealth';
+
 let _isNativeCached: boolean | null = null;
 
 /** Check if running inside a Capacitor native shell */
@@ -150,6 +152,25 @@ function markSettingsRedirect() {
 }
 
 /**
+ * Best-effort diagnostic log, awaited with a short timeout rather than
+ * fire-and-forget: a bare `void logTrackerEvent(...)` can still be lost if
+ * the process dies moments later (the insert is an in-flight network
+ * request, not something Android guarantees survives an Activity
+ * transition). Awaiting gives it a real window to actually reach the
+ * server before the caller proceeds to startActivity(); the timeout keeps
+ * a slow/offline network from delaying that transition indefinitely.
+ */
+async function logBreadcrumb(userId: string | null | undefined, event: TrackerEvent, details: Record<string, unknown>) {
+  try {
+    const { logTrackerEvent } = await import('@/services/trackerHealth');
+    await Promise.race([
+      logTrackerEvent(userId, event, details),
+      new Promise((resolve) => setTimeout(resolve, 1500)),
+    ]);
+  } catch { /* best-effort only */ }
+}
+
+/**
  * Single ordered, idempotent tracking-permission flow:
  * location → notifications → battery exemption → background location.
  * Concurrent callers share one run, so two dialogs can never race.
@@ -181,6 +202,12 @@ async function runPrepareNativeLocationSettings(
   userId?: string | null,
   force = false
 ): Promise<NativeLocationPowerStatus | null> {
+  // Breadcrumb before anything else in this flow runs — if a session only
+  // ever shows this and nothing after it, the failure is in the foreground-
+  // location request or getNativeLocationPowerStatus() itself, not in a
+  // later Settings redirect. Narrows "Check user tracking issues" down to
+  // exactly where setup stalled instead of just "somewhere before permission_status".
+  await logBreadcrumb(userId, 'location_setup_started', { forced: force });
 
   try {
     const { Geolocation } = await import('@capacitor/geolocation');
@@ -206,17 +233,19 @@ async function runPrepareNativeLocationSettings(
 
   if (status?.ignoringBatteryOptimizations === false) {
     if (cooldownActive) return status;
-    const { logTrackerEvent } = await import('@/services/trackerHealth');
-    void logTrackerEvent(userId, 'location_setup_redirect', { step: 'battery_exemption', forced: force });
-    markSettingsRedirect();
-    return requestBatteryOptimizationExemption();
+    await logBreadcrumb(userId, 'location_setup_redirect', { step: 'battery_exemption', forced: force });
+    const result = await requestBatteryOptimizationExemption();
+    // Only start the cooldown if Android actually confirms it opened a
+    // screen — a thrown/failed request shouldn't silently block a retry.
+    if (result?.opened) markSettingsRedirect();
+    return result;
   }
   if (status?.backgroundLocation !== 'granted') {
     if (cooldownActive) return status;
-    const { logTrackerEvent } = await import('@/services/trackerHealth');
-    void logTrackerEvent(userId, 'location_setup_redirect', { step: 'background_location', forced: force });
-    markSettingsRedirect();
-    return requestBackgroundLocationAccess();
+    await logBreadcrumb(userId, 'location_setup_redirect', { step: 'background_location', forced: force });
+    const result = await requestBackgroundLocationAccess();
+    if (result?.opened) markSettingsRedirect();
+    return result;
   }
   return getNativeLocationPowerStatus();
 }
