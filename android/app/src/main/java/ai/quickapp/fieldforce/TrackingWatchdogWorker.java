@@ -25,8 +25,15 @@ public class TrackingWatchdogWorker extends Worker {
             TrackingRestarter.cancelWatchdog(ctx);
             return Result.success();
         }
+        long now = System.currentTimeMillis();
         TrackingRestarter.prefs(ctx).edit()
-                .putLong("lastWatchdogAt", System.currentTimeMillis()).apply();
+                .putLong("lastWatchdogAt", now)
+                // Proves the restart/heartbeat path itself is alive even on a
+                // day with few real fixes (e.g. a stationary device held below
+                // the displacement filter) — a distinct signal from "a fix
+                // arrived," checked independently by the diagnostics dialog.
+                .putLong("lastServiceHeartbeatTimestamp", now)
+                .apply();
         if (TrackingRestarter.fixIsStale(ctx)) {
             TrackingRestarter.startService(ctx, "watchdog");
         }

@@ -40,7 +40,18 @@ export type TrackerEvent =
   // Present with no location_setup_redirect/permission_status after it ⇒
   // the stall is in the foreground-location request or the native status
   // read itself, not in a Settings redirect.
-  | "location_setup_started";
+  | "location_setup_started"
+  // Periodic snapshot of the four native health timestamps (capture
+  // resilience hardening): lastRealGpsFixTimestamp, lastNativeCallbackAt,
+  // lastNativePersistenceTimestamp, lastServiceHeartbeatTimestamp. Lets the
+  // diagnostics dialog tell "no real fixes are happening" apart from "the
+  // restart/heartbeat path itself is dead" — two different failures that
+  // look identical from distance alone.
+  | "native_health_snapshot"
+  // Device-wide Location is off at the OS level — distinct from a denied
+  // app permission; no amount of in-app retry can recover from this, only
+  // the user can. Honest-limit reporting, not a bug to work around.
+  | "location_services_disabled";
 
 /** Don't spam the table: identical events are rate-limited per session. */
 const MIN_GAP_MS: Partial<Record<TrackerEvent, number>> = {
@@ -50,6 +61,8 @@ const MIN_GAP_MS: Partial<Record<TrackerEvent, number>> = {
   resume_recovery: 60_000,
   native_buffer_drained: 60_000,
   permission_status: 30 * 60_000,
+  native_health_snapshot: 10 * 60_000,
+  location_services_disabled: 10 * 60_000,
 };
 
 const lastSentAt = new Map<TrackerEvent, number>();

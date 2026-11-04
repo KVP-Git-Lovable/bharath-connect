@@ -46,6 +46,7 @@ const RATE_LIMITED_EVENTS = new Set([
   "probe_discarded",
   "probe_failed",
   "native_buffer_drained",
+  "location_services_disabled",
 ]);
 
 // resume_recovery fires past just 60s of silence (RESUME_SILENCE_MS) —
@@ -76,7 +77,11 @@ function isDegraded(details: Record<string, any> | null): boolean {
 function classify(rows: TrackerEventRow[]): IssueBucket[] {
   const buckets: IssueBucket[] = [];
 
-  const degraded = rows.filter((r) => r.event === "permission_status" && isDegraded(r.details));
+  const degraded = rows.filter(
+    (r) =>
+      (r.event === "permission_status" && isDegraded(r.details)) ||
+      r.event === "location_services_disabled"
+  );
   if (degraded.length > 0) {
     buckets.push({
       key: "degraded",

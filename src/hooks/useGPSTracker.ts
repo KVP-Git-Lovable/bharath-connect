@@ -356,9 +356,12 @@ export function useGPSTracker(userId: string | null | undefined) {
           : await prepareNativeLocationSettings(userId);
         console.info("[GPSTracker] native location power status", powerStatus);
         void logTrackerEvent(userId, "permission_status", { ...(powerStatus ?? {}) });
-
-
-
+        if (powerStatus?.locationServicesEnabled === false) {
+          // Device-wide Location is off — no app permission or retry can fix
+          // this, only the user can. Logged as its own honest-limit
+          // condition rather than folded into generic permission_status.
+          void logTrackerEvent(userId, "location_services_disabled", {});
+        }
 
         // Only register the watcher once the OS has actually granted location.
         // Requesting here too would race the startup permission request and
@@ -456,20 +459,46 @@ export function useGPSTracker(userId: string | null | undefined) {
          * timestamps, so a frozen bridge is not mistaken for a dead watcher.
          */
         drainNativeBufferRef.current = async (reason: string) => {
-          if (!BackgroundGeolocation?.drainNativeLocationBuffer) return;
+          if (!BackgroundGeolocation?.beginNativeBufferDrain || !BackgroundGeolocation?.ackNativeBufferDrain) return;
           try {
-            const res = await BackgroundGeolocation.drainNativeLocationBuffer();
+            const res = await BackgroundGeolocation.beginNativeBufferDrain();
             const nativeCallbackAt = Number(res?.lastNativeCallbackAt) || 0;
             if (nativeCallbackAt > lastCallbackTsRef.current) {
               lastCallbackTsRef.current = nativeCallbackAt;
               setTrackerStatus({ lastCallbackAt: nativeCallbackAt, watcherAlive: true });
             }
+            if (reason === "watchdog") {
+              // Periodic health snapshot (rate-limited in trackerHealth.ts) —
+              // distinguishes "no real fixes happening" from "the
+              // restart/heartbeat path itself is dead," which otherwise look
+              // identical from a distance of zero points.
+              void logTrackerEvent(userId, "native_health_snapshot", {
+                lastRealGpsFixTimestamp: Number(res?.lastRealGpsFixTimestamp) || 0,
+                lastNativeCallbackAt: nativeCallbackAt,
+                lastNativePersistenceTimestamp: Number(res?.lastNativePersistenceTimestamp) || 0,
+                lastServiceHeartbeatTimestamp: Number(res?.lastServiceHeartbeatTimestamp) || 0,
+              });
+            }
+            // Two-phase drain (GpsBufferJournal, native side): this batch is
+            // staged, not yet deleted. It must only be acked once every row
+            // has at least been offered to the gate below — an interrupted
+            // pass (unmount / day closed mid-drain) leaves it staged so the
+            // next drain resumes exactly where this one stopped, instead of
+            // silently losing whatever wasn't processed yet. Re-offering
+            // already-processed rows on a retry is safe: insertPoint's
+            // OS-timestamp guard (lastSeenFixTimeRef) makes reprocessing the
+            // same fix a no-op.
+            const token: string | null = res?.token ?? null;
             const rows: any[] = Array.isArray(res?.locations) ? res.locations : [];
-            if (rows.length === 0) return;
+            if (rows.length === 0) {
+              if (token) void BackgroundGeolocation.ackNativeBufferDrain({ token });
+              return;
+            }
             rows.sort((a, b) => (Number(a?.time) || 0) - (Number(b?.time) || 0));
             let processed = 0;
+            let interrupted = false;
             for (const r of rows) {
-              if (cancelled || !activeRef.current) break;
+              if (cancelled || !activeRef.current) { interrupted = true; break; }
               if (typeof r?.latitude !== "number" || typeof r?.longitude !== "number") continue;
               insertPoint(
                 r.latitude,
@@ -480,6 +509,9 @@ export function useGPSTracker(userId: string | null | undefined) {
                 typeof r.time === "number" ? r.time : null
               );
               processed++;
+            }
+            if (!interrupted && token) {
+              void BackgroundGeolocation.ackNativeBufferDrain({ token });
             }
             if (processed > 0) {
               void logTrackerEvent(userId, "native_buffer_drained", { count: processed, reason });

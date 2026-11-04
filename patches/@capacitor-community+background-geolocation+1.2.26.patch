@@ -1,5 +1,5 @@
 diff --git a/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/BackgroundGeolocation.java b/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/BackgroundGeolocation.java
-index a92fcf9..a83396a 100644
+index a92fcf9..02d0605 100644
 --- a/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/BackgroundGeolocation.java
 +++ b/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/BackgroundGeolocation.java
 @@ -20,6 +20,7 @@ import android.os.Build;
@@ -22,60 +22,61 @@ index a92fcf9..a83396a 100644
          );
      }
  
-@@ -196,6 +200,51 @@ public class BackgroundGeolocation extends Plugin {
+@@ -196,6 +200,52 @@ public class BackgroundGeolocation extends Plugin {
          call.resolve();
      }
  
 +    /**
-+     * Drain the native observation buffer written by the service (real device
-+     * fixes recorded independently of the JS bridge) and report the native
-+     * health timestamps. Read-and-delete under the shared lock so a fix is
-+     * handed to JS exactly once.
++     * Phase one of draining the native observation buffer (real device fixes
++     * recorded independently of the JS bridge, see GpsBufferJournal): stage
++     * whatever is journaled and hand back the batch plus health timestamps.
++     * Nothing is deleted yet — a caller that dies before acking (app killed
++     * mid-sync) finds the same batch staged again on the next call, so no
++     * observation is lost to an interrupted drain.
 +     */
 +    @PluginMethod()
-+    public void drainNativeLocationBuffer(PluginCall call) {
++    public void beginNativeBufferDrain(PluginCall call) {
 +        JSObject ret = new JSObject();
 +        JSArray locations = new JSArray();
-+        synchronized (BackgroundGeolocationService.NATIVE_BUFFER_LOCK) {
-+            java.io.File f = new java.io.File(
-+                    getContext().getFilesDir(),
-+                    BackgroundGeolocationService.NATIVE_BUFFER_FILE
-+            );
-+            if (f.exists()) {
-+                try (java.io.BufferedReader reader =
-+                             new java.io.BufferedReader(new java.io.FileReader(f))) {
-+                    String line;
-+                    while ((line = reader.readLine()) != null) {
-+                        line = line.trim();
-+                        if (line.isEmpty()) continue;
-+                        try {
-+                            locations.put(new org.json.JSONObject(line));
-+                        } catch (Exception ignored) {
-+                            // A torn/corrupt line (e.g. process death mid-write)
-+                            // is skipped; it was never a complete observation.
-+                        }
-+                    }
-+                } catch (Exception ignored) {
-+                }
-+                //noinspection ResultOfMethodCallIgnored
-+                f.delete();
++        String token = GpsBufferJournal.beginDrain(getContext());
++        if (token != null) {
++            for (JSONObject record : GpsBufferJournal.read(getContext(), token)) {
++                locations.put(record);
 +            }
 +        }
 +        android.content.SharedPreferences prefs = getContext().getSharedPreferences(
 +                BackgroundGeolocationService.NATIVE_HEALTH_PREFS,
 +                Context.MODE_PRIVATE
 +        );
++        ret.put("token", token);
 +        ret.put("locations", locations);
 +        ret.put("lastNativeCallbackAt", prefs.getLong("lastNativeCallbackAt", 0));
 +        ret.put("serviceStartedAt", prefs.getLong("serviceStartedAt", 0));
++        ret.put("lastRealGpsFixTimestamp", prefs.getLong("lastRealGpsFixTimestamp", 0));
++        ret.put("lastNativePersistenceTimestamp", prefs.getLong("lastNativePersistenceTimestamp", 0));
++        ret.put("lastServiceHeartbeatTimestamp", prefs.getLong("lastServiceHeartbeatTimestamp", 0));
 +        call.resolve(ret);
++    }
++
++    /**
++     * Phase two: the batch handed back by beginNativeBufferDrain with this
++     * token has been safely enqueued on the JS side — delete the staged
++     * journal. Never call this before the batch is actually queued.
++     */
++    @PluginMethod()
++    public void ackNativeBufferDrain(PluginCall call) {
++        String token = call.getString("token");
++        if (token != null) {
++            GpsBufferJournal.ack(getContext(), token);
++        }
++        call.resolve();
 +    }
 +
      @PluginMethod()
      public void openSettings(PluginCall call) {
          Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
 diff --git a/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService.java b/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService.java
-index fafbb86..b877159 100644
+index fafbb86..dfacbc5 100644
 --- a/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService.java
 +++ b/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService.java
 @@ -1,7 +1,13 @@
@@ -92,52 +93,57 @@ index fafbb86..b877159 100644
  import android.content.Intent;
  import android.content.pm.ServiceInfo;
  import android.location.Location;
-@@ -18,6 +24,8 @@ import com.google.android.gms.location.LocationResult;
+@@ -17,7 +23,10 @@ import com.google.android.gms.location.LocationRequest;
+ import com.google.android.gms.location.LocationResult;
  import com.google.android.gms.location.LocationServices;
  
++import org.json.JSONObject;
++
  import java.util.HashSet;
-+import java.io.File;
-+import java.io.FileWriter;
++import java.util.UUID;
  
  import androidx.localbroadcastmanager.content.LocalBroadcastManager;
  
-@@ -33,6 +41,45 @@ public class BackgroundGeolocationService extends Service {
+@@ -33,6 +42,48 @@ public class BackgroundGeolocationService extends Service {
      // Must be unique for this application.
      private static final int NOTIFICATION_ID = 28351;
  
 +    // ---- Native observation buffer (JS-independence hardening) ----
-+    // Every real fix is appended to an app-private JSON-lines file BEFORE the
++    // Every real fix is durably journaled (GpsBufferJournal) BEFORE the
 +    // in-process broadcast to the WebView, so observations survive periods
-+    // where the JS bridge is frozen or slow. The JS layer drains this file
-+    // (drainNativeLocationBuffer) into its existing capture pipeline; entries
-+    // are real device fixes only — never synthesized.
-+    public static final Object NATIVE_BUFFER_LOCK = new Object();
-+    public static final String NATIVE_BUFFER_FILE = "gps_native_buffer.jsonl";
++    // where the JS bridge is frozen, slow, or entirely dead. The JS layer
++    // drains the journal (beginNativeBufferDrain/ackNativeBufferDrain) into
++    // its existing capture pipeline; entries are real device fixes only —
++    // never synthesized.
 +    public static final String NATIVE_HEALTH_PREFS = "gps_native_health";
-+    // Cap: drop new entries rather than grow unbounded if JS never drains
-+    // (~2 MB ≈ several days of fixes).
-+    private static final long NATIVE_BUFFER_MAX_BYTES = 2_000_000L;
 +
 +    private void recordNativeFix(Location location) {
 +        try {
-+            synchronized (NATIVE_BUFFER_LOCK) {
-+                File f = new File(getApplicationContext().getFilesDir(), NATIVE_BUFFER_FILE);
-+                if (f.length() <= NATIVE_BUFFER_MAX_BYTES) {
-+                    FileWriter w = new FileWriter(f, true);
-+                    w.write("{\"latitude\":" + location.getLatitude()
-+                            + ",\"longitude\":" + location.getLongitude()
-+                            + ",\"accuracy\":" + (location.hasAccuracy() ? location.getAccuracy() : "null")
-+                            + ",\"speed\":" + (location.hasSpeed() ? location.getSpeed() : "null")
-+                            + ",\"bearing\":" + (location.hasBearing() ? location.getBearing() : "null")
-+                            + ",\"time\":" + location.getTime()
-+                            + "}\n");
-+                    w.close();
-+                }
-+            }
++            JSONObject record = new JSONObject();
++            record.put("id", UUID.randomUUID().toString());
++            record.put("latitude", location.getLatitude());
++            record.put("longitude", location.getLongitude());
++            record.put("accuracy", location.hasAccuracy() ? location.getAccuracy() : JSONObject.NULL);
++            record.put("speed", location.hasSpeed() ? location.getSpeed() : JSONObject.NULL);
++            record.put("bearing", location.hasBearing() ? location.getBearing() : JSONObject.NULL);
++            // Original OS fix time — distinct from when this process observed
++            // and persisted it, so a batched/delayed delivery is still visible
++            // as such rather than collapsed into "now".
++            record.put("time", location.getTime());
++            long persistedAt = System.currentTimeMillis();
++            record.put("recordedAt", persistedAt);
++            GpsBufferJournal.append(getApplicationContext(), record);
++
 +            getApplicationContext()
 +                    .getSharedPreferences(NATIVE_HEALTH_PREFS, MODE_PRIVATE)
 +                    .edit()
-+                    .putLong("lastNativeCallbackAt", System.currentTimeMillis())
++                    // Legacy key: staleness checks (TrackingRestarter.fixIsStale)
++                    // and the JS drain response already depend on this name.
++                    .putLong("lastNativeCallbackAt", persistedAt)
++                    // Distinct health signals (not duplicates): the OS fix time
++                    // itself, vs. the moment this process durably wrote it.
++                    .putLong("lastRealGpsFixTimestamp", location.getTime())
++                    .putLong("lastNativePersistenceTimestamp", persistedAt)
 +                    .apply();
 +        } catch (Exception ignored) {
 +            // Buffering must never break acquisition.
@@ -147,7 +153,7 @@ index fafbb86..b877159 100644
      private class Watcher {
          public String id;
          public FusedLocationProviderClient client;
-@@ -47,6 +94,148 @@ public class BackgroundGeolocationService extends Service {
+@@ -47,6 +98,148 @@ public class BackgroundGeolocationService extends Service {
          return binder;
      }
  
@@ -296,7 +302,7 @@ index fafbb86..b877159 100644
      // Some devices allow a foreground service to outlive the application's main
      // activity, leading to nasty crashes as reported in issue #59. If we learn
      // that the application has been killed, all watchers are stopped and the
-@@ -57,6 +246,14 @@ public class BackgroundGeolocationService extends Service {
+@@ -57,6 +250,14 @@ public class BackgroundGeolocationService extends Service {
              watcher.client.removeLocationUpdates(watcher.locationCallback);
          }
          watchers = new HashSet<Watcher>();
@@ -311,7 +317,7 @@ index fafbb86..b877159 100644
          stopSelf();
          return false;
      }
-@@ -75,14 +272,24 @@ public class BackgroundGeolocationService extends Service {
+@@ -75,14 +276,24 @@ public class BackgroundGeolocationService extends Service {
          void addWatcher(
                  final String id,
                  Notification backgroundNotification,
@@ -339,7 +345,7 @@ index fafbb86..b877159 100644
              locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
              locationRequest.setSmallestDisplacement(distanceFilter);
  
-@@ -90,6 +297,7 @@ public class BackgroundGeolocationService extends Service {
+@@ -90,6 +301,7 @@ public class BackgroundGeolocationService extends Service {
                  @Override
                  public void onLocationResult(LocationResult locationResult) {
                      Location location = locationResult.getLastLocation();
@@ -347,7 +353,7 @@ index fafbb86..b877159 100644
                      Intent intent = new Intent(ACTION_BROADCAST);
                      intent.putExtra("location", location);
                      intent.putExtra("id", id);
-@@ -105,6 +313,12 @@ public class BackgroundGeolocationService extends Service {
+@@ -105,6 +317,12 @@ public class BackgroundGeolocationService extends Service {
                  }
              };
  
@@ -360,7 +366,7 @@ index fafbb86..b877159 100644
              Watcher watcher = new Watcher();
              watcher.id = id;
              watcher.client = client;
-@@ -113,6 +327,16 @@ public class BackgroundGeolocationService extends Service {
+@@ -113,6 +331,16 @@ public class BackgroundGeolocationService extends Service {
              watcher.backgroundNotification = backgroundNotification;
              watchers.add(watcher);
  
@@ -377,3 +383,195 @@ index fafbb86..b877159 100644
              // According to Android Studio, this method can throw a Security Exception if
              // permissions are not yet granted. Rather than check the permissions, which is fiddly,
              // we simply ignore the exception.
+diff --git a/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/GpsBufferJournal.java b/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/GpsBufferJournal.java
+new file mode 100644
+index 0000000..9b919e3
+--- /dev/null
++++ b/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/GpsBufferJournal.java
+@@ -0,0 +1,186 @@
++package com.equimaps.capacitor_background_geolocation;
++
++import android.content.Context;
++import android.util.Log;
++
++import org.json.JSONException;
++import org.json.JSONObject;
++
++import java.io.BufferedReader;
++import java.io.File;
++import java.io.FileOutputStream;
++import java.io.FileReader;
++import java.io.IOException;
++import java.nio.charset.StandardCharsets;
++import java.util.ArrayList;
++import java.util.List;
++import java.util.UUID;
++
++/**
++ * Durable storage for native GPS fixes, independent of the JS bridge.
++ *
++ * Mirrors ai.quickapp.fieldforce.AppUsageJournal's proven shape (append-only
++ * JSONL in getFilesDir() plus a two-phase stage/read/ack drain) — that class
++ * can't be reused directly since this plugin builds as its own Gradle module,
++ * separate from the app module it lives in, but the mechanics are copied
++ * deliberately rather than reinvented.
++ *
++ * One difference from the plugin's previous read-and-delete buffer, and it is
++ * intentional: a drain the JS side starts but never finishes (app killed
++ * mid-sync) must replay, not disappear. beginDrain() moves the journal aside
++ * under a token; ack() deletes it only once the caller confirms the records
++ * are safely queued elsewhere. A journal left inflight by a crashed drain is
++ * folded into the next one automatically.
++ */
++final class GpsBufferJournal {
++
++    private static final String TAG = "GpsBufferJournal";
++
++    /** Guards every read/append/rename of the journal files. */
++    static final Object LOCK = new Object();
++
++    /** Own subdirectory so this can be excluded from backups by folder. */
++    private static final String DIR = "gps_buffer";
++    static final String JOURNAL_FILE = "gps_native_buffer.jsonl";
++    private static final String INFLIGHT_PREFIX = "gps_native_buffer.inflight.";
++    private static final String INFLIGHT_SUFFIX = ".jsonl";
++
++    /** ~2 MB ≈ several days of fixes at normal cadence. */
++    private static final long JOURNAL_MAX_BYTES = 2_000_000L;
++
++    private GpsBufferJournal() {}
++
++    private static File dir(Context ctx) {
++        File d = new File(ctx.getFilesDir(), DIR);
++        if (!d.exists() && !d.mkdirs()) Log.w(TAG, "could not create " + DIR);
++        return d;
++    }
++
++    private static File journal(Context ctx) {
++        return new File(dir(ctx), JOURNAL_FILE);
++    }
++
++    private static File inflight(Context ctx, String token) {
++        return new File(dir(ctx), INFLIGHT_PREFIX + token + INFLIGHT_SUFFIX);
++    }
++
++    /**
++     * Append one real fix. Called directly from the service's location
++     * callbacks, so a failure here must never throw back into them — the
++     * caller already runs this under a try/catch, but the cap below also
++     * prevents unbounded growth if nothing ever drains.
++     */
++    static void append(Context ctx, JSONObject record) {
++        synchronized (LOCK) {
++            File f = journal(ctx);
++            if (f.length() > JOURNAL_MAX_BYTES) return;
++            try (FileOutputStream out = new FileOutputStream(f, true)) {
++                out.write((record.toString() + "\n").getBytes(StandardCharsets.UTF_8));
++                out.flush();
++                out.getFD().sync();
++            } catch (IOException e) {
++                Log.w(TAG, "journal append failed", e);
++            }
++        }
++    }
++
++    /**
++     * Phase one of a drain: adopt any journal left inflight by a previous
++     * drain that was never acked, fold the current journal into it, and hand
++     * back the token ack() will need.
++     *
++     * @return the token, or null when there is nothing to drain.
++     */
++    static String beginDrain(Context ctx) {
++        synchronized (LOCK) {
++            File existing = findInflight(ctx);
++            File live = journal(ctx);
++
++            if (existing != null) {
++                if (live.exists()) {
++                    appendFileTo(live, existing);
++                    live.delete();
++                }
++                return tokenOf(existing);
++            }
++
++            if (!live.exists() || live.length() == 0) return null;
++
++            String token = UUID.randomUUID().toString();
++            File target = inflight(ctx, token);
++            if (!live.renameTo(target)) {
++                Log.w(TAG, "could not move journal aside for drain");
++                return null;
++            }
++            return token;
++        }
++    }
++
++    /** Phase two: the records are safely queued on the JS side. */
++    static void ack(Context ctx, String token) {
++        synchronized (LOCK) {
++            File f = inflight(ctx, token);
++            if (f.exists() && !f.delete()) {
++                Log.w(TAG, "could not delete inflight journal " + token);
++            }
++        }
++    }
++
++    /** Parse the records held under a drain token. Malformed lines are skipped. */
++    static List<JSONObject> read(Context ctx, String token) {
++        List<JSONObject> out = new ArrayList<>();
++        synchronized (LOCK) {
++            File f = inflight(ctx, token);
++            if (!f.exists()) return out;
++            try (BufferedReader r = new BufferedReader(new FileReader(f))) {
++                String line;
++                while ((line = r.readLine()) != null) {
++                    line = line.trim();
++                    if (line.isEmpty()) continue;
++                    try {
++                        out.add(new JSONObject(line));
++                    } catch (JSONException e) {
++                        // A torn last line from a kill mid-write. Skip it.
++                        Log.w(TAG, "skipping malformed journal line");
++                    }
++                }
++            } catch (IOException e) {
++                Log.w(TAG, "journal read failed", e);
++            }
++        }
++        return out;
++    }
++
++    private static File findInflight(Context ctx) {
++        File[] files = dir(ctx).listFiles();
++        if (files == null) return null;
++        File oldest = null;
++        for (File f : files) {
++            String n = f.getName();
++            if (n.startsWith(INFLIGHT_PREFIX) && n.endsWith(INFLIGHT_SUFFIX)) {
++                if (oldest == null || f.lastModified() < oldest.lastModified()) oldest = f;
++            }
++        }
++        return oldest;
++    }
++
++    private static String tokenOf(File inflightFile) {
++        String n = inflightFile.getName();
++        return n.substring(INFLIGHT_PREFIX.length(), n.length() - INFLIGHT_SUFFIX.length());
++    }
++
++    private static void appendFileTo(File src, File dst) {
++        try (FileOutputStream out = new FileOutputStream(dst, true);
++             BufferedReader r = new BufferedReader(new FileReader(src))) {
++            String line;
++            while ((line = r.readLine()) != null) {
++                if (line.isEmpty()) continue;
++                out.write((line + "\n").getBytes(StandardCharsets.UTF_8));
++            }
++            out.flush();
++            out.getFD().sync();
++        } catch (IOException e) {
++            Log.w(TAG, "could not fold journal into inflight", e);
++        }
++    }
++}

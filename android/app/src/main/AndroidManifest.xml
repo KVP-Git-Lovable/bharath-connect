@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
     <application
         android:name=".QuickLocateApplication"
         android:allowBackup="true"
@@ -32,6 +32,18 @@
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
+
+        <!-- Hardening override: guarantee the location service survives being
+             swiped from Recents and is typed as a location foreground service,
+             regardless of what the plugin's own library manifest declares (that
+             manifest isn't inspectable in this build environment, so this pins
+             the behavior explicitly instead of relying on it by chance). -->
+        <service
+            android:name="com.equimaps.capacitor_background_geolocation.BackgroundGeolocationService"
+            tools:node="merge"
+            android:stopWithTask="false"
+            android:foregroundServiceType="location"
+            android:exported="false" />
 
         <provider
             android:name="androidx.core.content.FileProvider"
