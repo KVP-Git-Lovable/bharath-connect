@@ -37,13 +37,16 @@
              swiped from Recents and is typed as a location foreground service,
              regardless of what the plugin's own library manifest declares (that
              manifest isn't inspectable in this build environment, so this pins
-             the behavior explicitly instead of relying on it by chance). -->
+             the behavior explicitly instead of relying on it by chance).
+             exported is deliberately left unset here — the library declares
+             exported="true" and there's no reason from this change to flip
+             that, so tools:node="merge" lets its existing value stand instead
+             of forcing a tools:replace for an attribute we don't need to touch. -->
         <service
             android:name="com.equimaps.capacitor_background_geolocation.BackgroundGeolocationService"
             tools:node="merge"
             android:stopWithTask="false"
-            android:foregroundServiceType="location"
-            android:exported="false" />
+            android:foregroundServiceType="location" />
 
         <provider
             android:name="androidx.core.content.FileProvider"
