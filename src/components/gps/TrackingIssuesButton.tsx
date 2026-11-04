@@ -28,7 +28,7 @@ interface IssueBucket {
 
 interface TrackerEventRow {
   event: string;
-  details: Record<string, any> | null;
+  details: any;
   platform: string | null;
   occurred_at: string;
 }
@@ -60,7 +60,7 @@ function countLabel(n: number, event: string): string {
   return RATE_LIMITED_EVENTS.has(event) ? `at least ${times}` : times;
 }
 
-function isDegraded(details: Record<string, any> | null): boolean {
+function isDegraded(details: any): boolean {
   if (!details) return false;
   // permission_status is logged from two call sites with two different
   // detail shapes (the full native power status object, or a smaller
@@ -89,7 +89,7 @@ function classify(rows: TrackerEventRow[]): IssueBucket[] {
       title: "Location permission or settings degraded",
       detail: `${countLabel(degraded.length, "permission_status")} — device location, precise location, background access, or the battery exemption was off`,
       severity: "high",
-      latest: degraded[0].occurred_at,
+      latest: degraded[0]!.occurred_at,
     });
   }
 
@@ -131,7 +131,7 @@ function classify(rows: TrackerEventRow[]): IssueBucket[] {
           : `Got stuck at ${stepLabel}`
       } (${attempts} time${attempts === 1 ? "" : "s"}), but tracking never started afterward — the app was likely backgrounded or killed before setup finished. Ask them to reopen the app and finish granting permissions.`,
       severity: "high",
-      latest: (setupRedirects[0] ?? setupStarted[0]).occurred_at,
+      latest: (setupRedirects[0] ?? setupStarted[0])!.occurred_at,
     });
   }
 
@@ -146,7 +146,7 @@ function classify(rows: TrackerEventRow[]): IssueBucket[] {
       title: "Location undetectable while tracking was active",
       detail: `${totalMin} total minute${totalMin === 1 ? "" : "s"} without a fix, across ${countLabel(silence.length, "watcher_silence")}`,
       severity: "high",
-      latest: silence[0].occurred_at,
+      latest: silence[0]!.occurred_at,
     });
   }
 
@@ -160,7 +160,7 @@ function classify(rows: TrackerEventRow[]): IssueBucket[] {
       title: "App appears to have stopped tracking while backgrounded",
       detail: `${countLabel(kills.length, "resume_recovery")} — Android likely force-stopped or killed the app (Android gives no direct kill signal; this is inferred from a long silence that only cleared on reopen)`,
       severity: "high",
-      latest: kills[0].occurred_at,
+      latest: kills[0]!.occurred_at,
     });
   }
 
@@ -168,14 +168,14 @@ function classify(rows: TrackerEventRow[]): IssueBucket[] {
     ["watcher_error", "watcher_register_failed", "probe_failed"].includes(r.event)
   );
   if (errors.length > 0) {
-    const latestMsg = errors[0].details?.message ?? errors[0].details?.reason;
+    const latestMsg = errors[0]!.details?.message ?? errors[0]!.details?.reason;
     buckets.push({
       key: "errors",
       icon: AlertTriangle,
       title: "Location service errors",
-      detail: `${countLabel(errors.length, errors[0].event)}${latestMsg ? ` — latest: "${String(latestMsg).slice(0, 80)}"` : ""}`,
+      detail: `${countLabel(errors.length, errors[0]!.event)}${latestMsg ? ` — latest: "${String(latestMsg).slice(0, 80)}"` : ""}`,
       severity: "medium",
-      latest: errors[0].occurred_at,
+      latest: errors[0]!.occurred_at,
     });
   }
 
@@ -188,7 +188,7 @@ function classify(rows: TrackerEventRow[]): IssueBucket[] {
       title: "GPS points could not be saved",
       detail: `${totalPoints} point${totalPoints === 1 ? "" : "s"} permanently lost — distance for that time is missing`,
       severity: "high",
-      latest: lost[0].occurred_at,
+      latest: lost[0]!.occurred_at,
     });
   }
 
@@ -201,7 +201,7 @@ function classify(rows: TrackerEventRow[]): IssueBucket[] {
       title: "Points delayed syncing (recovered automatically)",
       detail: `${totalPoints} point${totalPoints === 1 ? "" : "s"} — queued and retried, not lost`,
       severity: "low",
-      latest: delayed[0].occurred_at,
+      latest: delayed[0]!.occurred_at,
     });
   }
 
@@ -215,7 +215,7 @@ function classify(rows: TrackerEventRow[]): IssueBucket[] {
         .map((r) => `${r.details?.date ?? "?"}: ${r.details?.remaining ?? "?"} point(s) still pending at checkout`)
         .join("; "),
       severity: "medium",
-      latest: checkout[0].occurred_at,
+      latest: checkout[0]!.occurred_at,
     });
   }
 
