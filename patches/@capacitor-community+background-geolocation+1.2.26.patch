@@ -363,7 +363,7 @@ diff --git a/node_modules/@capacitor-community/background-geolocation/android/sr
      }
  
      // Some devices allow a foreground service to outlive the application's main
-@@ -57,6 +305,18 @@
+@@ -57,6 +305,20 @@
              watcher.client.removeLocationUpdates(watcher.locationCallback);
          }
          watchers = new HashSet<Watcher>();
@@ -379,10 +379,12 @@ diff --git a/node_modules/@capacitor-community/background-geolocation/android/sr
 +            startHeadless();
 +            return false;
 +        }
++        stopHeadless();
++        stopForeground(true);
          stopSelf();
          return false;
      }
-@@ -75,27 +335,42 @@
+@@ -75,27 +337,42 @@
          void addWatcher(
                  final String id,
                  Notification backgroundNotification,
@@ -435,7 +437,7 @@ diff --git a/node_modules/@capacitor-community/background-geolocation/android/sr
                  }
                  @Override
                  public void onLocationAvailability(LocationAvailability availability) {
-@@ -105,6 +380,12 @@
+@@ -105,6 +382,12 @@
                  }
              };
  
@@ -448,7 +450,7 @@ diff --git a/node_modules/@capacitor-community/background-geolocation/android/sr
              Watcher watcher = new Watcher();
              watcher.id = id;
              watcher.client = client;
-@@ -113,32 +394,33 @@
+@@ -113,32 +396,33 @@
              watcher.backgroundNotification = backgroundNotification;
              watchers.add(watcher);
  
@@ -507,7 +509,7 @@ diff --git a/node_modules/@capacitor-community/background-geolocation/android/sr
              }
          }
  
-@@ -147,7 +429,9 @@
+@@ -147,7 +431,9 @@
                  if (watcher.id.equals(id)) {
                      watcher.client.removeLocationUpdates(watcher.locationCallback);
                      watchers.remove(watcher);
@@ -518,7 +520,7 @@ diff --git a/node_modules/@capacitor-community/background-geolocation/android/sr
                          stopForeground(true);
                      }
                      return;
-@@ -169,7 +453,11 @@
+@@ -169,7 +455,11 @@
          }
  
          void stopService() {
