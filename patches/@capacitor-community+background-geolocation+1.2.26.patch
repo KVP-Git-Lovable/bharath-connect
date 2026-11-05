@@ -1,210 +1,38 @@
-diff --git a/node_modules/@capacitor-community/background-geolocation/src/main/java/com/equimaps/capacitor_background_geolocation/BackgroundGeolocation.java b/node_modules/@capacitor-community/background-geolocation/src/main/java/com/equimaps/capacitor_background_geolocation/BackgroundGeolocation.java
-new file mode 100644
---- /dev/null
-+++ b/node_modules/@capacitor-community/background-geolocation/src/main/java/com/equimaps/capacitor_background_geolocation/BackgroundGeolocation.java
-@@ -0,0 +1,401 @@
-+package com.equimaps.capacitor_background_geolocation;
-+
-+import android.Manifest;
-+import android.app.Notification;
-+import android.app.NotificationChannel;
-+import android.app.NotificationManager;
-+import android.graphics.Color;
-+import android.app.PendingIntent;
-+import android.content.BroadcastReceiver;
-+import android.content.ComponentName;
-+import android.content.Context;
-+import android.content.Intent;
-+import android.content.IntentFilter;
-+import android.content.ServiceConnection;
-+import android.content.pm.PackageManager;
-+import android.location.Location;
-+import android.location.LocationManager;
-+import android.net.Uri;
-+import android.os.Build;
-+import android.os.IBinder;
-+import android.provider.Settings;
-+
+diff --git a/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/BackgroundGeolocation.java b/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/BackgroundGeolocation.java
+--- a/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/BackgroundGeolocation.java
++++ b/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/BackgroundGeolocation.java
+@@ -20,6 +20,7 @@
+ import android.os.IBinder;
+ import android.provider.Settings;
+ 
 +import com.getcapacitor.JSArray;
-+import com.getcapacitor.JSObject;
-+import com.getcapacitor.Logger;
-+import com.getcapacitor.PermissionState;
-+import com.getcapacitor.Plugin;
-+import com.getcapacitor.PluginCall;
-+import com.getcapacitor.PluginMethod;
-+import com.getcapacitor.annotation.CapacitorPlugin;
-+import com.getcapacitor.annotation.Permission;
-+import com.getcapacitor.annotation.PermissionCallback;
-+import com.google.android.gms.location.LocationServices;
-+import com.google.android.gms.tasks.OnSuccessListener;
-+
-+import org.json.JSONObject;
-+
-+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
-+
-+@CapacitorPlugin(
-+        name = "BackgroundGeolocation",
-+        permissions = {
-+                @Permission(
-+                        strings = {
-+                                Manifest.permission.ACCESS_COARSE_LOCATION,
-+                                Manifest.permission.ACCESS_FINE_LOCATION
-+                        },
-+                        alias = "location"
-+                )
-+        }
-+)
-+public class BackgroundGeolocation extends Plugin {
-+    private BackgroundGeolocationService.LocalBinder service = null;
-+    private Boolean stoppedWithoutPermissions = false;
-+
-+    private void fetchLastLocation(PluginCall call) {
+ import com.getcapacitor.JSObject;
+ import com.getcapacitor.Logger;
+ import com.getcapacitor.PermissionState;
+@@ -156,11 +157,18 @@
+ 
+             backgroundNotification = builder.build();
+         }
 +        try {
-+            LocationServices.getFusedLocationProviderClient(
-+                    getContext()
-+            ).getLastLocation().addOnSuccessListener(
-+                    getActivity(),
-+                    new OnSuccessListener<Location>() {
-+                        @Override
-+                        public void onSuccess(Location location) {
-+                            if (location != null) {
-+                                call.resolve(formatLocation(location));
-+                            }
-+                        }
-+                    }
-+            );
-+        } catch (SecurityException ignore) {}
-+    }
-+
-+    @PluginMethod(returnType = PluginMethod.RETURN_CALLBACK)
-+    public void addWatcher(final PluginCall call) {
-+        if (service == null) {
-+            call.reject("Service not running.");
-+            return;
-+        }
-+        call.setKeepAlive(true);
-+
-+        if (getPermissionState("location") != PermissionState.GRANTED) {
-+            if (call.getBoolean("requestPermissions", true)) {
-+                requestPermissionForAlias("location", call, "locationPermissionsCallback");
-+            } else {
-+                call.reject("Permission denied.", "NOT_AUTHORIZED");
-+            }
-+        } else if (!isLocationEnabled(getContext())) {
-+            call.reject("Location services disabled.", "NOT_AUTHORIZED");
-+        }
-+        if (call.getBoolean("stale", false)) {
-+            fetchLastLocation(call);
-+        }
-+        Notification backgroundNotification = null;
-+        String backgroundMessage = call.getString("backgroundMessage");
-+
-+        if (backgroundMessage != null) {
-+            Notification.Builder builder = new Notification.Builder(getContext())
-+                    .setContentTitle(
-+                            call.getString(
-+                                "backgroundTitle",
-+                                "Using your location"
-+                            )
-+                    )
-+                    .setContentText(backgroundMessage)
-+                    .setOngoing(true)
-+                    .setPriority(Notification.PRIORITY_HIGH)
-+                    .setWhen(System.currentTimeMillis());
-+
-+            try {
-+                String name = getAppString(
-+                        "capacitor_background_geolocation_notification_icon",
-+                        "mipmap/ic_launcher"
-+                );
-+                String[] parts = name.split("/");
-+                // It is actually necessary to set a valid icon for the notification to behave
-+                // correctly when tapped. If there is no icon specified, tapping it will open the
-+                // app's settings, rather than bringing the application to the foreground.
-+                builder.setSmallIcon(
-+                        getAppResourceIdentifier(parts[1], parts[0])
-+                );
-+            } catch (Exception e) {
-+                Logger.error("Could not set notification icon", e);
-+            }
-+
-+            try {
-+                String color = getAppString(
-+                        "capacitor_background_geolocation_notification_color",
-+                        null
-+                );
-+                if (color != null) {
-+                    builder.setColor(Color.parseColor(color));
-+                }
-+            } catch (Exception e) {
-+                Logger.error("Could not set notification color", e);
-+            }
-+
-+            Intent launchIntent = getContext().getPackageManager().getLaunchIntentForPackage(
-+                    getContext().getPackageName()
-+            );
-+            if (launchIntent != null) {
-+                launchIntent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-+                builder.setContentIntent(
-+                        PendingIntent.getActivity(
-+                                getContext(),
-+                                0,
-+                                launchIntent,
-+                                PendingIntent.FLAG_CANCEL_CURRENT | PendingIntent.FLAG_IMMUTABLE
-+                        )
-+                );
-+            }
-+
-+            // Set the Channel ID for Android O.
-+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-+                builder.setChannelId(BackgroundGeolocationService.class.getPackage().getName());
-+            }
-+
-+            backgroundNotification = builder.build();
-+        }
-+        try {
-+        service.addWatcher(
-+                call.getCallbackId(),
-+                backgroundNotification,
+         service.addWatcher(
+                 call.getCallbackId(),
+                 backgroundNotification,
+-                call.getFloat("distanceFilter", 0f)
 +                call.getFloat("distanceFilter", 0f),
 +                call.getInt("interval", 1000),
 +                call.getInt("fastestInterval", 1000),
 +                call.getInt("maxWaitTime", 1000)
-+        );
+         );
 +        } catch (Exception e) {
 +            call.reject("Could not start background location: " + e.getMessage(), "BACKGROUND_START_FAILED", e);
 +        }
-+    }
-+
-+    @PermissionCallback
-+    private void locationPermissionsCallback(PluginCall call) {
-+
-+        if (getPermissionState("location") != PermissionState.GRANTED) {
-+            call.reject("User denied location permission", "NOT_AUTHORIZED");
-+            return;
-+        }
-+        if (call.getBoolean("stale", false)) {
-+            fetchLastLocation(call);
-+        }
-+        if (service != null) {
-+            service.onPermissionsGranted();
-+            // The handleOnResume method will now be called, and we don't need it to call
-+            // service.onPermissionsGranted again so we reset this flag.
-+            stoppedWithoutPermissions = false;
-+        }
-+    }
-+
-+    @PluginMethod()
-+    public void removeWatcher(PluginCall call) {
-+        String callbackId = call.getString("id");
-+        if (callbackId == null) {
-+            call.reject("Missing id.");
-+            return;
-+        }
-+        service.removeWatcher(callbackId);
-+        PluginCall savedCall = getBridge().getSavedCall(callbackId);
-+        if (savedCall != null) {
-+            savedCall.release(getBridge());
+     }
+ 
+     @PermissionCallback
+@@ -192,6 +200,52 @@
+         PluginCall savedCall = getBridge().getSavedCall(callbackId);
+         if (savedCall != null) {
+             savedCall.release(getBridge());
 +        }
 +        call.resolve();
 +    }
@@ -251,207 +79,41 @@ new file mode 100644
 +        String token = call.getString("token");
 +        if (token != null) {
 +            GpsBufferJournal.ack(getContext(), token);
-+        }
-+        call.resolve();
-+    }
-+
-+    @PluginMethod()
-+    public void openSettings(PluginCall call) {
-+        Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
-+        Uri uri = Uri.fromParts("package", getContext().getPackageName(), null);
-+        intent.setData(uri);
-+        getContext().startActivity(intent);
-+        call.resolve();
-+    }
-+
-+    // Checks if device-wide location services are disabled
-+    private static Boolean isLocationEnabled(Context context) {
-+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-+            LocationManager lm = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
-+            return lm != null && lm.isLocationEnabled();
-+        } else {
-+            return (
-+                    Settings.Secure.getInt(
-+                            context.getContentResolver(),
-+                            Settings.Secure.LOCATION_MODE,
-+                            Settings.Secure.LOCATION_MODE_OFF
-+                    ) != Settings.Secure.LOCATION_MODE_OFF
-+            );
-+        }
-+    }
-+
-+    private static JSObject formatLocation(Location location) {
-+        JSObject obj = new JSObject();
-+        obj.put("latitude", location.getLatitude());
-+        obj.put("longitude", location.getLongitude());
-+        // The docs state that all Location objects have an accuracy, but then why is there a
-+        // hasAccuracy method? Better safe than sorry.
-+        obj.put("accuracy", location.hasAccuracy() ? location.getAccuracy() : JSONObject.NULL);
-+        obj.put("altitude", location.hasAltitude() ? location.getAltitude() : JSONObject.NULL);
-+        if (Build.VERSION.SDK_INT >= 26 && location.hasVerticalAccuracy()) {
-+            obj.put("altitudeAccuracy", location.getVerticalAccuracyMeters());
-+        } else {
-+            obj.put("altitudeAccuracy", JSONObject.NULL);
-+        }
-+        // In addition to mocking locations in development, Android allows the
-+        // installation of apps which have the power to simulate location
-+        // readings in other apps.
-+        obj.put("simulated", location.isFromMockProvider());
-+        obj.put("speed", location.hasSpeed() ? location.getSpeed() : JSONObject.NULL);
-+        obj.put("bearing", location.hasBearing() ? location.getBearing() : JSONObject.NULL);
-+        obj.put("time", location.getTime());
-+        return obj;
-+    }
-+
-+    // Receives messages from the service.
-+    private class ServiceReceiver extends BroadcastReceiver {
-+        @Override
-+        public void onReceive(Context context, Intent intent) {
-+            String id = intent.getStringExtra("id");
-+            PluginCall call = getBridge().getSavedCall(id);
-+            if (call == null) {
-+                return;
-+            }
-+            Location location = intent.getParcelableExtra("location");
-+            if (location != null) {
-+                call.resolve(formatLocation(location));
-+            } else {
-+                Logger.debug("No locations received");
-+            }
-+        }
-+    }
-+
-+    // Gets the identifier of the app's resource by name, returning 0 if not found.
-+    private int getAppResourceIdentifier(String name, String defType) {
-+        return getContext().getResources().getIdentifier(
-+                name,
-+                defType,
-+                getContext().getPackageName()
-+        );
-+    }
-+
-+    // Gets a string from the app's strings.xml file, resorting to a fallback if it is not defined.
-+    private String getAppString(String name, String fallback) {
-+        int id = getAppResourceIdentifier(name, "string");
-+        return id == 0 ? fallback : getContext().getString(id);
-+    }
-+
-+    @Override
-+    public void load() {
-+        super.load();
-+
-+        // Android O requires a Notification Channel.
-+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-+            NotificationManager manager = (NotificationManager) getContext().getSystemService(
-+                    Context.NOTIFICATION_SERVICE
-+            );
-+            NotificationChannel channel = new NotificationChannel(
-+                    BackgroundGeolocationService.class.getPackage().getName(),
-+                    getAppString(
-+                            "capacitor_background_geolocation_notification_channel_name",
-+                            "Background Tracking"
-+                    ),
-+                    NotificationManager.IMPORTANCE_DEFAULT
-+            );
-+            channel.enableLights(false);
-+            channel.enableVibration(false);
-+            channel.setSound(null, null);
-+            manager.createNotificationChannel(channel);
-+        }
-+
-+        this.getContext().bindService(
-+                new Intent(this.getContext(), BackgroundGeolocationService.class),
-+                new ServiceConnection() {
-+                    @Override
-+                    public void onServiceConnected(ComponentName name, IBinder binder) {
-+                        BackgroundGeolocation.this.service = (BackgroundGeolocationService.LocalBinder) binder;
-+                    }
-+
-+                    @Override
-+                    public void onServiceDisconnected(ComponentName name) {
-+                    }
-+                },
-+                Context.BIND_AUTO_CREATE
-+        );
-+
-+        LocalBroadcastManager.getInstance(this.getContext()).registerReceiver(
-+                new ServiceReceiver(),
-+                new IntentFilter(BackgroundGeolocationService.ACTION_BROADCAST)
-+        );
-+    }
-+
-+    @Override
-+    protected void handleOnResume() {
-+        if (service != null) {
-+            if (stoppedWithoutPermissions && getPermissionState("location") == PermissionState.GRANTED) {
-+                service.onPermissionsGranted();
-+            }
-+        }
-+        super.handleOnResume();
-+    }
-+
-+    @Override
-+    protected void handleOnPause() {
-+        stoppedWithoutPermissions = getPermissionState("location") != PermissionState.GRANTED;
-+        super.handleOnPause();
-+    }
-+
-+    @Override
-+    protected void handleOnDestroy() {
-+        if (service != null) {
-+            service.stopService();
-+        }
-+        super.handleOnDestroy();
-+    }
-+}
-diff --git a/node_modules/@capacitor-community/background-geolocation/src/main/java/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService.java b/node_modules/@capacitor-community/background-geolocation/src/main/java/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService.java
-new file mode 100644
---- /dev/null
-+++ b/node_modules/@capacitor-community/background-geolocation/src/main/java/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService.java
-@@ -0,0 +1,425 @@
-+package com.equimaps.capacitor_background_geolocation;
-+
+         }
+         call.resolve();
+     }
+diff --git a/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService.java b/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService.java
+--- a/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService.java
++++ b/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService.java
+@@ -1,7 +1,13 @@
+ package com.equimaps.capacitor_background_geolocation;
+ 
 +import android.Manifest;
-+import android.app.Notification;
+ import android.app.Notification;
 +import android.app.NotificationChannel;
 +import android.app.NotificationManager;
 +import android.app.PendingIntent;
-+import android.app.Service;
+ import android.app.Service;
 +import android.content.SharedPreferences;
 +import android.content.pm.PackageManager;
-+import android.content.Intent;
-+import android.content.pm.ServiceInfo;
-+import android.location.Location;
-+import android.os.Binder;
-+import android.os.Build;
-+import android.os.IBinder;
-+
-+import com.getcapacitor.Logger;
-+import com.google.android.gms.location.FusedLocationProviderClient;
-+import com.google.android.gms.location.LocationAvailability;
-+import com.google.android.gms.location.LocationCallback;
-+import com.google.android.gms.location.LocationRequest;
-+import com.google.android.gms.location.LocationResult;
-+import com.google.android.gms.location.LocationServices;
-+
+ import android.content.Intent;
+ import android.content.pm.ServiceInfo;
+ import android.location.Location;
+@@ -17,7 +23,10 @@
+ import com.google.android.gms.location.LocationResult;
+ import com.google.android.gms.location.LocationServices;
+ 
 +import org.json.JSONObject;
 +
-+import java.util.HashSet;
+ import java.util.HashSet;
 +import java.util.UUID;
-+
-+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
-+
-+// A bound and started service that is promoted to a foreground service
-+// (showing a persistent notification) when the first background watcher is
-+// added, and demoted when the last background watcher is removed.
-+public class BackgroundGeolocationService extends Service {
-+    static final String ACTION_BROADCAST = (
-+            BackgroundGeolocationService.class.getPackage().getName() + ".broadcast"
-+    );
-+    private final IBinder binder = new LocalBinder();
-+
-+    // Must be unique for this application.
-+    private static final int NOTIFICATION_ID = 28351;
+ 
+ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+ 
+@@ -32,6 +41,49 @@
+ 
+     // Must be unique for this application.
+     private static final int NOTIFICATION_ID = 28351;
 +    public static final String ACTION_RECOVER = "jovo.gps.RECOVER";
 +
 +    // ---- Native observation buffer (JS-independence hardening) ----
@@ -495,19 +157,13 @@ new file mode 100644
 +            // Buffering must never break acquisition.
 +        }
 +    }
-+
-+    private class Watcher {
-+        public String id;
-+        public FusedLocationProviderClient client;
-+        public LocationRequest locationRequest;
-+        public LocationCallback locationCallback;
-+        public Notification backgroundNotification;
-+    }
-+    private HashSet<Watcher> watchers = new HashSet<Watcher>();
-+
-+    @Override
-+    public IBinder onBind(Intent intent) {
-+        return binder;
+ 
+     private class Watcher {
+         public String id;
+@@ -45,6 +97,174 @@
+     @Override
+     public IBinder onBind(Intent intent) {
+         return binder;
 +    }
 +
 +    // ---- Restart / headless recording (reliability hardening) ----
@@ -676,18 +332,13 @@ new file mode 100644
 +            }
 +            s.stopSelf();
 +        }});
-+    }
-+
-+    // Some devices allow a foreground service to outlive the application's main
-+    // activity, leading to nasty crashes as reported in issue #59. If we learn
-+    // that the application has been killed, all watchers are stopped and the
-+    // service is terminated immediately.
-+    @Override
-+    public boolean onUnbind(Intent intent) {
-+        for (Watcher watcher : watchers) {
-+            watcher.client.removeLocationUpdates(watcher.locationCallback);
-+        }
-+        watchers = new HashSet<Watcher>();
+     }
+ 
+     // Some devices allow a foreground service to outlive the application's main
+@@ -57,6 +277,14 @@
+             watcher.client.removeLocationUpdates(watcher.locationCallback);
+         }
+         watchers = new HashSet<Watcher>();
 +        if (isDayOpen(this) && hasLocationPermission()) {
 +            // App UI went away mid-day (e.g. swiped from Recents): keep
 +            // recording natively instead of stopping. No broadcasts are sent
@@ -696,38 +347,30 @@ new file mode 100644
 +            startHeadless();
 +            return false;
 +        }
-+        stopSelf();
-+        return false;
-+    }
-+
-+    Notification getNotification() {
-+        for (Watcher watcher : watchers) {
-+            if (watcher.backgroundNotification != null) {
-+                return watcher.backgroundNotification;
-+            }
-+        }
-+        return null;
-+    }
-+
-+    // Handles requests from the activity.
-+    public class LocalBinder extends Binder {
-+        void addWatcher(
-+                final String id,
-+                Notification backgroundNotification,
+         stopSelf();
+         return false;
+     }
+@@ -75,27 +303,42 @@
+         void addWatcher(
+                 final String id,
+                 Notification backgroundNotification,
+-                float distanceFilter
 +                float distanceFilter,
 +                long interval,
 +                long fastestInterval,
 +                long maxWaitTime
-+        ) {
+         ) {
 +            // Promote synchronously while the Activity is visible, before
 +            // acquisition; onStartCommand alone leaves a backgrounding race.
 +            if (backgroundNotification != null && !promoteForeground(backgroundNotification)) {
 +                throw new IllegalStateException("Location foreground service could not start");
 +            }
-+            FusedLocationProviderClient client = LocationServices.getFusedLocationProviderClient(
-+                    BackgroundGeolocationService.this
-+            );
-+            LocationRequest locationRequest = new LocationRequest();
+             FusedLocationProviderClient client = LocationServices.getFusedLocationProviderClient(
+                     BackgroundGeolocationService.this
+             );
+             LocationRequest locationRequest = new LocationRequest();
+-            locationRequest.setMaxWaitTime(1000);
+-            locationRequest.setInterval(1000);
 +            // Configurable acquisition cadence (defaults preserve upstream's
 +            // 1000ms behavior). maxWaitTime > interval enables fused-location
 +            // batched delivery so the radio can duty-cycle between batches.
@@ -735,12 +378,19 @@ new file mode 100644
 +            locationRequest.setMaxWaitTime(maxWaitTime);
 +            locationRequest.setInterval(interval);
 +            locationRequest.setFastestInterval(fastestInterval);
-+            locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-+            locationRequest.setSmallestDisplacement(distanceFilter);
-+
-+            LocationCallback callback = new LocationCallback(){
-+                @Override
-+                public void onLocationResult(LocationResult locationResult) {
+             locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+             locationRequest.setSmallestDisplacement(distanceFilter);
+ 
+             LocationCallback callback = new LocationCallback(){
+                 @Override
+                 public void onLocationResult(LocationResult locationResult) {
+-                    Location location = locationResult.getLastLocation();
+-                    Intent intent = new Intent(ACTION_BROADCAST);
+-                    intent.putExtra("location", location);
+-                    intent.putExtra("id", id);
+-                    LocalBroadcastManager.getInstance(
+-                            getApplicationContext()
+-                    ).sendBroadcast(intent);
 +                    // Preserve every batched fix, not only the last one.
 +                    // The existing JS pipeline still owns capture filtering.
 +                    for (Location location : locationResult.getLocations()) {
@@ -750,29 +400,29 @@ new file mode 100644
 +                        intent.putExtra("id", id);
 +                        LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
 +                    }
-+                }
-+                @Override
-+                public void onLocationAvailability(LocationAvailability availability) {
-+                    if (!availability.isLocationAvailable()) {
-+                        Logger.debug("Location not available");
-+                    }
-+                }
-+            };
-+
+                 }
+                 @Override
+                 public void onLocationAvailability(LocationAvailability availability) {
+@@ -105,6 +348,12 @@
+                 }
+             };
+ 
 +            getApplicationContext()
 +                    .getSharedPreferences(NATIVE_HEALTH_PREFS, MODE_PRIVATE)
 +                    .edit()
 +                    .putLong("serviceStartedAt", System.currentTimeMillis())
 +                    .apply();
 +
-+            Watcher watcher = new Watcher();
-+            watcher.id = id;
-+            watcher.client = client;
-+            watcher.locationRequest = locationRequest;
-+            watcher.locationCallback = callback;
-+            watcher.backgroundNotification = backgroundNotification;
-+            watchers.add(watcher);
-+
+             Watcher watcher = new Watcher();
+             watcher.id = id;
+             watcher.client = client;
+@@ -113,32 +362,27 @@
+             watcher.backgroundNotification = backgroundNotification;
+             watchers.add(watcher);
+ 
+-            // According to Android Studio, this method can throw a Security Exception if
+-            // permissions are not yet granted. Rather than check the permissions, which is fiddly,
+-            // we simply ignore the exception.
 +            // Become a *started* service too, so START_STICKY applies and
 +            // Android restarts us after a memory-pressure / OEM kill.
 +            if (isDayOpen(BackgroundGeolocationService.this)) {
@@ -783,7 +433,29 @@ new file mode 100644
 +                }
 +            }
 +
-+            try {
+             try {
+-                watcher.client.requestLocationUpdates(
+-                        watcher.locationRequest,
+-                        watcher.locationCallback,
+-                        null
+-                );
+-            } catch (SecurityException ignore) {}
+-
+-            // Promote the service to the foreground if necessary.
+-            // Ideally we would only call 'startForeground' if the service is not already
+-            // foregrounded. Unfortunately, 'getForegroundServiceType' was only introduced
+-            // in API level 29 and seems to behave weirdly, as reported in #120. However,
+-            // it appears that 'startForeground' is idempotent, so we just call it repeatedly
+-            // each time a background watcher is added.
+-            if (backgroundNotification != null) {
+-                try {
+-                    // This method has been known to fail due to weird
+-                    // permission bugs, so we prevent any exceptions from
+-                    // crashing the app. See issue #86.
+-                    startForeground(NOTIFICATION_ID, backgroundNotification);
+-                } catch (Exception exception) {
+-                    Logger.error("Failed to foreground service", exception);
+-                }
 +                watcher.client.requestLocationUpdates(watcher.locationRequest, watcher.locationCallback, null)
 +                        .addOnSuccessListener(unused -> stopHeadless())
 +                        .addOnFailureListener(e -> {
@@ -794,50 +466,37 @@ new file mode 100644
 +            } catch (SecurityException e) {
 +                watchers.remove(watcher);
 +                throw e;
-+            }
-+        }
-+
-+        void removeWatcher(String id) {
-+            for (Watcher watcher : watchers) {
-+                if (watcher.id.equals(id)) {
-+                    watcher.client.removeLocationUpdates(watcher.locationCallback);
-+                    watchers.remove(watcher);
+             }
+         }
+ 
+@@ -147,7 +391,9 @@
+                 if (watcher.id.equals(id)) {
+                     watcher.client.removeLocationUpdates(watcher.locationCallback);
+                     watchers.remove(watcher);
+-                    if (getNotification() == null) {
 +                    if (watchers.isEmpty() && isDayOpen(BackgroundGeolocationService.this)) {
 +                        if (promoteForeground(headlessNotification())) startHeadless();
 +                    } else if (getNotification() == null) {
-+                        stopForeground(true);
-+                    }
-+                    return;
-+                }
-+            }
-+        }
-+
-+        void onPermissionsGranted() {
-+            // If permissions were granted while the app was in the background, for example in
-+            // the Settings app, the watchers need restarting.
-+            for (Watcher watcher : watchers) {
-+                watcher.client.removeLocationUpdates(watcher.locationCallback);
-+                watcher.client.requestLocationUpdates(
-+                        watcher.locationRequest,
-+                        watcher.locationCallback,
-+                        null
-+                );
-+            }
-+        }
-+
-+        void stopService() {
+                         stopForeground(true);
+                     }
+                     return;
+@@ -169,7 +415,11 @@
+         }
+ 
+         void stopService() {
+-            BackgroundGeolocationService.this.stopSelf();
 +            // Bridge destruction is not checkout. onUnbind hands an open
 +            // day to native buffering without removing started-service status.
 +            if (!isDayOpen(BackgroundGeolocationService.this)) {
 +                BackgroundGeolocationService.this.stopSelf();
 +            }
-+        }
-+    }
-+}
-diff --git a/node_modules/@capacitor-community/background-geolocation/src/main/java/com/equimaps/capacitor_background_geolocation/GpsBufferJournal.java b/node_modules/@capacitor-community/background-geolocation/src/main/java/com/equimaps/capacitor_background_geolocation/GpsBufferJournal.java
+         }
+     }
+ }
+diff --git a/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/GpsBufferJournal.java b/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/GpsBufferJournal.java
 new file mode 100644
 --- /dev/null
-+++ b/node_modules/@capacitor-community/background-geolocation/src/main/java/com/equimaps/capacitor_background_geolocation/GpsBufferJournal.java
++++ b/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/GpsBufferJournal.java
 @@ -0,0 +1,182 @@
 +package com.equimaps.capacitor_background_geolocation;
 +
