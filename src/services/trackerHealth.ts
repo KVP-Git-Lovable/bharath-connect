@@ -51,7 +51,20 @@ export type TrackerEvent =
   // Device-wide Location is off at the OS level — distinct from a denied
   // app permission; no amount of in-app retry can recover from this, only
   // the user can. Honest-limit reporting, not a bug to work around.
-  | "location_services_disabled";
+  | "location_services_disabled"
+  // A previously-unguarded native call in the permission-prep/watcher-start
+  // chain (startNativeBackground / prepareNativeLocationSettings) never
+  // settled within its timeout — the single highest-value new signal here:
+  // before this, a hang in this chain produced ZERO events, no matter how
+  // many times the app restarted. details.stage identifies which await hung.
+  | "native_start_timeout"
+  // The same chain threw instead of hanging — startNativeBackground's outer
+  // catch previously only did console.warn.
+  | "native_start_error"
+  // A rejection inside a GPS/location-relevant native helper
+  // (nativePermissions.ts) that previously only logged to console.
+  // details.step identifies which helper failed.
+  | "native_permission_error";
 
 /** Don't spam the table: identical events are rate-limited per session. */
 const MIN_GAP_MS: Partial<Record<TrackerEvent, number>> = {
@@ -63,6 +76,7 @@ const MIN_GAP_MS: Partial<Record<TrackerEvent, number>> = {
   permission_status: 30 * 60_000,
   native_health_snapshot: 10 * 60_000,
   location_services_disabled: 10 * 60_000,
+  native_permission_error: 5 * 60_000,
 };
 
 const lastSentAt = new Map<TrackerEvent, number>();

@@ -9,6 +9,53 @@
  */
 
 import type { TrackerEvent } from '@/services/trackerHealth';
+import { withTimeout } from '@/utils/withTimeout';
+
+/**
+ * Best-effort diagnostic log for a rejection inside a GPS/location-relevant
+ * native helper below — these used to be console.warn-only, invisible to
+ * "Check user tracking issues". Fire-and-forget (unlike logBreadcrumb further
+ * down): these fire on ordinary request/response failures, not on the one
+ * guaranteed-to-run-before-a-kill checkpoint that function exists for.
+ */
+function logPermissionError(userId: string | null | undefined, step: string, e: unknown) {
+  void import('@/services/trackerHealth').then(({ logTrackerEvent }) =>
+    logTrackerEvent(userId, 'native_permission_error', {
+      step,
+      message: e instanceof Error ? e.message : String(e),
+    })
+  );
+}
+
+/**
+ * Coordinated, deduped Geolocation.requestPermissions() — the ONLY call site
+ * that should ever invoke it directly. Confirmed bug class (useNativeStartup.ts's
+ * own prior comment documents it): Capacitor's Android bridge abandons one of
+ * the two callbacks when two requestPermissions() calls for the same plugin
+ * overlap, leaving whichever caller lost the race hanging forever with no
+ * timeout above it. useNativeStartup.ts fires this once on app boot;
+ * runPrepareNativeLocationSettings (below) used to fire a second, independent
+ * one shortly after for a user who's already checked in — exactly the
+ * scenario that races. Sharing one in-flight call, timeout-bounded, removes
+ * the race by construction instead of just tolerating its symptom.
+ */
+let locationPermRequestInFlight: Promise<any> | null = null;
+const LOCATION_PERM_REQUEST_TIMEOUT_MS = 60_000; // legitimately waits on a user-facing OS dialog
+
+export function requestLocationPermissionCoordinated(): Promise<any> {
+  if (locationPermRequestInFlight) return locationPermRequestInFlight;
+  locationPermRequestInFlight = (async () => {
+    const { Geolocation } = await import('@capacitor/geolocation');
+    return withTimeout(
+      Geolocation.requestPermissions({ permissions: ['location', 'coarseLocation'] }),
+      LOCATION_PERM_REQUEST_TIMEOUT_MS,
+      'Geolocation.requestPermissions'
+    );
+  })().finally(() => {
+    locationPermRequestInFlight = null;
+  });
+  return locationPermRequestInFlight;
+}
 
 let _isNativeCached: boolean | null = null;
 
@@ -67,47 +114,62 @@ async function getDeviceSettingsPlugin() {
   return registerPlugin<any>('DeviceSettings');
 }
 
-export async function getNativeLocationPowerStatus(): Promise<NativeLocationPowerStatus | null> {
+// Every DeviceSettings.* call below is a thin native bridge method with no
+// guaranteed resolve/reject path (confirmed: Android 10's background-location
+// permission-callback branch in DeviceSettingsPlugin.java can leave its
+// PluginCall permanently unresolved if the OS permission result never
+// arrives). An unguarded await here has no timeout anywhere above it either —
+// TrackingHealthCard.tsx polls getNativeLocationPowerStatus() directly, and
+// nothing wraps that call. 10s is generous margin for a bridge call that is
+// confirmed (DeviceSettingsPlugin.java) to resolve immediately after firing
+// its Settings intent, never waiting on the user's return.
+const NATIVE_BRIDGE_TIMEOUT_MS = 10_000;
+
+export async function getNativeLocationPowerStatus(userId?: string | null): Promise<NativeLocationPowerStatus | null> {
   if (!isNative()) return null;
   try {
     const DeviceSettings = await getDeviceSettingsPlugin();
-    return await DeviceSettings.getLocationPowerStatus();
+    return await withTimeout(DeviceSettings.getLocationPowerStatus(), NATIVE_BRIDGE_TIMEOUT_MS, 'getLocationPowerStatus');
   } catch (e) {
     console.warn('Could not read native location/power status:', e);
+    logPermissionError(userId, 'getLocationPowerStatus', e);
     return null;
   }
 }
 
-export async function requestBatteryOptimizationExemption(): Promise<NativeLocationPowerStatus | null> {
+export async function requestBatteryOptimizationExemption(userId?: string | null): Promise<NativeLocationPowerStatus | null> {
   if (!isNative()) return null;
   try {
     const DeviceSettings = await getDeviceSettingsPlugin();
-    return await DeviceSettings.requestIgnoreBatteryOptimizations();
+    return await withTimeout(DeviceSettings.requestIgnoreBatteryOptimizations(), NATIVE_BRIDGE_TIMEOUT_MS, 'requestBatteryOptimizationExemption');
   } catch (e) {
     console.warn('Could not request battery optimisation exemption:', e);
+    logPermissionError(userId, 'requestBatteryOptimizationExemption', e);
     return null;
   }
 }
 
 /** Open the system Location Services screen (device location on/off). */
-export async function openLocationSettings(): Promise<NativeLocationPowerStatus | null> {
+export async function openLocationSettings(userId?: string | null): Promise<NativeLocationPowerStatus | null> {
   if (!isNative()) return null;
   try {
     const DeviceSettings = await getDeviceSettingsPlugin();
-    return await DeviceSettings.openLocationSettings();
+    return await withTimeout(DeviceSettings.openLocationSettings(), NATIVE_BRIDGE_TIMEOUT_MS, 'openLocationSettings');
   } catch (e) {
     console.warn('Could not open location settings:', e);
+    logPermissionError(userId, 'openLocationSettings', e);
     return null;
   }
 }
 
-export async function requestBackgroundLocationAccess(): Promise<NativeLocationPowerStatus | null> {
+export async function requestBackgroundLocationAccess(userId?: string | null): Promise<NativeLocationPowerStatus | null> {
   if (!isNative()) return null;
   try {
     const DeviceSettings = await getDeviceSettingsPlugin();
-    return await DeviceSettings.requestBackgroundLocation();
+    return await withTimeout(DeviceSettings.requestBackgroundLocation(), NATIVE_BRIDGE_TIMEOUT_MS, 'requestBackgroundLocationAccess');
   } catch (e) {
     console.warn('Could not request background location access:', e);
+    logPermissionError(userId, 'requestBackgroundLocationAccess', e);
     return null;
   }
 }
@@ -210,13 +272,16 @@ async function runPrepareNativeLocationSettings(
   await logBreadcrumb(userId, 'location_setup_started', { forced: force });
 
   try {
-    const { Geolocation } = await import('@capacitor/geolocation');
-    await Geolocation.requestPermissions({ permissions: ['location', 'coarseLocation'] });
+    // Shared/deduped with useNativeStartup.ts's own boot-time request — see
+    // requestLocationPermissionCoordinated's own comment for why calling
+    // Geolocation.requestPermissions() independently here used to race it.
+    await requestLocationPermissionCoordinated();
   } catch (e) {
     console.warn('Foreground location permission request failed:', e);
+    logPermissionError(userId, 'requestPermissions', e);
   }
 
-  const status = await getNativeLocationPowerStatus();
+  const status = await getNativeLocationPowerStatus(userId);
   // Android 13+: the tracking foreground-service notification is invisible
   // until POST_NOTIFICATIONS is granted — request it in the same flow.
   // (A plain permission dialog, not a Settings redirect — safe to keep here.)
@@ -234,7 +299,7 @@ async function runPrepareNativeLocationSettings(
   if (status?.ignoringBatteryOptimizations === false) {
     if (cooldownActive) return status;
     await logBreadcrumb(userId, 'location_setup_redirect', { step: 'battery_exemption', forced: force });
-    const result = await requestBatteryOptimizationExemption();
+    const result = await requestBatteryOptimizationExemption(userId);
     // Only start the cooldown if Android actually confirms it opened a
     // screen — a thrown/failed request shouldn't silently block a retry.
     if (result?.opened) markSettingsRedirect();
@@ -243,11 +308,11 @@ async function runPrepareNativeLocationSettings(
   if (status?.backgroundLocation !== 'granted') {
     if (cooldownActive) return status;
     await logBreadcrumb(userId, 'location_setup_redirect', { step: 'background_location', forced: force });
-    const result = await requestBackgroundLocationAccess();
+    const result = await requestBackgroundLocationAccess(userId);
     if (result?.opened) markSettingsRedirect();
     return result;
   }
-  return getNativeLocationPowerStatus();
+  return getNativeLocationPowerStatus(userId);
 }
 
 /**

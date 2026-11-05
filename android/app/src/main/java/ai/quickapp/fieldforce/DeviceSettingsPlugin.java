@@ -33,6 +33,21 @@ import com.getcapacitor.annotation.PermissionCallback;
     }
 )
 public class DeviceSettingsPlugin extends Plugin {
+    // ---- Android 10 (API 29) backgroundLocation permission-callback fallback ----
+    // requestPermissionForAlias's result reaches us only via
+    // backgroundLocationCallback, invoked by the Capacitor framework from
+    // Activity#onRequestPermissionsResult. If that permission-result
+    // broadcast is ever dropped (e.g. the process is backgrounded/killed
+    // mid-dialog), the callback never fires and the PluginCall — and the
+    // JS-side promise awaiting it — is left permanently pending, with no
+    // timeout anywhere above it in nativePermissions.ts at the time this was
+    // written. Both this set and the callback that reads it run on the main
+    // looper only (permission-result delivery and Handler.postDelayed both
+    // post there), so no synchronization is needed.
+    private final java.util.Set<String> resolvedBackgroundLocationCallIds = new java.util.HashSet<>();
+    private final android.os.Handler mainHandler = new android.os.Handler(android.os.Looper.getMainLooper());
+    private static final long BACKGROUND_LOCATION_CALLBACK_TIMEOUT_MS = 60_000;
+
     private String permissionState(String permission) {
         return ContextCompat.checkSelfPermission(getContext(), permission) == PackageManager.PERMISSION_GRANTED
             ? "granted"
@@ -165,7 +180,19 @@ public class DeviceSettingsPlugin extends Plugin {
         }
 
         if (Build.VERSION.SDK_INT == Build.VERSION_CODES.Q) {
+            final String callbackId = call.getCallbackId();
             requestPermissionForAlias("backgroundLocation", call, "backgroundLocationCallback");
+            mainHandler.postDelayed(() -> {
+                if (resolvedBackgroundLocationCallIds.remove(callbackId)) return; // resolved normally already
+                JSObject result = currentStatus();
+                result.put("opened", false);
+                result.put("timedOut", true);
+                try {
+                    call.resolve(result);
+                } catch (Exception ignored) {
+                    // Already resolved/released through some other path.
+                }
+            }, BACKGROUND_LOCATION_CALLBACK_TIMEOUT_MS);
             return;
         }
 
@@ -174,6 +201,7 @@ public class DeviceSettingsPlugin extends Plugin {
 
     @PermissionCallback
     private void backgroundLocationCallback(PluginCall call) {
+        resolvedBackgroundLocationCallIds.add(call.getCallbackId());
         JSObject result = currentStatus();
         result.put("opened", false);
         call.resolve(result);
