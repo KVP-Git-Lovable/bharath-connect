@@ -22,7 +22,7 @@ public class TrackingRestartPolicyTest {
     @Test public void watchdogCanRestartWithBothExemptions() {
         assertTrue(TrackingRestartPolicy.canStart(true, true, 35, false, true, true, false));
     }
-    @Test public voidBootNeedsBackgroundLocation() {
+    @Test public void bootNeedsBackgroundLocation() {
         assertFalse(TrackingRestartPolicy.canStart(true, true, 35, false, false, false, true));
     }
     @Test public void bootIsStartExemptionWithBackgroundLocation() {
