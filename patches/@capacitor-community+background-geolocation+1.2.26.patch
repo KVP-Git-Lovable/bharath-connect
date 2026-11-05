@@ -110,7 +110,7 @@ diff --git a/node_modules/@capacitor-community/background-geolocation/android/sr
  
  import androidx.localbroadcastmanager.content.LocalBroadcastManager;
  
-@@ -32,6 +41,49 @@
+@@ -32,6 +41,63 @@
  
      // Must be unique for this application.
      private static final int NOTIFICATION_ID = 28351;
@@ -126,6 +126,15 @@ diff --git a/node_modules/@capacitor-community/background-geolocation/android/sr
 +    public static final String NATIVE_HEALTH_PREFS = "gps_native_health";
 +
 +    private void recordNativeFix(Location location) {
++        if (!isDayOpen(this)) {
++            stopHeadless();
++            stopSelf();
++            return;
++        }
++        long callbackAt = System.currentTimeMillis();
++        getSharedPreferences(NATIVE_HEALTH_PREFS, MODE_PRIVATE).edit()
++                .putLong("lastNativeCallbackAt", callbackAt)
++                .putLong("lastRealGpsFixTimestamp", location.getTime()).apply();
 +        try {
 +            JSONObject record = new JSONObject();
 +            record.put("id", UUID.randomUUID().toString());
@@ -140,7 +149,11 @@ diff --git a/node_modules/@capacitor-community/background-geolocation/android/sr
 +            record.put("time", location.getTime());
 +            long persistedAt = System.currentTimeMillis();
 +            record.put("recordedAt", persistedAt);
-+            GpsBufferJournal.append(getApplicationContext(), record);
++            if (!GpsBufferJournal.append(getApplicationContext(), record)) {
++                getSharedPreferences(NATIVE_HEALTH_PREFS, MODE_PRIVATE).edit()
++                        .putString("lastPersistenceFailure", "Native GPS journal write failed").apply();
++                return;
++            }
 +
 +            getApplicationContext()
 +                    .getSharedPreferences(NATIVE_HEALTH_PREFS, MODE_PRIVATE)
@@ -152,6 +165,7 @@ diff --git a/node_modules/@capacitor-community/background-geolocation/android/sr
 +                    // itself, vs. the moment this process durably wrote it.
 +                    .putLong("lastRealGpsFixTimestamp", location.getTime())
 +                    .putLong("lastNativePersistenceTimestamp", persistedAt)
++                    .remove("lastPersistenceFailure")
 +                    .apply();
 +        } catch (Exception ignored) {
 +            // Buffering must never break acquisition.
@@ -160,7 +174,7 @@ diff --git a/node_modules/@capacitor-community/background-geolocation/android/sr
  
      private class Watcher {
          public String id;
-@@ -45,6 +97,174 @@
+@@ -45,6 +111,188 @@
      @Override
      public IBinder onBind(Intent intent) {
          return binder;
@@ -221,12 +235,13 @@ diff --git a/node_modules/@capacitor-community/background-geolocation/android/sr
 +            }
 +            getSharedPreferences(NATIVE_HEALTH_PREFS, MODE_PRIVATE).edit()
 +                    .putLong("lastServiceHeartbeatTimestamp", System.currentTimeMillis())
-+                    .remove("lastForegroundFailure").apply();
++                    .remove("lastForegroundFailure").putBoolean("restartDeferred", false).apply();
 +            return true;
 +        } catch (Exception e) {
 +            Logger.error("Failed to foreground service (restart)", e);
 +            getSharedPreferences(NATIVE_HEALTH_PREFS, MODE_PRIVATE).edit()
-+                    .putString("lastForegroundFailure", e.getClass().getSimpleName() + ": " + e.getMessage()).apply();
++                    .putString("lastForegroundFailure", e.getClass().getSimpleName() + ": " + e.getMessage())
++                    .putBoolean("restartDeferred", true).apply();
 +            return false;
 +        }
 +    }
@@ -253,9 +268,22 @@ diff --git a/node_modules/@capacitor-community/background-geolocation/android/sr
 +            }
 +        };
 +        try {
-+            headlessClient.requestLocationUpdates(req, headlessCallback, null);
-+            getApplicationContext().getSharedPreferences(NATIVE_HEALTH_PREFS, MODE_PRIVATE)
-+                    .edit().putLong("serviceStartedAt", System.currentTimeMillis()).apply();
++            final LocationCallback registration = headlessCallback;
++            headlessClient.requestLocationUpdates(req, registration, android.os.Looper.getMainLooper())
++                    .addOnSuccessListener(unused -> {
++                        if (headlessCallback != registration || !isDayOpen(BackgroundGeolocationService.this)) {
++                            headlessClient.removeLocationUpdates(registration);
++                            return;
++                        }
++                        getSharedPreferences(NATIVE_HEALTH_PREFS, MODE_PRIVATE).edit()
++                                .putLong("serviceStartedAt", System.currentTimeMillis())
++                                .remove("lastHeadlessFailure").apply();
++                    }).addOnFailureListener(e -> {
++                        if (headlessCallback == registration) headlessCallback = null;
++                        getSharedPreferences(NATIVE_HEALTH_PREFS, MODE_PRIVATE).edit()
++                                .putString("lastHeadlessFailure", e.getClass().getSimpleName() + ": " + e.getMessage()).apply();
++                        Logger.error("Failed to register headless location", e);
++                    });
 +        } catch (SecurityException e) {
 +            headlessCallback = null;
 +        }
@@ -293,7 +321,7 @@ diff --git a/node_modules/@capacitor-community/background-geolocation/android/sr
 +                for (Watcher watcher : watchers) {
 +                    watcher.client.removeLocationUpdates(watcher.locationCallback);
 +                    try {
-+                        watcher.client.requestLocationUpdates(watcher.locationRequest, watcher.locationCallback, null)
++                        watcher.client.requestLocationUpdates(watcher.locationRequest, watcher.locationCallback, android.os.Looper.getMainLooper())
 +                                .addOnFailureListener(e -> Logger.error("Failed to recover location watcher", e));
 +                    } catch (SecurityException e) {
 +                        Logger.error("Location permission revoked during recovery", e);
@@ -335,7 +363,7 @@ diff --git a/node_modules/@capacitor-community/background-geolocation/android/sr
      }
  
      // Some devices allow a foreground service to outlive the application's main
-@@ -57,6 +277,14 @@
+@@ -57,6 +305,18 @@
              watcher.client.removeLocationUpdates(watcher.locationCallback);
          }
          watchers = new HashSet<Watcher>();
@@ -343,14 +371,18 @@ diff --git a/node_modules/@capacitor-community/background-geolocation/android/sr
 +            // App UI went away mid-day (e.g. swiped from Recents): keep
 +            // recording natively instead of stopping. No broadcasts are sent
 +            // to the dead WebView, so issue #59 cannot recur.
-+            promoteForeground(headlessNotification());
++            if (!promoteForeground(headlessNotification())) {
++                stopHeadless();
++                stopSelf();
++                return false;
++            }
 +            startHeadless();
 +            return false;
 +        }
          stopSelf();
          return false;
      }
-@@ -75,27 +303,42 @@
+@@ -75,27 +335,42 @@
          void addWatcher(
                  final String id,
                  Notification backgroundNotification,
@@ -403,7 +435,7 @@ diff --git a/node_modules/@capacitor-community/background-geolocation/android/sr
                  }
                  @Override
                  public void onLocationAvailability(LocationAvailability availability) {
-@@ -105,6 +348,12 @@
+@@ -105,6 +380,12 @@
                  }
              };
  
@@ -416,7 +448,7 @@ diff --git a/node_modules/@capacitor-community/background-geolocation/android/sr
              Watcher watcher = new Watcher();
              watcher.id = id;
              watcher.client = client;
-@@ -113,32 +362,27 @@
+@@ -113,32 +394,33 @@
              watcher.backgroundNotification = backgroundNotification;
              watchers.add(watcher);
  
@@ -456,12 +488,18 @@ diff --git a/node_modules/@capacitor-community/background-geolocation/android/sr
 -                } catch (Exception exception) {
 -                    Logger.error("Failed to foreground service", exception);
 -                }
-+                watcher.client.requestLocationUpdates(watcher.locationRequest, watcher.locationCallback, null)
-+                        .addOnSuccessListener(unused -> stopHeadless())
++                watcher.client.requestLocationUpdates(watcher.locationRequest, watcher.locationCallback, android.os.Looper.getMainLooper())
++                        .addOnSuccessListener(unused -> {
++                            if (!watchers.contains(watcher) || !isDayOpen(BackgroundGeolocationService.this)) {
++                                watcher.client.removeLocationUpdates(watcher.locationCallback);
++                                return;
++                            }
++                            stopHeadless();
++                        })
 +                        .addOnFailureListener(e -> {
 +                            Logger.error("Failed to register location watcher", e);
-+                            watchers.remove(watcher);
-+                            if (watchers.isEmpty() && isDayOpen(BackgroundGeolocationService.this)) startHeadless();
++                            boolean wasActive = watchers.remove(watcher);
++                            if (wasActive && watchers.isEmpty() && isDayOpen(BackgroundGeolocationService.this)) startHeadless();
 +                        });
 +            } catch (SecurityException e) {
 +                watchers.remove(watcher);
@@ -469,7 +507,7 @@ diff --git a/node_modules/@capacitor-community/background-geolocation/android/sr
              }
          }
  
-@@ -147,7 +391,9 @@
+@@ -147,7 +429,9 @@
                  if (watcher.id.equals(id)) {
                      watcher.client.removeLocationUpdates(watcher.locationCallback);
                      watchers.remove(watcher);
@@ -480,7 +518,7 @@ diff --git a/node_modules/@capacitor-community/background-geolocation/android/sr
                          stopForeground(true);
                      }
                      return;
-@@ -169,7 +415,11 @@
+@@ -169,7 +453,11 @@
          }
  
          void stopService() {
@@ -497,7 +535,7 @@ diff --git a/node_modules/@capacitor-community/background-geolocation/android/sr
 new file mode 100644
 --- /dev/null
 +++ b/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/GpsBufferJournal.java
-@@ -0,0 +1,182 @@
+@@ -0,0 +1,167 @@
 +package com.equimaps.capacitor_background_geolocation;
 +
 +import android.content.Context;
@@ -567,15 +605,17 @@ new file mode 100644
 +     * caller already runs this under a try/catch. Do not silently discard
 +     * captured fixes just because the WebView has not drained yet.
 +     */
-+    static void append(Context ctx, JSONObject record) {
++    static boolean append(Context ctx, JSONObject record) {
 +        synchronized (LOCK) {
 +            File f = journal(ctx);
 +            try (FileOutputStream out = new FileOutputStream(f, true)) {
 +                out.write((record.toString() + "\n").getBytes(StandardCharsets.UTF_8));
 +                out.flush();
 +                out.getFD().sync();
++                return true;
 +            } catch (IOException e) {
 +                Log.w(TAG, "journal append failed", e);
++                return false;
 +            }
 +        }
 +    }
@@ -592,13 +632,10 @@ new file mode 100644
 +            File existing = findInflight(ctx);
 +            File live = journal(ctx);
 +
-+            if (existing != null) {
-+                if (live.exists()) {
-+                    appendFileTo(live, existing);
-+                    live.delete();
-+                }
-+                return tokenOf(existing);
-+            }
++            // Replay an immutable inflight batch first. Leave the live
++            // journal untouched for the next drain: failed copies must never
++            // delete captured fixes, and retries must not duplicate merges.
++            if (existing != null) return tokenOf(existing);
 +
 +            if (!live.exists() || live.length() == 0) return null;
 +
@@ -665,18 +702,4 @@ new file mode 100644
 +        return n.substring(INFLIGHT_PREFIX.length(), n.length() - INFLIGHT_SUFFIX.length());
 +    }
 +
-+    private static void appendFileTo(File src, File dst) {
-+        try (FileOutputStream out = new FileOutputStream(dst, true);
-+             BufferedReader r = new BufferedReader(new FileReader(src))) {
-+            String line;
-+            while ((line = r.readLine()) != null) {
-+                if (line.isEmpty()) continue;
-+                out.write((line + "\n").getBytes(StandardCharsets.UTF_8));
-+            }
-+            out.flush();
-+            out.getFD().sync();
-+        } catch (IOException e) {
-+            Log.w(TAG, "could not fold journal into inflight", e);
-+        }
-+    }
 +}
