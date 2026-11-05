@@ -7,3 +7,5 @@
 - [x] Modernize `/admin/expenses` UI only, remove duplicate navigation, and preserve all expense behavior
 - [x] Prepare a revised frontend-only Expense Master UI plan and visual options from the supplied references; no backend changes
 - [x] Implement the approved Enterprise Vehicle Master UI in Expense Configuration only; no backend changes
+- [ ] Apply Android foreground-service promotion and permission-aware restart fixes; preserve GPS filters and existing modules
+- [ ] Validate native patch and GPS regressions; new APK and physical-device background/reboot tests required
