@@ -22,17 +22,14 @@ public class TrackingWatchdogWorker extends Worker {
     public Result doWork() {
         Context ctx = getApplicationContext();
         if (!TrackingRestarter.isDayOpen(ctx)) {
+            com.equimaps.capacitor_background_geolocation.BackgroundGeolocationService.onDayClosed();
             TrackingRestarter.cancelWatchdog(ctx);
             return Result.success();
         }
         long now = System.currentTimeMillis();
         TrackingRestarter.prefs(ctx).edit()
                 .putLong("lastWatchdogAt", now)
-                // Proves the restart/heartbeat path itself is alive even on a
-                // day with few real fixes (e.g. a stationary device held below
-                // the displacement filter) — a distinct signal from "a fix
-                // arrived," checked independently by the diagnostics dialog.
-                .putLong("lastServiceHeartbeatTimestamp", now)
+                // A worker running is NOT proof that the location service is alive.
                 .apply();
         if (TrackingRestarter.fixIsStale(ctx)) {
             TrackingRestarter.startService(ctx, "watchdog");
