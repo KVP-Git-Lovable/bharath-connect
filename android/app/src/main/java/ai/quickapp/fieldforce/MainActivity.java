@@ -11,4 +11,19 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(AppUsagePlugin.class);
         super.onCreate(savedInstanceState);
     }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        TrackingRestarter.setAppVisible(true);
+        if (TrackingRestarter.isDayOpen(this)) {
+            TrackingRestarter.startService(this, "activity_resume");
+        }
+    }
+
+    @Override
+    public void onPause() {
+        TrackingRestarter.setAppVisible(false);
+        super.onPause();
+    }
 }

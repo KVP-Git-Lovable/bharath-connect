@@ -292,6 +292,9 @@ public class DeviceSettingsPlugin extends Plugin {
         try {
             if (open) {
                 TrackingRestarter.scheduleWatchdog(ctx);
+                // The JS day-flag update can finish after watcher registration.
+                // Ensure started-service status here too, while the UI is visible.
+                TrackingRestarter.startService(ctx, "day_open");
             } else {
                 TrackingRestarter.cancelWatchdog(ctx);
                 com.equimaps.capacitor_background_geolocation.BackgroundGeolocationService.onDayClosed();
