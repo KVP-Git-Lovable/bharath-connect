@@ -14,17 +14,23 @@ import { withTimeout } from '@/utils/withTimeout';
 /**
  * Best-effort diagnostic log for a rejection inside a GPS/location-relevant
  * native helper below — these used to be console.warn-only, invisible to
- * "Check user tracking issues". Fire-and-forget (unlike logBreadcrumb further
- * down): these fire on ordinary request/response failures, not on the one
- * guaranteed-to-run-before-a-kill checkpoint that function exists for.
+ * "Check user tracking issues". Awaited with a bounded 1.5s race (same
+ * pattern as logBreadcrumb further down) rather than fire-and-forget, so the
+ * insert has a real window to reach the server if the process is killed or
+ * restarted moments after logging; the race keeps a slow/offline network
+ * from delaying the caller indefinitely.
  */
-function logPermissionError(userId: string | null | undefined, step: string, e: unknown) {
-  void import('@/services/trackerHealth').then(({ logTrackerEvent }) =>
-    logTrackerEvent(userId, 'native_permission_error', {
-      step,
-      message: e instanceof Error ? e.message : String(e),
-    })
-  );
+async function logPermissionError(userId: string | null | undefined, step: string, e: unknown): Promise<void> {
+  try {
+    const { logTrackerEvent } = await import('@/services/trackerHealth');
+    await Promise.race([
+      logTrackerEvent(userId, 'native_permission_error', {
+        step,
+        message: e instanceof Error ? e.message : String(e),
+      }),
+      new Promise((resolve) => setTimeout(resolve, 1500)),
+    ]);
+  } catch { /* best-effort only */ }
 }
 
 /**
@@ -41,11 +47,25 @@ function logPermissionError(userId: string | null | undefined, step: string, e: 
  */
 let locationPermRequestInFlight: Promise<any> | null = null;
 const LOCATION_PERM_REQUEST_TIMEOUT_MS = 60_000; // legitimately waits on a user-facing OS dialog
+const LOCATION_PERM_CHECK_TIMEOUT_MS = 10_000; // checkPermissions never shows UI
 
 export function requestLocationPermissionCoordinated(): Promise<any> {
   if (locationPermRequestInFlight) return locationPermRequestInFlight;
   locationPermRequestInFlight = (async () => {
     const { Geolocation } = await import('@capacitor/geolocation');
+    // Check first: when precise location is already granted there is
+    // nothing to request, so never pay the request-dialog/bridge-callback
+    // risk at all. A failed/timed-out check falls through to the request.
+    try {
+      const current = await withTimeout(
+        Geolocation.checkPermissions(),
+        LOCATION_PERM_CHECK_TIMEOUT_MS,
+        'Geolocation.checkPermissions'
+      );
+      if (current?.location === 'granted') return current;
+    } catch (e) {
+      console.warn('Geolocation.checkPermissions failed before request:', e);
+    }
     return withTimeout(
       Geolocation.requestPermissions({ permissions: ['location', 'coarseLocation'] }),
       LOCATION_PERM_REQUEST_TIMEOUT_MS,
@@ -132,7 +152,7 @@ export async function getNativeLocationPowerStatus(userId?: string | null): Prom
     return await withTimeout(DeviceSettings.getLocationPowerStatus(), NATIVE_BRIDGE_TIMEOUT_MS, 'getLocationPowerStatus');
   } catch (e) {
     console.warn('Could not read native location/power status:', e);
-    logPermissionError(userId, 'getLocationPowerStatus', e);
+    await logPermissionError(userId, 'getLocationPowerStatus', e);
     return null;
   }
 }
@@ -144,7 +164,7 @@ export async function requestBatteryOptimizationExemption(userId?: string | null
     return await withTimeout(DeviceSettings.requestIgnoreBatteryOptimizations(), NATIVE_BRIDGE_TIMEOUT_MS, 'requestBatteryOptimizationExemption');
   } catch (e) {
     console.warn('Could not request battery optimisation exemption:', e);
-    logPermissionError(userId, 'requestBatteryOptimizationExemption', e);
+    await logPermissionError(userId, 'requestBatteryOptimizationExemption', e);
     return null;
   }
 }
@@ -157,7 +177,7 @@ export async function openLocationSettings(userId?: string | null): Promise<Nati
     return await withTimeout(DeviceSettings.openLocationSettings(), NATIVE_BRIDGE_TIMEOUT_MS, 'openLocationSettings');
   } catch (e) {
     console.warn('Could not open location settings:', e);
-    logPermissionError(userId, 'openLocationSettings', e);
+    await logPermissionError(userId, 'openLocationSettings', e);
     return null;
   }
 }
@@ -169,7 +189,7 @@ export async function requestBackgroundLocationAccess(userId?: string | null): P
     return await withTimeout(DeviceSettings.requestBackgroundLocation(), NATIVE_BRIDGE_TIMEOUT_MS, 'requestBackgroundLocationAccess');
   } catch (e) {
     console.warn('Could not request background location access:', e);
-    logPermissionError(userId, 'requestBackgroundLocationAccess', e);
+    await logPermissionError(userId, 'requestBackgroundLocationAccess', e);
     return null;
   }
 }
@@ -278,7 +298,7 @@ async function runPrepareNativeLocationSettings(
     await requestLocationPermissionCoordinated();
   } catch (e) {
     console.warn('Foreground location permission request failed:', e);
-    logPermissionError(userId, 'requestPermissions', e);
+    await logPermissionError(userId, 'requestPermissions', e);
   }
 
   const status = await getNativeLocationPowerStatus(userId);
@@ -288,7 +308,7 @@ async function runPrepareNativeLocationSettings(
   if (status?.notificationsEnabled === false) {
     try {
       const DeviceSettings = await getDeviceSettingsPlugin();
-      await DeviceSettings.requestPostNotifications();
+      await withTimeout(DeviceSettings.requestPostNotifications(), NATIVE_BRIDGE_TIMEOUT_MS, 'requestPostNotifications');
     } catch (e) {
       console.warn('Could not request notification permission:', e);
     }
