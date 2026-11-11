@@ -492,6 +492,31 @@ export default function GPSTracking() {
     [gpsStops, activityMarkers]
   );
 
+  // Fallback route for days where real GPS alone is too sparse (e.g. one
+  // fix all day) to draw a line. Combines every timestamped location we
+  // actually have — GPS fixes, detected stops, visit check-ins — in
+  // chronological order. Display only: never feeds distance or the
+  // trajectory engine, and the map only draws this when it has no real
+  // GPS trail to show instead.
+  const extrapolatedPoints = useMemo(() => {
+    const waypoints = [
+      ...gpsPoints.map((p) => ({ lat: p.latitude, lng: p.longitude, timestamp: p.timestamp })),
+      ...gpsStops.map((s) => ({ lat: s.latitude, lng: s.longitude, timestamp: s.timestamp })),
+      ...activityMarkers
+        .filter((a) => a.timestamp)
+        .map((a) => ({ lat: a.lat, lng: a.lng, timestamp: a.timestamp as string })),
+    ].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+    const deduped: { lat: number; lng: number }[] = [];
+    waypoints.forEach((w) => {
+      const prev = deduped[deduped.length - 1];
+      if (!prev || prev.lat !== w.lat || prev.lng !== w.lng) {
+        deduped.push({ lat: w.lat, lng: w.lng });
+      }
+    });
+    return deduped;
+  }, [gpsPoints, gpsStops, activityMarkers]);
+
   // Distance ladder: road-snapped total when routing succeeded, otherwise the
   // validated trajectory distance. Raw unfiltered GPS distance is never used.
   const isRoadDistance = route?.distanceMeters != null;
@@ -857,12 +882,17 @@ export default function GPSTracking() {
                         gpsPoints={gpsPoints}
                         activityMarkers={allMapMarkers}
                         routePath={route?.path ?? null}
+                        extrapolatedPoints={extrapolatedPoints}
                       />
                     </Suspense>
                     <div className="absolute top-2 right-2 z-[400] bg-primary text-primary-foreground text-xs font-semibold px-3 py-1.5 rounded-full shadow-md">
                       Traveled: {totalDistance.toFixed(1)} km
                     </div>
-
+                    {gpsPoints.length <= 1 && extrapolatedPoints.length > 1 && (
+                      <div className="absolute top-11 right-2 z-[400] bg-amber-500 text-white text-[11px] font-medium px-3 py-1 rounded-full shadow-md">
+                        Approximate route (too few GPS fixes)
+                      </div>
+                    )}
                   </>
                 ) : (
                   <div className="h-full w-full flex flex-col items-center justify-center bg-muted/50">
