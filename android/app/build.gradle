@@ -7,8 +7,14 @@ android {
         applicationId "ai.quickapp.fieldforce"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        // Overridable per build (e.g. CI passes -PappVersionCode=<run number>
+        // -PappVersionName=<short sha>) so app_usage_sessions.app_version can
+        // actually tell which build a device is running — it was previously
+        // hardcoded, which made two separate production investigations
+        // unable to confirm whether a reporting user's APK contained a given
+        // fix. Defaults preserve the previous values for a plain local build.
+        versionCode (project.hasProperty('appVersionCode') ? project.appVersionCode.toInteger() : 1)
+        versionName (project.hasProperty('appVersionName') ? project.appVersionName : "1.0")
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
