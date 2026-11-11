@@ -8,7 +8,6 @@ import {
   Outlet,
   Scripts,
   useRouter,
-  type ErrorComponentProps,
 } from "@tanstack/react-router";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -178,7 +177,7 @@ function RootComponent() {
   );
 }
 
-function RootErrorComponent({ error, reset }: ErrorComponentProps) {
+function RootErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   const router = useRouter();
 
   console.error(error);

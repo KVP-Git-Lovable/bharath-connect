@@ -33,21 +33,6 @@ import com.getcapacitor.annotation.PermissionCallback;
     }
 )
 public class DeviceSettingsPlugin extends Plugin {
-    // ---- Android 10 (API 29) backgroundLocation permission-callback fallback ----
-    // requestPermissionForAlias's result reaches us only via
-    // backgroundLocationCallback, invoked by the Capacitor framework from
-    // Activity#onRequestPermissionsResult. If that permission-result
-    // broadcast is ever dropped (e.g. the process is backgrounded/killed
-    // mid-dialog), the callback never fires and the PluginCall — and the
-    // JS-side promise awaiting it — is left permanently pending, with no
-    // timeout anywhere above it in nativePermissions.ts at the time this was
-    // written. Both this set and the callback that reads it run on the main
-    // looper only (permission-result delivery and Handler.postDelayed both
-    // post there), so no synchronization is needed.
-    private final java.util.Set<String> resolvedBackgroundLocationCallIds = new java.util.HashSet<>();
-    private final android.os.Handler mainHandler = new android.os.Handler(android.os.Looper.getMainLooper());
-    private static final long BACKGROUND_LOCATION_CALLBACK_TIMEOUT_MS = 60_000;
-
     private String permissionState(String permission) {
         return ContextCompat.checkSelfPermission(getContext(), permission) == PackageManager.PERMISSION_GRANTED
             ? "granted"
@@ -180,19 +165,7 @@ public class DeviceSettingsPlugin extends Plugin {
         }
 
         if (Build.VERSION.SDK_INT == Build.VERSION_CODES.Q) {
-            final String callbackId = call.getCallbackId();
             requestPermissionForAlias("backgroundLocation", call, "backgroundLocationCallback");
-            mainHandler.postDelayed(() -> {
-                if (resolvedBackgroundLocationCallIds.remove(callbackId)) return; // resolved normally already
-                JSObject result = currentStatus();
-                result.put("opened", false);
-                result.put("timedOut", true);
-                try {
-                    call.resolve(result);
-                } catch (Exception ignored) {
-                    // Already resolved/released through some other path.
-                }
-            }, BACKGROUND_LOCATION_CALLBACK_TIMEOUT_MS);
             return;
         }
 
@@ -201,7 +174,6 @@ public class DeviceSettingsPlugin extends Plugin {
 
     @PermissionCallback
     private void backgroundLocationCallback(PluginCall call) {
-        resolvedBackgroundLocationCallIds.add(call.getCallbackId());
         JSObject result = currentStatus();
         result.put("opened", false);
         call.resolve(result);
@@ -268,51 +240,5 @@ public class DeviceSettingsPlugin extends Plugin {
         // No OEM screen on this device (stock Android) — app details is the
         // closest useful destination.
         openAppSettings(call);
-    }
-
-    /**
-     * App marks the attendance day open/closed. Read natively by the location
-     * service (sticky restart / headless recording), the boot receiver and
-     * the periodic watchdog.
-     */
-    @PluginMethod
-    public void setTrackingDayOpen(PluginCall call) {
-        boolean open = Boolean.TRUE.equals(call.getBoolean("open", false));
-        Context ctx = getContext();
-        android.content.SharedPreferences.Editor ed = TrackingRestarter.prefs(ctx).edit()
-                .putBoolean(com.equimaps.capacitor_background_geolocation.BackgroundGeolocationService.PREF_DAY_OPEN, open);
-        if (open) {
-            // Keep the original open time across repeated calls the same day.
-            if (!TrackingRestarter.isDayOpen(ctx)) {
-                ed.putLong(com.equimaps.capacitor_background_geolocation.BackgroundGeolocationService.PREF_DAY_OPENED_AT,
-                        System.currentTimeMillis());
-            }
-        }
-        ed.commit();
-        try {
-            if (open) {
-                TrackingRestarter.scheduleWatchdog(ctx);
-                // The JS day-flag update can finish after watcher registration.
-                // Ensure started-service status here too, while the UI is visible.
-                TrackingRestarter.startService(ctx, "day_open");
-            } else {
-                TrackingRestarter.cancelWatchdog(ctx);
-                com.equimaps.capacitor_background_geolocation.BackgroundGeolocationService.onDayClosed();
-            }
-        } catch (Exception ignored) {
-            // Scheduling must never block check-in/check-out.
-        }
-        JSObject ret = new JSObject();
-        ret.put("open", open);
-        call.resolve(ret);
-    }
-
-    /** Phone maker, for the per-brand autostart guide. */
-    @PluginMethod
-    public void getDeviceBrand(PluginCall call) {
-        JSObject ret = new JSObject();
-        ret.put("manufacturer", Build.MANUFACTURER);
-        ret.put("brand", Build.BRAND);
-        call.resolve(ret);
     }
 }

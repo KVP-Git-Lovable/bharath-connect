@@ -20,7 +20,6 @@ import { Calendar } from "@/components/ui/calendar";
 import { MapPin, AlertTriangle, RefreshCw, Clock, Navigation, CalendarIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppUsageCards, type AppUsageSummary } from "@/components/gps/AppUsageCards";
-import { TrackingIssuesButton } from "@/components/gps/TrackingIssuesButton";
 import { getCurrentPosition, openAppSettings, isNative, prepareNativeLocationSettings } from "@/utils/nativePermissions";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -492,31 +491,6 @@ export default function GPSTracking() {
     [gpsStops, activityMarkers]
   );
 
-  // Fallback route for days where real GPS alone is too sparse (e.g. one
-  // fix all day) to draw a line. Combines every timestamped location we
-  // actually have — GPS fixes, detected stops, visit check-ins — in
-  // chronological order. Display only: never feeds distance or the
-  // trajectory engine, and the map only draws this when it has no real
-  // GPS trail to show instead.
-  const extrapolatedPoints = useMemo(() => {
-    const waypoints = [
-      ...gpsPoints.map((p) => ({ lat: p.latitude, lng: p.longitude, timestamp: p.timestamp })),
-      ...gpsStops.map((s) => ({ lat: s.latitude, lng: s.longitude, timestamp: s.timestamp })),
-      ...activityMarkers
-        .filter((a) => a.timestamp)
-        .map((a) => ({ lat: a.lat, lng: a.lng, timestamp: a.timestamp as string })),
-    ].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-
-    const deduped: { lat: number; lng: number }[] = [];
-    waypoints.forEach((w) => {
-      const prev = deduped[deduped.length - 1];
-      if (!prev || prev.lat !== w.lat || prev.lng !== w.lng) {
-        deduped.push({ lat: w.lat, lng: w.lng });
-      }
-    });
-    return deduped;
-  }, [gpsPoints, gpsStops, activityMarkers]);
-
   // Distance ladder: road-snapped total when routing succeeded, otherwise the
   // validated trajectory distance. Raw unfiltered GPS distance is never used.
   const isRoadDistance = route?.distanceMeters != null;
@@ -544,10 +518,7 @@ export default function GPSTracking() {
   // leaving the user to find Battery/Permissions themselves.
   const handleFixTrackingGap = async () => {
     if (isNative()) {
-      // Explicit, user-initiated retry — bypass the automatic flow's
-      // redirect cooldown (see nativePermissions.ts) so tapping this button
-      // always actually does something.
-      await prepareNativeLocationSettings(currentUserId, { force: true });
+      await prepareNativeLocationSettings();
       toast({
         title: "Device settings opened",
         description: "Allow the battery prompt if shown, then set Location to \"Allow all the time\" and Battery to Unrestricted.",
@@ -576,11 +547,6 @@ export default function GPSTracking() {
   const selectedCurrentUserName = currentSelectedUser === "me"
     ? "My Location"
     : teamMembers.find(m => m.id === currentSelectedUser)?.full_name || "Selected User";
-
-  const trackingSelectedUserId = selectedUser === "me" ? currentUserId : selectedUser;
-  const trackingSelectedUserName = selectedUser === "me"
-    ? "My Data"
-    : teamMembers.find(m => m.id === selectedUser)?.full_name || "Selected User";
 
   return (
     <motion.div
@@ -778,19 +744,6 @@ export default function GPSTracking() {
             </div>
           )}
 
-          {/* Historical, per-user tracking-issue log — distinct from the
-              live "tracking gap" card below (which only reflects the
-              currently-loaded points) and the "sync health" card (which
-              only reflects this viewing device's own queue). Reads
-              gps_tracker_events, already written continuously by
-              useGPSTracker.ts, scoped to the selected team member + range. */}
-          <TrackingIssuesButton
-            userId={trackingSelectedUserId}
-            userLabel={trackingSelectedUserName}
-            from={displayFrom}
-            to={displayTo}
-          />
-
           {/* App usage. Deliberately outside the gpsPoints guard above: time in
               the app and location fixes fail independently, and "used the app
               for 47 minutes, produced no fixes" is the case most worth seeing.
@@ -882,17 +835,12 @@ export default function GPSTracking() {
                         gpsPoints={gpsPoints}
                         activityMarkers={allMapMarkers}
                         routePath={route?.path ?? null}
-                        extrapolatedPoints={extrapolatedPoints}
                       />
                     </Suspense>
                     <div className="absolute top-2 right-2 z-[400] bg-primary text-primary-foreground text-xs font-semibold px-3 py-1.5 rounded-full shadow-md">
                       Traveled: {totalDistance.toFixed(1)} km
                     </div>
-                    {gpsPoints.length <= 1 && extrapolatedPoints.length > 1 && (
-                      <div className="absolute top-11 right-2 z-[400] bg-amber-500 text-white text-[11px] font-medium px-3 py-1 rounded-full shadow-md">
-                        Approximate route (too few GPS fixes)
-                      </div>
-                    )}
+
                   </>
                 ) : (
                   <div className="h-full w-full flex flex-col items-center justify-center bg-muted/50">

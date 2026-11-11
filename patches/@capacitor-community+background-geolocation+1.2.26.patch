@@ -1,7 +1,484 @@
+diff --git a/node_modules/@capacitor-community/background-geolocation/android/build/.transforms/0ea66e211f8c26e2f3927d79c514aa7c/results.bin b/node_modules/@capacitor-community/background-geolocation/android/build/.transforms/0ea66e211f8c26e2f3927d79c514aa7c/results.bin
+new file mode 100644
+index 0000000..0d259dd
+--- /dev/null
++++ b/node_modules/@capacitor-community/background-geolocation/android/build/.transforms/0ea66e211f8c26e2f3927d79c514aa7c/results.bin
+@@ -0,0 +1 @@
++o/classes
+diff --git a/node_modules/@capacitor-community/background-geolocation/android/build/.transforms/0ea66e211f8c26e2f3927d79c514aa7c/transformed/classes/classes_dex/classes.dex b/node_modules/@capacitor-community/background-geolocation/android/build/.transforms/0ea66e211f8c26e2f3927d79c514aa7c/transformed/classes/classes_dex/classes.dex
+new file mode 100644
+index 0000000..5ba0a76
+Binary files /dev/null and b/node_modules/@capacitor-community/background-geolocation/android/build/.transforms/0ea66e211f8c26e2f3927d79c514aa7c/transformed/classes/classes_dex/classes.dex differ
+diff --git a/node_modules/@capacitor-community/background-geolocation/android/build/.transforms/3bab9d1726fe87cc151fc6bf7ef337e6/results.bin b/node_modules/@capacitor-community/background-geolocation/android/build/.transforms/3bab9d1726fe87cc151fc6bf7ef337e6/results.bin
+new file mode 100644
+index 0000000..7ed749e
+--- /dev/null
++++ b/node_modules/@capacitor-community/background-geolocation/android/build/.transforms/3bab9d1726fe87cc151fc6bf7ef337e6/results.bin
+@@ -0,0 +1 @@
++o/bundleLibRuntimeToDirDebug
+diff --git a/node_modules/@capacitor-community/background-geolocation/android/build/.transforms/3bab9d1726fe87cc151fc6bf7ef337e6/transformed/bundleLibRuntimeToDirDebug/bundleLibRuntimeToDirDebug_dex/com/equimaps/capacitor_background_geolocation/BackgroundGeolocation$1.dex b/node_modules/@capacitor-community/background-geolocation/android/build/.transforms/3bab9d1726fe87cc151fc6bf7ef337e6/transformed/bundleLibRuntimeToDirDebug/bundleLibRuntimeToDirDebug_dex/com/equimaps/capacitor_background_geolocation/BackgroundGeolocation$1.dex
+new file mode 100644
+index 0000000..e69953d
+Binary files /dev/null and b/node_modules/@capacitor-community/background-geolocation/android/build/.transforms/3bab9d1726fe87cc151fc6bf7ef337e6/transformed/bundleLibRuntimeToDirDebug/bundleLibRuntimeToDirDebug_dex/com/equimaps/capacitor_background_geolocation/BackgroundGeolocation$1.dex differ
+diff --git a/node_modules/@capacitor-community/background-geolocation/android/build/.transforms/3bab9d1726fe87cc151fc6bf7ef337e6/transformed/bundleLibRuntimeToDirDebug/bundleLibRuntimeToDirDebug_dex/com/equimaps/capacitor_background_geolocation/BackgroundGeolocation$2.dex b/node_modules/@capacitor-community/background-geolocation/android/build/.transforms/3bab9d1726fe87cc151fc6bf7ef337e6/transformed/bundleLibRuntimeToDirDebug/bundleLibRuntimeToDirDebug_dex/com/equimaps/capacitor_background_geolocation/BackgroundGeolocation$2.dex
+new file mode 100644
+index 0000000..0295333
+Binary files /dev/null and b/node_modules/@capacitor-community/background-geolocation/android/build/.transforms/3bab9d1726fe87cc151fc6bf7ef337e6/transformed/bundleLibRuntimeToDirDebug/bundleLibRuntimeToDirDebug_dex/com/equimaps/capacitor_background_geolocation/BackgroundGeolocation$2.dex differ
+diff --git a/node_modules/@capacitor-community/background-geolocation/android/build/.transforms/3bab9d1726fe87cc151fc6bf7ef337e6/transformed/bundleLibRuntimeToDirDebug/bundleLibRuntimeToDirDebug_dex/com/equimaps/capacitor_background_geolocation/BackgroundGeolocation$ServiceReceiver.dex b/node_modules/@capacitor-community/background-geolocation/android/build/.transforms/3bab9d1726fe87cc151fc6bf7ef337e6/transformed/bundleLibRuntimeToDirDebug/bundleLibRuntimeToDirDebug_dex/com/equimaps/capacitor_background_geolocation/BackgroundGeolocation$ServiceReceiver.dex
+new file mode 100644
+index 0000000..a35acbe
+Binary files /dev/null and b/node_modules/@capacitor-community/background-geolocation/android/build/.transforms/3bab9d1726fe87cc151fc6bf7ef337e6/transformed/bundleLibRuntimeToDirDebug/bundleLibRuntimeToDirDebug_dex/com/equimaps/capacitor_background_geolocation/BackgroundGeolocation$ServiceReceiver.dex differ
+diff --git a/node_modules/@capacitor-community/background-geolocation/android/build/.transforms/3bab9d1726fe87cc151fc6bf7ef337e6/transformed/bundleLibRuntimeToDirDebug/bundleLibRuntimeToDirDebug_dex/com/equimaps/capacitor_background_geolocation/BackgroundGeolocation.dex b/node_modules/@capacitor-community/background-geolocation/android/build/.transforms/3bab9d1726fe87cc151fc6bf7ef337e6/transformed/bundleLibRuntimeToDirDebug/bundleLibRuntimeToDirDebug_dex/com/equimaps/capacitor_background_geolocation/BackgroundGeolocation.dex
+new file mode 100644
+index 0000000..712fa72
+Binary files /dev/null and b/node_modules/@capacitor-community/background-geolocation/android/build/.transforms/3bab9d1726fe87cc151fc6bf7ef337e6/transformed/bundleLibRuntimeToDirDebug/bundleLibRuntimeToDirDebug_dex/com/equimaps/capacitor_background_geolocation/BackgroundGeolocation.dex differ
+diff --git a/node_modules/@capacitor-community/background-geolocation/android/build/.transforms/3bab9d1726fe87cc151fc6bf7ef337e6/transformed/bundleLibRuntimeToDirDebug/bundleLibRuntimeToDirDebug_dex/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService$1.dex b/node_modules/@capacitor-community/background-geolocation/android/build/.transforms/3bab9d1726fe87cc151fc6bf7ef337e6/transformed/bundleLibRuntimeToDirDebug/bundleLibRuntimeToDirDebug_dex/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService$1.dex
+new file mode 100644
+index 0000000..eb184bb
+Binary files /dev/null and b/node_modules/@capacitor-community/background-geolocation/android/build/.transforms/3bab9d1726fe87cc151fc6bf7ef337e6/transformed/bundleLibRuntimeToDirDebug/bundleLibRuntimeToDirDebug_dex/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService$1.dex differ
+diff --git a/node_modules/@capacitor-community/background-geolocation/android/build/.transforms/3bab9d1726fe87cc151fc6bf7ef337e6/transformed/bundleLibRuntimeToDirDebug/bundleLibRuntimeToDirDebug_dex/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService$LocalBinder$1.dex b/node_modules/@capacitor-community/background-geolocation/android/build/.transforms/3bab9d1726fe87cc151fc6bf7ef337e6/transformed/bundleLibRuntimeToDirDebug/bundleLibRuntimeToDirDebug_dex/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService$LocalBinder$1.dex
+new file mode 100644
+index 0000000..4fdf0c7
+Binary files /dev/null and b/node_modules/@capacitor-community/background-geolocation/android/build/.transforms/3bab9d1726fe87cc151fc6bf7ef337e6/transformed/bundleLibRuntimeToDirDebug/bundleLibRuntimeToDirDebug_dex/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService$LocalBinder$1.dex differ
+diff --git a/node_modules/@capacitor-community/background-geolocation/android/build/.transforms/3bab9d1726fe87cc151fc6bf7ef337e6/transformed/bundleLibRuntimeToDirDebug/bundleLibRuntimeToDirDebug_dex/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService$LocalBinder.dex b/node_modules/@capacitor-community/background-geolocation/android/build/.transforms/3bab9d1726fe87cc151fc6bf7ef337e6/transformed/bundleLibRuntimeToDirDebug/bundleLibRuntimeToDirDebug_dex/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService$LocalBinder.dex
+new file mode 100644
+index 0000000..9b3cd7b
+Binary files /dev/null and b/node_modules/@capacitor-community/background-geolocation/android/build/.transforms/3bab9d1726fe87cc151fc6bf7ef337e6/transformed/bundleLibRuntimeToDirDebug/bundleLibRuntimeToDirDebug_dex/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService$LocalBinder.dex differ
+diff --git a/node_modules/@capacitor-community/background-geolocation/android/build/.transforms/3bab9d1726fe87cc151fc6bf7ef337e6/transformed/bundleLibRuntimeToDirDebug/bundleLibRuntimeToDirDebug_dex/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService$Watcher.dex b/node_modules/@capacitor-community/background-geolocation/android/build/.transforms/3bab9d1726fe87cc151fc6bf7ef337e6/transformed/bundleLibRuntimeToDirDebug/bundleLibRuntimeToDirDebug_dex/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService$Watcher.dex
+new file mode 100644
+index 0000000..e5f7583
+Binary files /dev/null and b/node_modules/@capacitor-community/background-geolocation/android/build/.transforms/3bab9d1726fe87cc151fc6bf7ef337e6/transformed/bundleLibRuntimeToDirDebug/bundleLibRuntimeToDirDebug_dex/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService$Watcher.dex differ
+diff --git a/node_modules/@capacitor-community/background-geolocation/android/build/.transforms/3bab9d1726fe87cc151fc6bf7ef337e6/transformed/bundleLibRuntimeToDirDebug/bundleLibRuntimeToDirDebug_dex/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService.dex b/node_modules/@capacitor-community/background-geolocation/android/build/.transforms/3bab9d1726fe87cc151fc6bf7ef337e6/transformed/bundleLibRuntimeToDirDebug/bundleLibRuntimeToDirDebug_dex/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService.dex
+new file mode 100644
+index 0000000..d857da0
+Binary files /dev/null and b/node_modules/@capacitor-community/background-geolocation/android/build/.transforms/3bab9d1726fe87cc151fc6bf7ef337e6/transformed/bundleLibRuntimeToDirDebug/bundleLibRuntimeToDirDebug_dex/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService.dex differ
+diff --git a/node_modules/@capacitor-community/background-geolocation/android/build/.transforms/3bab9d1726fe87cc151fc6bf7ef337e6/transformed/bundleLibRuntimeToDirDebug/desugar_graph.bin b/node_modules/@capacitor-community/background-geolocation/android/build/.transforms/3bab9d1726fe87cc151fc6bf7ef337e6/transformed/bundleLibRuntimeToDirDebug/desugar_graph.bin
+new file mode 100644
+index 0000000..601f245
+Binary files /dev/null and b/node_modules/@capacitor-community/background-geolocation/android/build/.transforms/3bab9d1726fe87cc151fc6bf7ef337e6/transformed/bundleLibRuntimeToDirDebug/desugar_graph.bin differ
+diff --git a/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/aapt_friendly_merged_manifests/debug/processDebugManifest/aapt/AndroidManifest.xml b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/aapt_friendly_merged_manifests/debug/processDebugManifest/aapt/AndroidManifest.xml
+new file mode 100644
+index 0000000..6a2cc2b
+--- /dev/null
++++ b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/aapt_friendly_merged_manifests/debug/processDebugManifest/aapt/AndroidManifest.xml
+@@ -0,0 +1,31 @@
++<?xml version="1.0" encoding="utf-8"?>
++<manifest xmlns:android="http://schemas.android.com/apk/res/android"
++    package="com.equimaps.capacitor_background_geolocation" >
++
++    <uses-sdk android:minSdkVersion="24" />
++
++    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
++    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
++    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
++    <!--
++    Android SDK 34+ additionally requires the FOREGROUND_SERVICE_LOCATION
++    runtime permission to start a foreground service of type "location".
++    -->
++    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
++    <!--
++    Android SDK 33+ requires the POST_NOTIFICATIONS runtime permission to
++    display the foreground service notification.
++    -->
++    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
++
++    <uses-feature android:name="android.hardware.location.gps" />
++
++    <application>
++        <service
++            android:name="com.equimaps.capacitor_background_geolocation.BackgroundGeolocationService"
++            android:enabled="true"
++            android:exported="true"
++            android:foregroundServiceType="location" />
++    </application>
++
++</manifest>
+\ No newline at end of file
+diff --git a/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/aapt_friendly_merged_manifests/debug/processDebugManifest/aapt/output-metadata.json b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/aapt_friendly_merged_manifests/debug/processDebugManifest/aapt/output-metadata.json
+new file mode 100644
+index 0000000..02cc692
+--- /dev/null
++++ b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/aapt_friendly_merged_manifests/debug/processDebugManifest/aapt/output-metadata.json
+@@ -0,0 +1,18 @@
++{
++  "version": 3,
++  "artifactType": {
++    "type": "AAPT_FRIENDLY_MERGED_MANIFESTS",
++    "kind": "Directory"
++  },
++  "applicationId": "com.equimaps.capacitor_background_geolocation",
++  "variantName": "debug",
++  "elements": [
++    {
++      "type": "SINGLE",
++      "filters": [],
++      "attributes": [],
++      "outputFile": "AndroidManifest.xml"
++    }
++  ],
++  "elementType": "File"
++}
+\ No newline at end of file
+diff --git a/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/aar_main_jar/debug/syncDebugLibJars/classes.jar b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/aar_main_jar/debug/syncDebugLibJars/classes.jar
+new file mode 100644
+index 0000000..3a0f4b3
+Binary files /dev/null and b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/aar_main_jar/debug/syncDebugLibJars/classes.jar differ
+diff --git a/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/aar_metadata/debug/writeDebugAarMetadata/aar-metadata.properties b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/aar_metadata/debug/writeDebugAarMetadata/aar-metadata.properties
+new file mode 100644
+index 0000000..1211b1e
+--- /dev/null
++++ b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/aar_metadata/debug/writeDebugAarMetadata/aar-metadata.properties
+@@ -0,0 +1,6 @@
++aarFormatVersion=1.0
++aarMetadataVersion=1.0
++minCompileSdk=1
++minCompileSdkExtension=0
++minAndroidGradlePluginVersion=1.0.0
++coreLibraryDesugaringEnabled=false
+diff --git a/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/annotation_processor_list/debug/javaPreCompileDebug/annotationProcessors.json b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/annotation_processor_list/debug/javaPreCompileDebug/annotationProcessors.json
+new file mode 100644
+index 0000000..9e26dfe
+--- /dev/null
++++ b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/annotation_processor_list/debug/javaPreCompileDebug/annotationProcessors.json
+@@ -0,0 +1 @@
++{}
+\ No newline at end of file
+diff --git a/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/annotations_typedef_file/debug/extractDebugAnnotations/typedefs.txt b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/annotations_typedef_file/debug/extractDebugAnnotations/typedefs.txt
+new file mode 100644
+index 0000000..e69de29
+diff --git a/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/compile_library_classes_jar/debug/bundleLibCompileToJarDebug/classes.jar b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/compile_library_classes_jar/debug/bundleLibCompileToJarDebug/classes.jar
+new file mode 100644
+index 0000000..e2fcce8
+Binary files /dev/null and b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/compile_library_classes_jar/debug/bundleLibCompileToJarDebug/classes.jar differ
+diff --git a/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/compile_r_class_jar/debug/generateDebugRFile/R.jar b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/compile_r_class_jar/debug/generateDebugRFile/R.jar
+new file mode 100644
+index 0000000..e0d7888
+Binary files /dev/null and b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/compile_r_class_jar/debug/generateDebugRFile/R.jar differ
+diff --git a/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/compile_symbol_list/debug/generateDebugRFile/R.txt b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/compile_symbol_list/debug/generateDebugRFile/R.txt
+new file mode 100644
+index 0000000..e69de29
+diff --git a/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/incremental/debug-mergeJavaRes/merge-state b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/incremental/debug-mergeJavaRes/merge-state
+new file mode 100644
+index 0000000..1c983fc
+Binary files /dev/null and b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/incremental/debug-mergeJavaRes/merge-state differ
+diff --git a/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/incremental/debug/packageDebugResources/compile-file-map.properties b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/incremental/debug/packageDebugResources/compile-file-map.properties
+new file mode 100644
+index 0000000..5a22574
+--- /dev/null
++++ b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/incremental/debug/packageDebugResources/compile-file-map.properties
+@@ -0,0 +1 @@
++#Wed Sep 02 15:41:45 IST 2026
+diff --git a/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/incremental/debug/packageDebugResources/merger.xml b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/incremental/debug/packageDebugResources/merger.xml
+new file mode 100644
+index 0000000..327a9fc
+--- /dev/null
++++ b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/incremental/debug/packageDebugResources/merger.xml
+@@ -0,0 +1,2 @@
++<?xml version="1.0" encoding="utf-8"?>
++<merger version="3"><dataSet aapt-namespace="http://schemas.android.com/apk/res-auto" config="main$Generated" generated="true" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"><source path="/private/tmp/claude-502/-Users-abhishek/8b5157d8-1fe4-4bc2-beed-4e2b7fd20323/scratchpad/dest-repo/node_modules/@capacitor-community/background-geolocation/android/src/main/res"/></dataSet><dataSet aapt-namespace="http://schemas.android.com/apk/res-auto" config="main" generated-set="main$Generated" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~:!&lt;dir>navigation"><source path="/private/tmp/claude-502/-Users-abhishek/8b5157d8-1fe4-4bc2-beed-4e2b7fd20323/scratchpad/dest-repo/node_modules/@capacitor-community/background-geolocation/android/src/main/res"/></dataSet><dataSet aapt-namespace="http://schemas.android.com/apk/res-auto" config="debug$Generated" generated="true" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"><source path="/private/tmp/claude-502/-Users-abhishek/8b5157d8-1fe4-4bc2-beed-4e2b7fd20323/scratchpad/dest-repo/node_modules/@capacitor-community/background-geolocation/android/src/debug/res"/></dataSet><dataSet aapt-namespace="http://schemas.android.com/apk/res-auto" config="debug" generated-set="debug$Generated" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~:!&lt;dir>navigation"><source path="/private/tmp/claude-502/-Users-abhishek/8b5157d8-1fe4-4bc2-beed-4e2b7fd20323/scratchpad/dest-repo/node_modules/@capacitor-community/background-geolocation/android/src/debug/res"/></dataSet><dataSet aapt-namespace="http://schemas.android.com/apk/res-auto" config="generated$Generated" generated="true" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"><source path="/private/tmp/claude-502/-Users-abhishek/8b5157d8-1fe4-4bc2-beed-4e2b7fd20323/scratchpad/dest-repo/node_modules/@capacitor-community/background-geolocation/android/build/generated/res/resValues/debug"/></dataSet><dataSet aapt-namespace="http://schemas.android.com/apk/res-auto" config="generated" generated-set="generated$Generated" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~:!&lt;dir>navigation"><source path="/private/tmp/claude-502/-Users-abhishek/8b5157d8-1fe4-4bc2-beed-4e2b7fd20323/scratchpad/dest-repo/node_modules/@capacitor-community/background-geolocation/android/build/generated/res/resValues/debug"/></dataSet><mergedItems/></merger>
+\ No newline at end of file
+diff --git a/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/incremental/mergeDebugAssets/merger.xml b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/incremental/mergeDebugAssets/merger.xml
+new file mode 100644
+index 0000000..8228b62
+--- /dev/null
++++ b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/incremental/mergeDebugAssets/merger.xml
+@@ -0,0 +1,2 @@
++<?xml version="1.0" encoding="utf-8"?>
++<merger version="3"><dataSet config="main" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"><source path="/private/tmp/claude-502/-Users-abhishek/8b5157d8-1fe4-4bc2-beed-4e2b7fd20323/scratchpad/dest-repo/node_modules/@capacitor-community/background-geolocation/android/src/main/assets"/></dataSet><dataSet config="debug" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"><source path="/private/tmp/claude-502/-Users-abhishek/8b5157d8-1fe4-4bc2-beed-4e2b7fd20323/scratchpad/dest-repo/node_modules/@capacitor-community/background-geolocation/android/src/debug/assets"/></dataSet><dataSet config="generated" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"><source path="/private/tmp/claude-502/-Users-abhishek/8b5157d8-1fe4-4bc2-beed-4e2b7fd20323/scratchpad/dest-repo/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/shader_assets/debug/compileDebugShaders/out"/></dataSet></merger>
+\ No newline at end of file
+diff --git a/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/incremental/mergeDebugJniLibFolders/merger.xml b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/incremental/mergeDebugJniLibFolders/merger.xml
+new file mode 100644
+index 0000000..b00190d
+--- /dev/null
++++ b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/incremental/mergeDebugJniLibFolders/merger.xml
+@@ -0,0 +1,2 @@
++<?xml version="1.0" encoding="utf-8"?>
++<merger version="3"><dataSet config="main" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"><source path="/private/tmp/claude-502/-Users-abhishek/8b5157d8-1fe4-4bc2-beed-4e2b7fd20323/scratchpad/dest-repo/node_modules/@capacitor-community/background-geolocation/android/src/main/jniLibs"/></dataSet><dataSet config="debug" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"><source path="/private/tmp/claude-502/-Users-abhishek/8b5157d8-1fe4-4bc2-beed-4e2b7fd20323/scratchpad/dest-repo/node_modules/@capacitor-community/background-geolocation/android/src/debug/jniLibs"/></dataSet></merger>
+\ No newline at end of file
+diff --git a/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/incremental/mergeDebugShaders/merger.xml b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/incremental/mergeDebugShaders/merger.xml
+new file mode 100644
+index 0000000..3c3cc46
+--- /dev/null
++++ b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/incremental/mergeDebugShaders/merger.xml
+@@ -0,0 +1,2 @@
++<?xml version="1.0" encoding="utf-8"?>
++<merger version="3"><dataSet config="main" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"><source path="/private/tmp/claude-502/-Users-abhishek/8b5157d8-1fe4-4bc2-beed-4e2b7fd20323/scratchpad/dest-repo/node_modules/@capacitor-community/background-geolocation/android/src/main/shaders"/></dataSet><dataSet config="debug" ignore_pattern="!.svn:!.git:!.ds_store:!*.scc:.*:&lt;dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"><source path="/private/tmp/claude-502/-Users-abhishek/8b5157d8-1fe4-4bc2-beed-4e2b7fd20323/scratchpad/dest-repo/node_modules/@capacitor-community/background-geolocation/android/src/debug/shaders"/></dataSet></merger>
+\ No newline at end of file
+diff --git a/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/javac/debug/compileDebugJavaWithJavac/classes/com/equimaps/capacitor_background_geolocation/BackgroundGeolocation$1.class b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/javac/debug/compileDebugJavaWithJavac/classes/com/equimaps/capacitor_background_geolocation/BackgroundGeolocation$1.class
+new file mode 100644
+index 0000000..b226aea
+Binary files /dev/null and b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/javac/debug/compileDebugJavaWithJavac/classes/com/equimaps/capacitor_background_geolocation/BackgroundGeolocation$1.class differ
+diff --git a/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/javac/debug/compileDebugJavaWithJavac/classes/com/equimaps/capacitor_background_geolocation/BackgroundGeolocation$2.class b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/javac/debug/compileDebugJavaWithJavac/classes/com/equimaps/capacitor_background_geolocation/BackgroundGeolocation$2.class
+new file mode 100644
+index 0000000..60cf50b
+Binary files /dev/null and b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/javac/debug/compileDebugJavaWithJavac/classes/com/equimaps/capacitor_background_geolocation/BackgroundGeolocation$2.class differ
+diff --git a/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/javac/debug/compileDebugJavaWithJavac/classes/com/equimaps/capacitor_background_geolocation/BackgroundGeolocation$ServiceReceiver.class b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/javac/debug/compileDebugJavaWithJavac/classes/com/equimaps/capacitor_background_geolocation/BackgroundGeolocation$ServiceReceiver.class
+new file mode 100644
+index 0000000..9686eb2
+Binary files /dev/null and b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/javac/debug/compileDebugJavaWithJavac/classes/com/equimaps/capacitor_background_geolocation/BackgroundGeolocation$ServiceReceiver.class differ
+diff --git a/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/javac/debug/compileDebugJavaWithJavac/classes/com/equimaps/capacitor_background_geolocation/BackgroundGeolocation.class b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/javac/debug/compileDebugJavaWithJavac/classes/com/equimaps/capacitor_background_geolocation/BackgroundGeolocation.class
+new file mode 100644
+index 0000000..219a7ce
+Binary files /dev/null and b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/javac/debug/compileDebugJavaWithJavac/classes/com/equimaps/capacitor_background_geolocation/BackgroundGeolocation.class differ
+diff --git a/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/javac/debug/compileDebugJavaWithJavac/classes/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService$1.class b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/javac/debug/compileDebugJavaWithJavac/classes/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService$1.class
+new file mode 100644
+index 0000000..febc311
+Binary files /dev/null and b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/javac/debug/compileDebugJavaWithJavac/classes/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService$1.class differ
+diff --git a/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/javac/debug/compileDebugJavaWithJavac/classes/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService$LocalBinder$1.class b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/javac/debug/compileDebugJavaWithJavac/classes/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService$LocalBinder$1.class
+new file mode 100644
+index 0000000..4393e09
+Binary files /dev/null and b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/javac/debug/compileDebugJavaWithJavac/classes/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService$LocalBinder$1.class differ
+diff --git a/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/javac/debug/compileDebugJavaWithJavac/classes/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService$LocalBinder.class b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/javac/debug/compileDebugJavaWithJavac/classes/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService$LocalBinder.class
+new file mode 100644
+index 0000000..8a3a127
+Binary files /dev/null and b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/javac/debug/compileDebugJavaWithJavac/classes/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService$LocalBinder.class differ
+diff --git a/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/javac/debug/compileDebugJavaWithJavac/classes/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService$Watcher.class b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/javac/debug/compileDebugJavaWithJavac/classes/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService$Watcher.class
+new file mode 100644
+index 0000000..1c210c2
+Binary files /dev/null and b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/javac/debug/compileDebugJavaWithJavac/classes/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService$Watcher.class differ
+diff --git a/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/javac/debug/compileDebugJavaWithJavac/classes/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService.class b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/javac/debug/compileDebugJavaWithJavac/classes/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService.class
+new file mode 100644
+index 0000000..61f74f7
+Binary files /dev/null and b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/javac/debug/compileDebugJavaWithJavac/classes/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService.class differ
+diff --git a/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/local_only_symbol_list/debug/parseDebugLocalResources/R-def.txt b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/local_only_symbol_list/debug/parseDebugLocalResources/R-def.txt
+new file mode 100644
+index 0000000..78ac5b8
+--- /dev/null
++++ b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/local_only_symbol_list/debug/parseDebugLocalResources/R-def.txt
+@@ -0,0 +1,2 @@
++R_DEF: Internal format may change without notice
++local
+diff --git a/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/manifest_merge_blame_file/debug/processDebugManifest/manifest-merger-blame-debug-report.txt b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/manifest_merge_blame_file/debug/processDebugManifest/manifest-merger-blame-debug-report.txt
+new file mode 100644
+index 0000000..bfeeeed
+--- /dev/null
++++ b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/manifest_merge_blame_file/debug/processDebugManifest/manifest-merger-blame-debug-report.txt
+@@ -0,0 +1,49 @@
++1<?xml version="1.0" encoding="utf-8"?>
++2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
++3    package="com.equimaps.capacitor_background_geolocation" >
++4
++5    <uses-sdk android:minSdkVersion="24" />
++6
++7    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
++7-->/private/tmp/claude-502/-Users-abhishek/8b5157d8-1fe4-4bc2-beed-4e2b7fd20323/scratchpad/dest-repo/node_modules/@capacitor-community/background-geolocation/android/src/main/AndroidManifest.xml:10:5-81
++7-->/private/tmp/claude-502/-Users-abhishek/8b5157d8-1fe4-4bc2-beed-4e2b7fd20323/scratchpad/dest-repo/node_modules/@capacitor-community/background-geolocation/android/src/main/AndroidManifest.xml:10:22-78
++8    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
++8-->/private/tmp/claude-502/-Users-abhishek/8b5157d8-1fe4-4bc2-beed-4e2b7fd20323/scratchpad/dest-repo/node_modules/@capacitor-community/background-geolocation/android/src/main/AndroidManifest.xml:11:5-79
++8-->/private/tmp/claude-502/-Users-abhishek/8b5157d8-1fe4-4bc2-beed-4e2b7fd20323/scratchpad/dest-repo/node_modules/@capacitor-community/background-geolocation/android/src/main/AndroidManifest.xml:11:22-76
++9    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
++9-->/private/tmp/claude-502/-Users-abhishek/8b5157d8-1fe4-4bc2-beed-4e2b7fd20323/scratchpad/dest-repo/node_modules/@capacitor-community/background-geolocation/android/src/main/AndroidManifest.xml:12:5-77
++9-->/private/tmp/claude-502/-Users-abhishek/8b5157d8-1fe4-4bc2-beed-4e2b7fd20323/scratchpad/dest-repo/node_modules/@capacitor-community/background-geolocation/android/src/main/AndroidManifest.xml:12:22-74
++10    <!--
++11    Android SDK 34+ additionally requires the FOREGROUND_SERVICE_LOCATION
++12    runtime permission to start a foreground service of type "location".
++13    -->
++14    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
++14-->/private/tmp/claude-502/-Users-abhishek/8b5157d8-1fe4-4bc2-beed-4e2b7fd20323/scratchpad/dest-repo/node_modules/@capacitor-community/background-geolocation/android/src/main/AndroidManifest.xml:15:5-86
++14-->/private/tmp/claude-502/-Users-abhishek/8b5157d8-1fe4-4bc2-beed-4e2b7fd20323/scratchpad/dest-repo/node_modules/@capacitor-community/background-geolocation/android/src/main/AndroidManifest.xml:15:22-83
++15    <!--
++16    Android SDK 33+ requires the POST_NOTIFICATIONS runtime permission to
++17    display the foreground service notification.
++18    -->
++19    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
++19-->/private/tmp/claude-502/-Users-abhishek/8b5157d8-1fe4-4bc2-beed-4e2b7fd20323/scratchpad/dest-repo/node_modules/@capacitor-community/background-geolocation/android/src/main/AndroidManifest.xml:18:5-77
++19-->/private/tmp/claude-502/-Users-abhishek/8b5157d8-1fe4-4bc2-beed-4e2b7fd20323/scratchpad/dest-repo/node_modules/@capacitor-community/background-geolocation/android/src/main/AndroidManifest.xml:18:22-74
++20
++21    <uses-feature android:name="android.hardware.location.gps" />
++21-->/private/tmp/claude-502/-Users-abhishek/8b5157d8-1fe4-4bc2-beed-4e2b7fd20323/scratchpad/dest-repo/node_modules/@capacitor-community/background-geolocation/android/src/main/AndroidManifest.xml:19:5-66
++21-->/private/tmp/claude-502/-Users-abhishek/8b5157d8-1fe4-4bc2-beed-4e2b7fd20323/scratchpad/dest-repo/node_modules/@capacitor-community/background-geolocation/android/src/main/AndroidManifest.xml:19:19-63
++22
++23    <application>
++23-->/private/tmp/claude-502/-Users-abhishek/8b5157d8-1fe4-4bc2-beed-4e2b7fd20323/scratchpad/dest-repo/node_modules/@capacitor-community/background-geolocation/android/src/main/AndroidManifest.xml:2:5-8:19
++24        <service
++24-->/private/tmp/claude-502/-Users-abhishek/8b5157d8-1fe4-4bc2-beed-4e2b7fd20323/scratchpad/dest-repo/node_modules/@capacitor-community/background-geolocation/android/src/main/AndroidManifest.xml:3:9-7:56
++25            android:name="com.equimaps.capacitor_background_geolocation.BackgroundGeolocationService"
++25-->/private/tmp/claude-502/-Users-abhishek/8b5157d8-1fe4-4bc2-beed-4e2b7fd20323/scratchpad/dest-repo/node_modules/@capacitor-community/background-geolocation/android/src/main/AndroidManifest.xml:4:13-102
++26            android:enabled="true"
++26-->/private/tmp/claude-502/-Users-abhishek/8b5157d8-1fe4-4bc2-beed-4e2b7fd20323/scratchpad/dest-repo/node_modules/@capacitor-community/background-geolocation/android/src/main/AndroidManifest.xml:5:13-35
++27            android:exported="true"
++27-->/private/tmp/claude-502/-Users-abhishek/8b5157d8-1fe4-4bc2-beed-4e2b7fd20323/scratchpad/dest-repo/node_modules/@capacitor-community/background-geolocation/android/src/main/AndroidManifest.xml:6:13-36
++28            android:foregroundServiceType="location" />
++28-->/private/tmp/claude-502/-Users-abhishek/8b5157d8-1fe4-4bc2-beed-4e2b7fd20323/scratchpad/dest-repo/node_modules/@capacitor-community/background-geolocation/android/src/main/AndroidManifest.xml:7:13-53
++29    </application>
++30
++31</manifest>
+diff --git a/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/merged_java_res/debug/mergeDebugJavaResource/feature-capacitor-community-background-geolocation.jar b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/merged_java_res/debug/mergeDebugJavaResource/feature-capacitor-community-background-geolocation.jar
+new file mode 100644
+index 0000000..15cb0ec
+Binary files /dev/null and b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/merged_java_res/debug/mergeDebugJavaResource/feature-capacitor-community-background-geolocation.jar differ
+diff --git a/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml
+new file mode 100644
+index 0000000..6a2cc2b
+--- /dev/null
++++ b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml
+@@ -0,0 +1,31 @@
++<?xml version="1.0" encoding="utf-8"?>
++<manifest xmlns:android="http://schemas.android.com/apk/res/android"
++    package="com.equimaps.capacitor_background_geolocation" >
++
++    <uses-sdk android:minSdkVersion="24" />
++
++    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
++    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
++    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
++    <!--
++    Android SDK 34+ additionally requires the FOREGROUND_SERVICE_LOCATION
++    runtime permission to start a foreground service of type "location".
++    -->
++    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
++    <!--
++    Android SDK 33+ requires the POST_NOTIFICATIONS runtime permission to
++    display the foreground service notification.
++    -->
++    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
++
++    <uses-feature android:name="android.hardware.location.gps" />
++
++    <application>
++        <service
++            android:name="com.equimaps.capacitor_background_geolocation.BackgroundGeolocationService"
++            android:enabled="true"
++            android:exported="true"
++            android:foregroundServiceType="location" />
++    </application>
++
++</manifest>
+\ No newline at end of file
+diff --git a/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/navigation_json/debug/extractDeepLinksDebug/navigation.json b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/navigation_json/debug/extractDeepLinksDebug/navigation.json
+new file mode 100644
+index 0000000..0637a08
+--- /dev/null
++++ b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/navigation_json/debug/extractDeepLinksDebug/navigation.json
+@@ -0,0 +1 @@
++[]
+\ No newline at end of file
+diff --git a/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/nested_resources_validation_report/debug/generateDebugResources/nestedResourcesValidationReport.txt b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/nested_resources_validation_report/debug/generateDebugResources/nestedResourcesValidationReport.txt
+new file mode 100644
+index 0000000..08f4ebe
+--- /dev/null
++++ b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/nested_resources_validation_report/debug/generateDebugResources/nestedResourcesValidationReport.txt
+@@ -0,0 +1 @@
++0 Warning/Error
+\ No newline at end of file
+diff --git a/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/runtime_library_classes_dir/debug/bundleLibRuntimeToDirDebug/com/equimaps/capacitor_background_geolocation/BackgroundGeolocation$1.class b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/runtime_library_classes_dir/debug/bundleLibRuntimeToDirDebug/com/equimaps/capacitor_background_geolocation/BackgroundGeolocation$1.class
+new file mode 100644
+index 0000000..b226aea
+Binary files /dev/null and b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/runtime_library_classes_dir/debug/bundleLibRuntimeToDirDebug/com/equimaps/capacitor_background_geolocation/BackgroundGeolocation$1.class differ
+diff --git a/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/runtime_library_classes_dir/debug/bundleLibRuntimeToDirDebug/com/equimaps/capacitor_background_geolocation/BackgroundGeolocation$2.class b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/runtime_library_classes_dir/debug/bundleLibRuntimeToDirDebug/com/equimaps/capacitor_background_geolocation/BackgroundGeolocation$2.class
+new file mode 100644
+index 0000000..60cf50b
+Binary files /dev/null and b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/runtime_library_classes_dir/debug/bundleLibRuntimeToDirDebug/com/equimaps/capacitor_background_geolocation/BackgroundGeolocation$2.class differ
+diff --git a/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/runtime_library_classes_dir/debug/bundleLibRuntimeToDirDebug/com/equimaps/capacitor_background_geolocation/BackgroundGeolocation$ServiceReceiver.class b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/runtime_library_classes_dir/debug/bundleLibRuntimeToDirDebug/com/equimaps/capacitor_background_geolocation/BackgroundGeolocation$ServiceReceiver.class
+new file mode 100644
+index 0000000..9686eb2
+Binary files /dev/null and b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/runtime_library_classes_dir/debug/bundleLibRuntimeToDirDebug/com/equimaps/capacitor_background_geolocation/BackgroundGeolocation$ServiceReceiver.class differ
+diff --git a/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/runtime_library_classes_dir/debug/bundleLibRuntimeToDirDebug/com/equimaps/capacitor_background_geolocation/BackgroundGeolocation.class b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/runtime_library_classes_dir/debug/bundleLibRuntimeToDirDebug/com/equimaps/capacitor_background_geolocation/BackgroundGeolocation.class
+new file mode 100644
+index 0000000..219a7ce
+Binary files /dev/null and b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/runtime_library_classes_dir/debug/bundleLibRuntimeToDirDebug/com/equimaps/capacitor_background_geolocation/BackgroundGeolocation.class differ
+diff --git a/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/runtime_library_classes_dir/debug/bundleLibRuntimeToDirDebug/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService$1.class b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/runtime_library_classes_dir/debug/bundleLibRuntimeToDirDebug/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService$1.class
+new file mode 100644
+index 0000000..febc311
+Binary files /dev/null and b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/runtime_library_classes_dir/debug/bundleLibRuntimeToDirDebug/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService$1.class differ
+diff --git a/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/runtime_library_classes_dir/debug/bundleLibRuntimeToDirDebug/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService$LocalBinder$1.class b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/runtime_library_classes_dir/debug/bundleLibRuntimeToDirDebug/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService$LocalBinder$1.class
+new file mode 100644
+index 0000000..4393e09
+Binary files /dev/null and b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/runtime_library_classes_dir/debug/bundleLibRuntimeToDirDebug/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService$LocalBinder$1.class differ
+diff --git a/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/runtime_library_classes_dir/debug/bundleLibRuntimeToDirDebug/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService$LocalBinder.class b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/runtime_library_classes_dir/debug/bundleLibRuntimeToDirDebug/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService$LocalBinder.class
+new file mode 100644
+index 0000000..8a3a127
+Binary files /dev/null and b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/runtime_library_classes_dir/debug/bundleLibRuntimeToDirDebug/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService$LocalBinder.class differ
+diff --git a/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/runtime_library_classes_dir/debug/bundleLibRuntimeToDirDebug/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService$Watcher.class b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/runtime_library_classes_dir/debug/bundleLibRuntimeToDirDebug/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService$Watcher.class
+new file mode 100644
+index 0000000..1c210c2
+Binary files /dev/null and b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/runtime_library_classes_dir/debug/bundleLibRuntimeToDirDebug/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService$Watcher.class differ
+diff --git a/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/runtime_library_classes_dir/debug/bundleLibRuntimeToDirDebug/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService.class b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/runtime_library_classes_dir/debug/bundleLibRuntimeToDirDebug/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService.class
+new file mode 100644
+index 0000000..61f74f7
+Binary files /dev/null and b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/runtime_library_classes_dir/debug/bundleLibRuntimeToDirDebug/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService.class differ
+diff --git a/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/runtime_library_classes_jar/debug/bundleLibRuntimeToJarDebug/classes.jar b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/runtime_library_classes_jar/debug/bundleLibRuntimeToJarDebug/classes.jar
+new file mode 100644
+index 0000000..abacb84
+Binary files /dev/null and b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/runtime_library_classes_jar/debug/bundleLibRuntimeToJarDebug/classes.jar differ
+diff --git a/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/symbol_list_with_package_name/debug/generateDebugRFile/package-aware-r.txt b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/symbol_list_with_package_name/debug/generateDebugRFile/package-aware-r.txt
+new file mode 100644
+index 0000000..d58b26c
+--- /dev/null
++++ b/node_modules/@capacitor-community/background-geolocation/android/build/intermediates/symbol_list_with_package_name/debug/generateDebugRFile/package-aware-r.txt
+@@ -0,0 +1 @@
++com.equimaps.capacitor_background_geolocation
+diff --git a/node_modules/@capacitor-community/background-geolocation/android/build/outputs/aar/capacitor-community-background-geolocation-debug.aar b/node_modules/@capacitor-community/background-geolocation/android/build/outputs/aar/capacitor-community-background-geolocation-debug.aar
+new file mode 100644
+index 0000000..16f1e92
+Binary files /dev/null and b/node_modules/@capacitor-community/background-geolocation/android/build/outputs/aar/capacitor-community-background-geolocation-debug.aar differ
+diff --git a/node_modules/@capacitor-community/background-geolocation/android/build/outputs/logs/manifest-merger-debug-report.txt b/node_modules/@capacitor-community/background-geolocation/android/build/outputs/logs/manifest-merger-debug-report.txt
+new file mode 100644
+index 0000000..ebda569
+--- /dev/null
++++ b/node_modules/@capacitor-community/background-geolocation/android/build/outputs/logs/manifest-merger-debug-report.txt
+@@ -0,0 +1,52 @@
++-- Merging decision tree log ---
++manifest
++ADDED from /private/tmp/claude-502/-Users-abhishek/8b5157d8-1fe4-4bc2-beed-4e2b7fd20323/scratchpad/dest-repo/node_modules/@capacitor-community/background-geolocation/android/src/main/AndroidManifest.xml:1:1-20:12
++INJECTED from /private/tmp/claude-502/-Users-abhishek/8b5157d8-1fe4-4bc2-beed-4e2b7fd20323/scratchpad/dest-repo/node_modules/@capacitor-community/background-geolocation/android/src/main/AndroidManifest.xml:1:1-20:12
++	package
++		INJECTED from /private/tmp/claude-502/-Users-abhishek/8b5157d8-1fe4-4bc2-beed-4e2b7fd20323/scratchpad/dest-repo/node_modules/@capacitor-community/background-geolocation/android/src/main/AndroidManifest.xml
++	xmlns:android
++		ADDED from /private/tmp/claude-502/-Users-abhishek/8b5157d8-1fe4-4bc2-beed-4e2b7fd20323/scratchpad/dest-repo/node_modules/@capacitor-community/background-geolocation/android/src/main/AndroidManifest.xml:1:11-69
++application
++ADDED from /private/tmp/claude-502/-Users-abhishek/8b5157d8-1fe4-4bc2-beed-4e2b7fd20323/scratchpad/dest-repo/node_modules/@capacitor-community/background-geolocation/android/src/main/AndroidManifest.xml:2:5-8:19
++service#com.equimaps.capacitor_background_geolocation.BackgroundGeolocationService
++ADDED from /private/tmp/claude-502/-Users-abhishek/8b5157d8-1fe4-4bc2-beed-4e2b7fd20323/scratchpad/dest-repo/node_modules/@capacitor-community/background-geolocation/android/src/main/AndroidManifest.xml:3:9-7:56
++	android:enabled
++		ADDED from /private/tmp/claude-502/-Users-abhishek/8b5157d8-1fe4-4bc2-beed-4e2b7fd20323/scratchpad/dest-repo/node_modules/@capacitor-community/background-geolocation/android/src/main/AndroidManifest.xml:5:13-35
++	android:exported
++		ADDED from /private/tmp/claude-502/-Users-abhishek/8b5157d8-1fe4-4bc2-beed-4e2b7fd20323/scratchpad/dest-repo/node_modules/@capacitor-community/background-geolocation/android/src/main/AndroidManifest.xml:6:13-36
++	android:foregroundServiceType
++		ADDED from /private/tmp/claude-502/-Users-abhishek/8b5157d8-1fe4-4bc2-beed-4e2b7fd20323/scratchpad/dest-repo/node_modules/@capacitor-community/background-geolocation/android/src/main/AndroidManifest.xml:7:13-53
++	android:name
++		ADDED from /private/tmp/claude-502/-Users-abhishek/8b5157d8-1fe4-4bc2-beed-4e2b7fd20323/scratchpad/dest-repo/node_modules/@capacitor-community/background-geolocation/android/src/main/AndroidManifest.xml:4:13-102
++uses-permission#android.permission.ACCESS_COARSE_LOCATION
++ADDED from /private/tmp/claude-502/-Users-abhishek/8b5157d8-1fe4-4bc2-beed-4e2b7fd20323/scratchpad/dest-repo/node_modules/@capacitor-community/background-geolocation/android/src/main/AndroidManifest.xml:10:5-81
++	android:name
++		ADDED from /private/tmp/claude-502/-Users-abhishek/8b5157d8-1fe4-4bc2-beed-4e2b7fd20323/scratchpad/dest-repo/node_modules/@capacitor-community/background-geolocation/android/src/main/AndroidManifest.xml:10:22-78
++uses-permission#android.permission.ACCESS_FINE_LOCATION
++ADDED from /private/tmp/claude-502/-Users-abhishek/8b5157d8-1fe4-4bc2-beed-4e2b7fd20323/scratchpad/dest-repo/node_modules/@capacitor-community/background-geolocation/android/src/main/AndroidManifest.xml:11:5-79
++	android:name
++		ADDED from /private/tmp/claude-502/-Users-abhishek/8b5157d8-1fe4-4bc2-beed-4e2b7fd20323/scratchpad/dest-repo/node_modules/@capacitor-community/background-geolocation/android/src/main/AndroidManifest.xml:11:22-76
++uses-permission#android.permission.FOREGROUND_SERVICE
++ADDED from /private/tmp/claude-502/-Users-abhishek/8b5157d8-1fe4-4bc2-beed-4e2b7fd20323/scratchpad/dest-repo/node_modules/@capacitor-community/background-geolocation/android/src/main/AndroidManifest.xml:12:5-77
++	android:name
++		ADDED from /private/tmp/claude-502/-Users-abhishek/8b5157d8-1fe4-4bc2-beed-4e2b7fd20323/scratchpad/dest-repo/node_modules/@capacitor-community/background-geolocation/android/src/main/AndroidManifest.xml:12:22-74
++uses-permission#android.permission.FOREGROUND_SERVICE_LOCATION
++ADDED from /private/tmp/claude-502/-Users-abhishek/8b5157d8-1fe4-4bc2-beed-4e2b7fd20323/scratchpad/dest-repo/node_modules/@capacitor-community/background-geolocation/android/src/main/AndroidManifest.xml:15:5-86
++	android:name
++		ADDED from /private/tmp/claude-502/-Users-abhishek/8b5157d8-1fe4-4bc2-beed-4e2b7fd20323/scratchpad/dest-repo/node_modules/@capacitor-community/background-geolocation/android/src/main/AndroidManifest.xml:15:22-83
++uses-permission#android.permission.POST_NOTIFICATIONS
++ADDED from /private/tmp/claude-502/-Users-abhishek/8b5157d8-1fe4-4bc2-beed-4e2b7fd20323/scratchpad/dest-repo/node_modules/@capacitor-community/background-geolocation/android/src/main/AndroidManifest.xml:18:5-77
++	android:name
++		ADDED from /private/tmp/claude-502/-Users-abhishek/8b5157d8-1fe4-4bc2-beed-4e2b7fd20323/scratchpad/dest-repo/node_modules/@capacitor-community/background-geolocation/android/src/main/AndroidManifest.xml:18:22-74
++uses-feature#android.hardware.location.gps
++ADDED from /private/tmp/claude-502/-Users-abhishek/8b5157d8-1fe4-4bc2-beed-4e2b7fd20323/scratchpad/dest-repo/node_modules/@capacitor-community/background-geolocation/android/src/main/AndroidManifest.xml:19:5-66
++	android:name
++		ADDED from /private/tmp/claude-502/-Users-abhishek/8b5157d8-1fe4-4bc2-beed-4e2b7fd20323/scratchpad/dest-repo/node_modules/@capacitor-community/background-geolocation/android/src/main/AndroidManifest.xml:19:19-63
++uses-sdk
++INJECTED from /private/tmp/claude-502/-Users-abhishek/8b5157d8-1fe4-4bc2-beed-4e2b7fd20323/scratchpad/dest-repo/node_modules/@capacitor-community/background-geolocation/android/src/main/AndroidManifest.xml reason: use-sdk injection requested
++INJECTED from /private/tmp/claude-502/-Users-abhishek/8b5157d8-1fe4-4bc2-beed-4e2b7fd20323/scratchpad/dest-repo/node_modules/@capacitor-community/background-geolocation/android/src/main/AndroidManifest.xml
++INJECTED from /private/tmp/claude-502/-Users-abhishek/8b5157d8-1fe4-4bc2-beed-4e2b7fd20323/scratchpad/dest-repo/node_modules/@capacitor-community/background-geolocation/android/src/main/AndroidManifest.xml
++	android:targetSdkVersion
++		INJECTED from /private/tmp/claude-502/-Users-abhishek/8b5157d8-1fe4-4bc2-beed-4e2b7fd20323/scratchpad/dest-repo/node_modules/@capacitor-community/background-geolocation/android/src/main/AndroidManifest.xml
++	android:minSdkVersion
++		INJECTED from /private/tmp/claude-502/-Users-abhishek/8b5157d8-1fe4-4bc2-beed-4e2b7fd20323/scratchpad/dest-repo/node_modules/@capacitor-community/background-geolocation/android/src/main/AndroidManifest.xml
+diff --git a/node_modules/@capacitor-community/background-geolocation/android/build/tmp/compileDebugJavaWithJavac/previous-compilation-data.bin b/node_modules/@capacitor-community/background-geolocation/android/build/tmp/compileDebugJavaWithJavac/previous-compilation-data.bin
+new file mode 100644
+index 0000000..a7a6e73
+Binary files /dev/null and b/node_modules/@capacitor-community/background-geolocation/android/build/tmp/compileDebugJavaWithJavac/previous-compilation-data.bin differ
 diff --git a/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/BackgroundGeolocation.java b/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/BackgroundGeolocation.java
+index a92fcf9..a83396a 100644
 --- a/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/BackgroundGeolocation.java
 +++ b/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/BackgroundGeolocation.java
-@@ -20,6 +20,7 @@
+@@ -20,6 +20,7 @@ import android.os.Build;
  import android.os.IBinder;
  import android.provider.Settings;
  
@@ -9,11 +486,7 @@ diff --git a/node_modules/@capacitor-community/background-geolocation/android/sr
  import com.getcapacitor.JSObject;
  import com.getcapacitor.Logger;
  import com.getcapacitor.PermissionState;
-@@ -156,11 +157,18 @@
- 
-             backgroundNotification = builder.build();
-         }
-+        try {
+@@ -159,7 +160,10 @@ public class BackgroundGeolocation extends Plugin {
          service.addWatcher(
                  call.getCallbackId(),
                  backgroundNotification,
@@ -23,368 +496,120 @@ diff --git a/node_modules/@capacitor-community/background-geolocation/android/sr
 +                call.getInt("fastestInterval", 1000),
 +                call.getInt("maxWaitTime", 1000)
          );
-+        } catch (Exception e) {
-+            call.reject("Could not start background location: " + e.getMessage(), "BACKGROUND_START_FAILED", e);
-+        }
      }
  
-     @PermissionCallback
-@@ -192,6 +200,52 @@
-         PluginCall savedCall = getBridge().getSavedCall(callbackId);
-         if (savedCall != null) {
-             savedCall.release(getBridge());
-+        }
-+        call.resolve();
-+    }
-+
+@@ -196,6 +200,51 @@ public class BackgroundGeolocation extends Plugin {
+         call.resolve();
+     }
+ 
 +    /**
-+     * Phase one of draining the native observation buffer (real device fixes
-+     * recorded independently of the JS bridge, see GpsBufferJournal): stage
-+     * whatever is journaled and hand back the batch plus health timestamps.
-+     * Nothing is deleted yet — a caller that dies before acking (app killed
-+     * mid-sync) finds the same batch staged again on the next call, so no
-+     * observation is lost to an interrupted drain.
++     * Drain the native observation buffer written by the service (real device
++     * fixes recorded independently of the JS bridge) and report the native
++     * health timestamps. Read-and-delete under the shared lock so a fix is
++     * handed to JS exactly once.
 +     */
 +    @PluginMethod()
-+    public void beginNativeBufferDrain(PluginCall call) {
++    public void drainNativeLocationBuffer(PluginCall call) {
 +        JSObject ret = new JSObject();
 +        JSArray locations = new JSArray();
-+        String token = GpsBufferJournal.beginDrain(getContext());
-+        if (token != null) {
-+            for (JSONObject record : GpsBufferJournal.read(getContext(), token)) {
-+                locations.put(record);
++        synchronized (BackgroundGeolocationService.NATIVE_BUFFER_LOCK) {
++            java.io.File f = new java.io.File(
++                    getContext().getFilesDir(),
++                    BackgroundGeolocationService.NATIVE_BUFFER_FILE
++            );
++            if (f.exists()) {
++                try (java.io.BufferedReader reader =
++                             new java.io.BufferedReader(new java.io.FileReader(f))) {
++                    String line;
++                    while ((line = reader.readLine()) != null) {
++                        line = line.trim();
++                        if (line.isEmpty()) continue;
++                        try {
++                            locations.put(new org.json.JSONObject(line));
++                        } catch (Exception ignored) {
++                            // A torn/corrupt line (e.g. process death mid-write)
++                            // is skipped; it was never a complete observation.
++                        }
++                    }
++                } catch (Exception ignored) {
++                }
++                //noinspection ResultOfMethodCallIgnored
++                f.delete();
 +            }
 +        }
 +        android.content.SharedPreferences prefs = getContext().getSharedPreferences(
 +                BackgroundGeolocationService.NATIVE_HEALTH_PREFS,
 +                Context.MODE_PRIVATE
 +        );
-+        ret.put("token", token);
 +        ret.put("locations", locations);
 +        ret.put("lastNativeCallbackAt", prefs.getLong("lastNativeCallbackAt", 0));
 +        ret.put("serviceStartedAt", prefs.getLong("serviceStartedAt", 0));
-+        ret.put("lastRealGpsFixTimestamp", prefs.getLong("lastRealGpsFixTimestamp", 0));
-+        ret.put("lastNativePersistenceTimestamp", prefs.getLong("lastNativePersistenceTimestamp", 0));
-+        ret.put("lastServiceHeartbeatTimestamp", prefs.getLong("lastServiceHeartbeatTimestamp", 0));
 +        call.resolve(ret);
 +    }
 +
-+    /**
-+     * Phase two: the batch handed back by beginNativeBufferDrain with this
-+     * token has been safely enqueued on the JS side — delete the staged
-+     * journal. Never call this before the batch is actually queued.
-+     */
-+    @PluginMethod()
-+    public void ackNativeBufferDrain(PluginCall call) {
-+        String token = call.getString("token");
-+        if (token != null) {
-+            GpsBufferJournal.ack(getContext(), token);
-         }
-         call.resolve();
-     }
+     @PluginMethod()
+     public void openSettings(PluginCall call) {
+         Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
 diff --git a/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService.java b/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService.java
+index fafbb86..6dd5705 100644
 --- a/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService.java
 +++ b/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/BackgroundGeolocationService.java
-@@ -1,7 +1,13 @@
- package com.equimaps.capacitor_background_geolocation;
- 
-+import android.Manifest;
- import android.app.Notification;
-+import android.app.NotificationChannel;
-+import android.app.NotificationManager;
-+import android.app.PendingIntent;
- import android.app.Service;
-+import android.content.SharedPreferences;
-+import android.content.pm.PackageManager;
- import android.content.Intent;
- import android.content.pm.ServiceInfo;
- import android.location.Location;
-@@ -17,7 +23,10 @@
- import com.google.android.gms.location.LocationResult;
+@@ -18,6 +18,8 @@ import com.google.android.gms.location.LocationResult;
  import com.google.android.gms.location.LocationServices;
  
-+import org.json.JSONObject;
-+
  import java.util.HashSet;
-+import java.util.UUID;
++import java.io.File;
++import java.io.FileWriter;
  
  import androidx.localbroadcastmanager.content.LocalBroadcastManager;
  
-@@ -32,6 +41,63 @@
- 
+@@ -33,6 +35,45 @@ public class BackgroundGeolocationService extends Service {
      // Must be unique for this application.
      private static final int NOTIFICATION_ID = 28351;
-+    public static final String ACTION_RECOVER = "jovo.gps.RECOVER";
-+
+ 
 +    // ---- Native observation buffer (JS-independence hardening) ----
-+    // Every real fix is durably journaled (GpsBufferJournal) BEFORE the
++    // Every real fix is appended to an app-private JSON-lines file BEFORE the
 +    // in-process broadcast to the WebView, so observations survive periods
-+    // where the JS bridge is frozen, slow, or entirely dead. The JS layer
-+    // drains the journal (beginNativeBufferDrain/ackNativeBufferDrain) into
-+    // its existing capture pipeline; entries are real device fixes only —
-+    // never synthesized.
++    // where the JS bridge is frozen or slow. The JS layer drains this file
++    // (drainNativeLocationBuffer) into its existing capture pipeline; entries
++    // are real device fixes only — never synthesized.
++    public static final Object NATIVE_BUFFER_LOCK = new Object();
++    public static final String NATIVE_BUFFER_FILE = "gps_native_buffer.jsonl";
 +    public static final String NATIVE_HEALTH_PREFS = "gps_native_health";
++    // Cap: drop new entries rather than grow unbounded if JS never drains
++    // (~2 MB ≈ several days of fixes).
++    private static final long NATIVE_BUFFER_MAX_BYTES = 2_000_000L;
 +
 +    private void recordNativeFix(Location location) {
-+        if (!isDayOpen(this)) {
-+            stopHeadless();
-+            stopSelf();
-+            return;
-+        }
-+        long callbackAt = System.currentTimeMillis();
-+        getSharedPreferences(NATIVE_HEALTH_PREFS, MODE_PRIVATE).edit()
-+                .putLong("lastNativeCallbackAt", callbackAt)
-+                .putLong("lastRealGpsFixTimestamp", location.getTime()).apply();
 +        try {
-+            JSONObject record = new JSONObject();
-+            record.put("id", UUID.randomUUID().toString());
-+            record.put("latitude", location.getLatitude());
-+            record.put("longitude", location.getLongitude());
-+            record.put("accuracy", location.hasAccuracy() ? location.getAccuracy() : JSONObject.NULL);
-+            record.put("speed", location.hasSpeed() ? location.getSpeed() : JSONObject.NULL);
-+            record.put("bearing", location.hasBearing() ? location.getBearing() : JSONObject.NULL);
-+            // Original OS fix time — distinct from when this process observed
-+            // and persisted it, so a batched/delayed delivery is still visible
-+            // as such rather than collapsed into "now".
-+            record.put("time", location.getTime());
-+            long persistedAt = System.currentTimeMillis();
-+            record.put("recordedAt", persistedAt);
-+            if (!GpsBufferJournal.append(getApplicationContext(), record)) {
-+                getSharedPreferences(NATIVE_HEALTH_PREFS, MODE_PRIVATE).edit()
-+                        .putString("lastPersistenceFailure", "Native GPS journal write failed").apply();
-+                return;
++            synchronized (NATIVE_BUFFER_LOCK) {
++                File f = new File(getApplicationContext().getFilesDir(), NATIVE_BUFFER_FILE);
++                if (f.length() <= NATIVE_BUFFER_MAX_BYTES) {
++                    FileWriter w = new FileWriter(f, true);
++                    w.write("{\"latitude\":" + location.getLatitude()
++                            + ",\"longitude\":" + location.getLongitude()
++                            + ",\"accuracy\":" + (location.hasAccuracy() ? location.getAccuracy() : "null")
++                            + ",\"speed\":" + (location.hasSpeed() ? location.getSpeed() : "null")
++                            + ",\"bearing\":" + (location.hasBearing() ? location.getBearing() : "null")
++                            + ",\"time\":" + location.getTime()
++                            + "}\n");
++                    w.close();
++                }
 +            }
-+
 +            getApplicationContext()
 +                    .getSharedPreferences(NATIVE_HEALTH_PREFS, MODE_PRIVATE)
 +                    .edit()
-+                    // Legacy key: staleness checks (TrackingRestarter.fixIsStale)
-+                    // and the JS drain response already depend on this name.
-+                    .putLong("lastNativeCallbackAt", persistedAt)
-+                    // Distinct health signals (not duplicates): the OS fix time
-+                    // itself, vs. the moment this process durably wrote it.
-+                    .putLong("lastRealGpsFixTimestamp", location.getTime())
-+                    .putLong("lastNativePersistenceTimestamp", persistedAt)
-+                    .remove("lastPersistenceFailure")
++                    .putLong("lastNativeCallbackAt", System.currentTimeMillis())
 +                    .apply();
 +        } catch (Exception ignored) {
 +            // Buffering must never break acquisition.
 +        }
 +    }
- 
++
      private class Watcher {
          public String id;
-@@ -45,6 +111,188 @@
-     @Override
-     public IBinder onBind(Intent intent) {
-         return binder;
-+    }
-+
-+    // ---- Restart / headless recording (reliability hardening) ----
-+    // Set by the app (DeviceSettings.setTrackingDayOpen) at check-in and
-+    // cleared at check-out. While a day is open the service is a *started*
-+    // sticky service, so Android restarts it after a kill, and if no JS
-+    // watcher is attached it records fixes straight into the native buffer
-+    // (drained by the app on next open). Only real device fixes are written.
-+    public static final String PREF_DAY_OPEN = "dayOpen";
-+    public static final String PREF_DAY_OPENED_AT = "dayOpenedAt";
-+    private static final long MAX_DAY_MS = 16L * 60 * 60 * 1000; // matches app auto-stop
-+    private static final String HEADLESS_CHANNEL = "jovo_tracking_restart";
-+    private FusedLocationProviderClient headlessClient;
-+    private LocationCallback headlessCallback;
-+
-+    public static boolean isDayOpen(android.content.Context ctx) {
-+        SharedPreferences p = ctx.getSharedPreferences(NATIVE_HEALTH_PREFS, MODE_PRIVATE);
-+        if (!p.getBoolean(PREF_DAY_OPEN, false)) return false;
-+        return System.currentTimeMillis() - p.getLong(PREF_DAY_OPENED_AT, 0) < MAX_DAY_MS;
-+    }
-+
-+    private Notification headlessNotification() {
-+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-+            NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-+            if (nm != null && nm.getNotificationChannel(HEADLESS_CHANNEL) == null) {
-+                NotificationChannel ch = new NotificationChannel(
-+                        HEADLESS_CHANNEL, "Day Tracking", NotificationManager.IMPORTANCE_LOW);
-+                ch.setSound(null, null);
-+                ch.enableVibration(false);
-+                nm.createNotificationChannel(ch);
-+            }
-+        }
-+        Notification.Builder b = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
-+                ? new Notification.Builder(this, HEADLESS_CHANNEL)
-+                : new Notification.Builder(this);
-+        b.setContentTitle("JOVO — Day Tracking active")
-+                .setContentText("Tracking your workday location. Tap to open JOVO.")
-+                .setOngoing(true);
-+        int icon = getApplicationInfo().icon;
-+        b.setSmallIcon(icon != 0 ? icon : android.R.drawable.ic_menu_mylocation);
-+        Intent launch = getPackageManager().getLaunchIntentForPackage(getPackageName());
-+        if (launch != null) {
-+            int flags = Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_IMMUTABLE : 0;
-+            b.setContentIntent(PendingIntent.getActivity(this, 0, launch, flags));
-+        }
-+        return b.build();
-+    }
-+
-+    private boolean promoteForeground(Notification n) {
-+        try {
-+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-+                startForeground(NOTIFICATION_ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
-+            } else {
-+                startForeground(NOTIFICATION_ID, n);
-+            }
-+            getSharedPreferences(NATIVE_HEALTH_PREFS, MODE_PRIVATE).edit()
-+                    .putLong("lastServiceHeartbeatTimestamp", System.currentTimeMillis())
-+                    .remove("lastForegroundFailure").putBoolean("restartDeferred", false).apply();
-+            return true;
-+        } catch (Exception e) {
-+            Logger.error("Failed to foreground service (restart)", e);
-+            getSharedPreferences(NATIVE_HEALTH_PREFS, MODE_PRIVATE).edit()
-+                    .putString("lastForegroundFailure", e.getClass().getSimpleName() + ": " + e.getMessage())
-+                    .putBoolean("restartDeferred", true).apply();
-+            return false;
-+        }
-+    }
-+
-+    private boolean hasLocationPermission() {
-+        return checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
-+                || checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED;
-+    }
-+
-+    private void startHeadless() {
-+        if (headlessCallback != null || !watchers.isEmpty() || !hasLocationPermission()) return;
-+        headlessClient = LocationServices.getFusedLocationProviderClient(this);
-+        LocationRequest req = new LocationRequest();
-+        // Same cadence as the app's MOVING watcher config (3s/2s/8s, 5 m).
-+        req.setInterval(3000);
-+        req.setFastestInterval(2000);
-+        req.setMaxWaitTime(8000);
-+        req.setSmallestDisplacement(5f);
-+        req.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-+        headlessCallback = new LocationCallback() {
-+            @Override
-+            public void onLocationResult(LocationResult result) {
-+                for (Location l : result.getLocations()) recordNativeFix(l);
-+            }
-+        };
-+        try {
-+            final LocationCallback registration = headlessCallback;
-+            headlessClient.requestLocationUpdates(req, registration, android.os.Looper.getMainLooper())
-+                    .addOnSuccessListener(unused -> {
-+                        if (headlessCallback != registration || !isDayOpen(BackgroundGeolocationService.this)) {
-+                            headlessClient.removeLocationUpdates(registration);
-+                            return;
-+                        }
-+                        getSharedPreferences(NATIVE_HEALTH_PREFS, MODE_PRIVATE).edit()
-+                                .putLong("serviceStartedAt", System.currentTimeMillis())
-+                                .remove("lastHeadlessFailure").apply();
-+                    }).addOnFailureListener(e -> {
-+                        if (headlessCallback == registration) headlessCallback = null;
-+                        getSharedPreferences(NATIVE_HEALTH_PREFS, MODE_PRIVATE).edit()
-+                                .putString("lastHeadlessFailure", e.getClass().getSimpleName() + ": " + e.getMessage()).apply();
-+                        Logger.error("Failed to register headless location", e);
-+                    });
-+        } catch (SecurityException e) {
-+            headlessCallback = null;
-+        }
-+    }
-+
-+    private void stopHeadless() {
-+        if (headlessClient != null && headlessCallback != null) {
-+            try { headlessClient.removeLocationUpdates(headlessCallback); } catch (Exception ignored) {}
-+        }
-+        headlessCallback = null;
-+    }
-+
-+    @Override
-+    public int onStartCommand(Intent intent, int flags, int startId) {
-+        // A startForegroundService() caller requires startForeground() within
-+        // seconds, so always promote first (reusing the JS watcher's
-+        // notification when one exists), then decide.
-+        Notification existing = getNotification();
-+        if (!promoteForeground(existing != null ? existing : headlessNotification())) {
-+            stopSelf(startId);
-+            return START_NOT_STICKY;
-+        }
-+        if (!isDayOpen(this) || !hasLocationPermission()) {
-+            stopHeadless();
-+            if (watchers.isEmpty()) {
-+                stopForeground(true);
-+                stopSelf(startId);
-+            }
-+            return START_NOT_STICKY;
-+        }
-+        if (watchers.isEmpty()) startHeadless();
-+        else if (intent != null && ACTION_RECOVER.equals(intent.getAction())) {
-+            long last = getSharedPreferences(NATIVE_HEALTH_PREFS, MODE_PRIVATE).getLong("lastNativeCallbackAt", 0);
-+            if (System.currentTimeMillis() - last > 10L * 60 * 1000) {
-+                for (Watcher watcher : watchers) {
-+                    watcher.client.removeLocationUpdates(watcher.locationCallback);
-+                    try {
-+                        watcher.client.requestLocationUpdates(watcher.locationRequest, watcher.locationCallback, android.os.Looper.getMainLooper())
-+                                .addOnFailureListener(e -> Logger.error("Failed to recover location watcher", e));
-+                    } catch (SecurityException e) {
-+                        Logger.error("Location permission revoked during recovery", e);
-+                    }
-+                }
-+            }
-+        }
-+        return START_STICKY;
-+    }
-+
-+    private static volatile BackgroundGeolocationService instance;
-+
-+    @Override
-+    public void onCreate() {
-+        super.onCreate();
-+        instance = this;
-+    }
-+
-+    @Override
-+    public void onDestroy() {
-+        stopHeadless();
-+        for (Watcher watcher : watchers) watcher.client.removeLocationUpdates(watcher.locationCallback);
-+        watchers.clear();
-+        if (instance == this) instance = null;
-+        super.onDestroy();
-+    }
-+
-+    /** Called by the app at check-out: stop native-only recording now. */
-+    public static void onDayClosed() {
-+        final BackgroundGeolocationService s = instance;
-+        if (s == null) return;
-+        new android.os.Handler(android.os.Looper.getMainLooper()).post(new Runnable() { @Override public void run() {
-+            s.stopHeadless();
-+            if (s.watchers.isEmpty()) {
-+                try { s.stopForeground(true); } catch (Exception ignored) {}
-+            }
-+            s.stopSelf();
-+        }});
-     }
- 
-     // Some devices allow a foreground service to outlive the application's main
-@@ -57,6 +305,20 @@
-             watcher.client.removeLocationUpdates(watcher.locationCallback);
-         }
-         watchers = new HashSet<Watcher>();
-+        if (isDayOpen(this) && hasLocationPermission()) {
-+            // App UI went away mid-day (e.g. swiped from Recents): keep
-+            // recording natively instead of stopping. No broadcasts are sent
-+            // to the dead WebView, so issue #59 cannot recur.
-+            if (!promoteForeground(headlessNotification())) {
-+                stopHeadless();
-+                stopSelf();
-+                return false;
-+            }
-+            startHeadless();
-+            return false;
-+        }
-+        stopHeadless();
-+        stopForeground(true);
-         stopSelf();
-         return false;
-     }
-@@ -75,27 +337,42 @@
+         public FusedLocationProviderClient client;
+@@ -75,14 +116,22 @@ public class BackgroundGeolocationService extends Service {
          void addWatcher(
                  final String id,
                  Notification backgroundNotification,
@@ -394,11 +619,6 @@ diff --git a/node_modules/@capacitor-community/background-geolocation/android/sr
 +                long fastestInterval,
 +                long maxWaitTime
          ) {
-+            // Promote synchronously while the Activity is visible, before
-+            // acquisition; onStartCommand alone leaves a backgrounding race.
-+            if (backgroundNotification != null && !promoteForeground(backgroundNotification)) {
-+                throw new IllegalStateException("Location foreground service could not start");
-+            }
              FusedLocationProviderClient client = LocationServices.getFusedLocationProviderClient(
                      BackgroundGeolocationService.this
              );
@@ -415,29 +635,15 @@ diff --git a/node_modules/@capacitor-community/background-geolocation/android/sr
              locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
              locationRequest.setSmallestDisplacement(distanceFilter);
  
-             LocationCallback callback = new LocationCallback(){
+@@ -90,6 +139,7 @@ public class BackgroundGeolocationService extends Service {
                  @Override
                  public void onLocationResult(LocationResult locationResult) {
--                    Location location = locationResult.getLastLocation();
--                    Intent intent = new Intent(ACTION_BROADCAST);
--                    intent.putExtra("location", location);
--                    intent.putExtra("id", id);
--                    LocalBroadcastManager.getInstance(
--                            getApplicationContext()
--                    ).sendBroadcast(intent);
-+                    // Preserve every batched fix, not only the last one.
-+                    // The existing JS pipeline still owns capture filtering.
-+                    for (Location location : locationResult.getLocations()) {
-+                        recordNativeFix(location);
-+                        Intent intent = new Intent(ACTION_BROADCAST);
-+                        intent.putExtra("location", location);
-+                        intent.putExtra("id", id);
-+                        LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
-+                    }
-                 }
-                 @Override
-                 public void onLocationAvailability(LocationAvailability availability) {
-@@ -105,6 +382,12 @@
+                     Location location = locationResult.getLastLocation();
++                    recordNativeFix(location);
+                     Intent intent = new Intent(ACTION_BROADCAST);
+                     intent.putExtra("location", location);
+                     intent.putExtra("id", id);
+@@ -105,6 +155,12 @@ public class BackgroundGeolocationService extends Service {
                  }
              };
  
@@ -450,258 +656,3 @@ diff --git a/node_modules/@capacitor-community/background-geolocation/android/sr
              Watcher watcher = new Watcher();
              watcher.id = id;
              watcher.client = client;
-@@ -113,32 +396,33 @@
-             watcher.backgroundNotification = backgroundNotification;
-             watchers.add(watcher);
- 
--            // According to Android Studio, this method can throw a Security Exception if
--            // permissions are not yet granted. Rather than check the permissions, which is fiddly,
--            // we simply ignore the exception.
-+            // Become a *started* service too, so START_STICKY applies and
-+            // Android restarts us after a memory-pressure / OEM kill.
-+            if (isDayOpen(BackgroundGeolocationService.this)) {
-+                try {
-+                    startService(new Intent(BackgroundGeolocationService.this, BackgroundGeolocationService.class));
-+                } catch (Exception ignored) {
-+                    // Background-start restriction: the bound watcher still works.
-+                }
-+            }
-+
-             try {
--                watcher.client.requestLocationUpdates(
--                        watcher.locationRequest,
--                        watcher.locationCallback,
--                        null
--                );
--            } catch (SecurityException ignore) {}
--
--            // Promote the service to the foreground if necessary.
--            // Ideally we would only call 'startForeground' if the service is not already
--            // foregrounded. Unfortunately, 'getForegroundServiceType' was only introduced
--            // in API level 29 and seems to behave weirdly, as reported in #120. However,
--            // it appears that 'startForeground' is idempotent, so we just call it repeatedly
--            // each time a background watcher is added.
--            if (backgroundNotification != null) {
--                try {
--                    // This method has been known to fail due to weird
--                    // permission bugs, so we prevent any exceptions from
--                    // crashing the app. See issue #86.
--                    startForeground(NOTIFICATION_ID, backgroundNotification);
--                } catch (Exception exception) {
--                    Logger.error("Failed to foreground service", exception);
--                }
-+                watcher.client.requestLocationUpdates(watcher.locationRequest, watcher.locationCallback, android.os.Looper.getMainLooper())
-+                        .addOnSuccessListener(unused -> {
-+                            if (!watchers.contains(watcher) || !isDayOpen(BackgroundGeolocationService.this)) {
-+                                watcher.client.removeLocationUpdates(watcher.locationCallback);
-+                                return;
-+                            }
-+                            stopHeadless();
-+                        })
-+                        .addOnFailureListener(e -> {
-+                            Logger.error("Failed to register location watcher", e);
-+                            boolean wasActive = watchers.remove(watcher);
-+                            if (wasActive && watchers.isEmpty() && isDayOpen(BackgroundGeolocationService.this)) startHeadless();
-+                        });
-+            } catch (SecurityException e) {
-+                watchers.remove(watcher);
-+                throw e;
-             }
-         }
- 
-@@ -147,7 +431,9 @@
-                 if (watcher.id.equals(id)) {
-                     watcher.client.removeLocationUpdates(watcher.locationCallback);
-                     watchers.remove(watcher);
--                    if (getNotification() == null) {
-+                    if (watchers.isEmpty() && isDayOpen(BackgroundGeolocationService.this)) {
-+                        if (promoteForeground(headlessNotification())) startHeadless();
-+                    } else if (getNotification() == null) {
-                         stopForeground(true);
-                     }
-                     return;
-@@ -169,7 +455,11 @@
-         }
- 
-         void stopService() {
--            BackgroundGeolocationService.this.stopSelf();
-+            // Bridge destruction is not checkout. onUnbind hands an open
-+            // day to native buffering without removing started-service status.
-+            if (!isDayOpen(BackgroundGeolocationService.this)) {
-+                BackgroundGeolocationService.this.stopSelf();
-+            }
-         }
-     }
- }
-diff --git a/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/GpsBufferJournal.java b/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/GpsBufferJournal.java
-new file mode 100644
---- /dev/null
-+++ b/node_modules/@capacitor-community/background-geolocation/android/src/main/java/com/equimaps/capacitor_background_geolocation/GpsBufferJournal.java
-@@ -0,0 +1,167 @@
-+package com.equimaps.capacitor_background_geolocation;
-+
-+import android.content.Context;
-+import android.util.Log;
-+
-+import org.json.JSONException;
-+import org.json.JSONObject;
-+
-+import java.io.BufferedReader;
-+import java.io.File;
-+import java.io.FileOutputStream;
-+import java.io.FileReader;
-+import java.io.IOException;
-+import java.nio.charset.StandardCharsets;
-+import java.util.ArrayList;
-+import java.util.List;
-+import java.util.UUID;
-+
-+/**
-+ * Durable storage for native GPS fixes, independent of the JS bridge.
-+ *
-+ * Mirrors ai.quickapp.fieldforce.AppUsageJournal's proven shape (append-only
-+ * JSONL in getFilesDir() plus a two-phase stage/read/ack drain) — that class
-+ * can't be reused directly since this plugin builds as its own Gradle module,
-+ * separate from the app module it lives in, but the mechanics are copied
-+ * deliberately rather than reinvented.
-+ *
-+ * One difference from the plugin's previous read-and-delete buffer, and it is
-+ * intentional: a drain the JS side starts but never finishes (app killed
-+ * mid-sync) must replay, not disappear. beginDrain() moves the journal aside
-+ * under a token; ack() deletes it only once the caller confirms the records
-+ * are safely queued elsewhere. A journal left inflight by a crashed drain is
-+ * folded into the next one automatically.
-+ */
-+final class GpsBufferJournal {
-+
-+    private static final String TAG = "GpsBufferJournal";
-+
-+    /** Guards every read/append/rename of the journal files. */
-+    static final Object LOCK = new Object();
-+
-+    /** Own subdirectory so this can be excluded from backups by folder. */
-+    private static final String DIR = "gps_buffer";
-+    static final String JOURNAL_FILE = "gps_native_buffer.jsonl";
-+    private static final String INFLIGHT_PREFIX = "gps_native_buffer.inflight.";
-+    private static final String INFLIGHT_SUFFIX = ".jsonl";
-+
-+    private GpsBufferJournal() {}
-+
-+    private static File dir(Context ctx) {
-+        File d = new File(ctx.getFilesDir(), DIR);
-+        if (!d.exists() && !d.mkdirs()) Log.w(TAG, "could not create " + DIR);
-+        return d;
-+    }
-+
-+    private static File journal(Context ctx) {
-+        return new File(dir(ctx), JOURNAL_FILE);
-+    }
-+
-+    private static File inflight(Context ctx, String token) {
-+        return new File(dir(ctx), INFLIGHT_PREFIX + token + INFLIGHT_SUFFIX);
-+    }
-+
-+    /**
-+     * Append one real fix. Called directly from the service's location
-+     * callbacks, so a failure here must never throw back into them — the
-+     * caller already runs this under a try/catch. Do not silently discard
-+     * captured fixes just because the WebView has not drained yet.
-+     */
-+    static boolean append(Context ctx, JSONObject record) {
-+        synchronized (LOCK) {
-+            File f = journal(ctx);
-+            try (FileOutputStream out = new FileOutputStream(f, true)) {
-+                out.write((record.toString() + "\n").getBytes(StandardCharsets.UTF_8));
-+                out.flush();
-+                out.getFD().sync();
-+                return true;
-+            } catch (IOException e) {
-+                Log.w(TAG, "journal append failed", e);
-+                return false;
-+            }
-+        }
-+    }
-+
-+    /**
-+     * Phase one of a drain: adopt any journal left inflight by a previous
-+     * drain that was never acked, fold the current journal into it, and hand
-+     * back the token ack() will need.
-+     *
-+     * @return the token, or null when there is nothing to drain.
-+     */
-+    static String beginDrain(Context ctx) {
-+        synchronized (LOCK) {
-+            File existing = findInflight(ctx);
-+            File live = journal(ctx);
-+
-+            // Replay an immutable inflight batch first. Leave the live
-+            // journal untouched for the next drain: failed copies must never
-+            // delete captured fixes, and retries must not duplicate merges.
-+            if (existing != null) return tokenOf(existing);
-+
-+            if (!live.exists() || live.length() == 0) return null;
-+
-+            String token = UUID.randomUUID().toString();
-+            File target = inflight(ctx, token);
-+            if (!live.renameTo(target)) {
-+                Log.w(TAG, "could not move journal aside for drain");
-+                return null;
-+            }
-+            return token;
-+        }
-+    }
-+
-+    /** Phase two: the records are safely queued on the JS side. */
-+    static void ack(Context ctx, String token) {
-+        synchronized (LOCK) {
-+            File f = inflight(ctx, token);
-+            if (f.exists() && !f.delete()) {
-+                Log.w(TAG, "could not delete inflight journal " + token);
-+            }
-+        }
-+    }
-+
-+    /** Parse the records held under a drain token. Malformed lines are skipped. */
-+    static List<JSONObject> read(Context ctx, String token) {
-+        List<JSONObject> out = new ArrayList<>();
-+        synchronized (LOCK) {
-+            File f = inflight(ctx, token);
-+            if (!f.exists()) return out;
-+            try (BufferedReader r = new BufferedReader(new FileReader(f))) {
-+                String line;
-+                while ((line = r.readLine()) != null) {
-+                    line = line.trim();
-+                    if (line.isEmpty()) continue;
-+                    try {
-+                        out.add(new JSONObject(line));
-+                    } catch (JSONException e) {
-+                        // A torn last line from a kill mid-write. Skip it.
-+                        Log.w(TAG, "skipping malformed journal line");
-+                    }
-+                }
-+            } catch (IOException e) {
-+                Log.w(TAG, "journal read failed", e);
-+            }
-+        }
-+        return out;
-+    }
-+
-+    private static File findInflight(Context ctx) {
-+        File[] files = dir(ctx).listFiles();
-+        if (files == null) return null;
-+        File oldest = null;
-+        for (File f : files) {
-+            String n = f.getName();
-+            if (n.startsWith(INFLIGHT_PREFIX) && n.endsWith(INFLIGHT_SUFFIX)) {
-+                if (oldest == null || f.lastModified() < oldest.lastModified()) oldest = f;
-+            }
-+        }
-+        return oldest;
-+    }
-+
-+    private static String tokenOf(File inflightFile) {
-+        String n = inflightFile.getName();
-+        return n.substring(INFLIGHT_PREFIX.length(), n.length() - INFLIGHT_SUFFIX.length());
-+    }
-+
-+}

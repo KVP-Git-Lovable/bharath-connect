@@ -8,75 +8,6 @@
  * Strategy: always try native plugin first, catch errors, fall back to web API.
  */
 
-import type { TrackerEvent } from '@/services/trackerHealth';
-import { withTimeout } from '@/utils/withTimeout';
-
-/**
- * Best-effort diagnostic log for a rejection inside a GPS/location-relevant
- * native helper below — these used to be console.warn-only, invisible to
- * "Check user tracking issues". Awaited with a bounded 1.5s race (same
- * pattern as logBreadcrumb further down) rather than fire-and-forget, so the
- * insert has a real window to reach the server if the process is killed or
- * restarted moments after logging; the race keeps a slow/offline network
- * from delaying the caller indefinitely.
- */
-async function logPermissionError(userId: string | null | undefined, step: string, e: unknown): Promise<void> {
-  try {
-    const { logTrackerEvent } = await import('@/services/trackerHealth');
-    await Promise.race([
-      logTrackerEvent(userId, 'native_permission_error', {
-        step,
-        message: e instanceof Error ? e.message : String(e),
-      }),
-      new Promise((resolve) => setTimeout(resolve, 1500)),
-    ]);
-  } catch { /* best-effort only */ }
-}
-
-/**
- * Coordinated, deduped Geolocation.requestPermissions() — the ONLY call site
- * that should ever invoke it directly. Confirmed bug class (useNativeStartup.ts's
- * own prior comment documents it): Capacitor's Android bridge abandons one of
- * the two callbacks when two requestPermissions() calls for the same plugin
- * overlap, leaving whichever caller lost the race hanging forever with no
- * timeout above it. useNativeStartup.ts fires this once on app boot;
- * runPrepareNativeLocationSettings (below) used to fire a second, independent
- * one shortly after for a user who's already checked in — exactly the
- * scenario that races. Sharing one in-flight call, timeout-bounded, removes
- * the race by construction instead of just tolerating its symptom.
- */
-let locationPermRequestInFlight: Promise<any> | null = null;
-const LOCATION_PERM_REQUEST_TIMEOUT_MS = 60_000; // legitimately waits on a user-facing OS dialog
-const LOCATION_PERM_CHECK_TIMEOUT_MS = 10_000; // checkPermissions never shows UI
-
-export function requestLocationPermissionCoordinated(): Promise<any> {
-  if (locationPermRequestInFlight) return locationPermRequestInFlight;
-  locationPermRequestInFlight = (async () => {
-    const { Geolocation } = await import('@capacitor/geolocation');
-    // Check first: when precise location is already granted there is
-    // nothing to request, so never pay the request-dialog/bridge-callback
-    // risk at all. A failed/timed-out check falls through to the request.
-    try {
-      const current = await withTimeout(
-        Geolocation.checkPermissions(),
-        LOCATION_PERM_CHECK_TIMEOUT_MS,
-        'Geolocation.checkPermissions'
-      );
-      if (current?.location === 'granted') return current;
-    } catch (e) {
-      console.warn('Geolocation.checkPermissions failed before request:', e);
-    }
-    return withTimeout(
-      Geolocation.requestPermissions({ permissions: ['location', 'coarseLocation'] }),
-      LOCATION_PERM_REQUEST_TIMEOUT_MS,
-      'Geolocation.requestPermissions'
-    );
-  })().finally(() => {
-    locationPermRequestInFlight = null;
-  });
-  return locationPermRequestInFlight;
-}
-
 let _isNativeCached: boolean | null = null;
 
 /** Check if running inside a Capacitor native shell */
@@ -134,62 +65,47 @@ async function getDeviceSettingsPlugin() {
   return registerPlugin<any>('DeviceSettings');
 }
 
-// Every DeviceSettings.* call below is a thin native bridge method with no
-// guaranteed resolve/reject path (confirmed: Android 10's background-location
-// permission-callback branch in DeviceSettingsPlugin.java can leave its
-// PluginCall permanently unresolved if the OS permission result never
-// arrives). An unguarded await here has no timeout anywhere above it either —
-// TrackingHealthCard.tsx polls getNativeLocationPowerStatus() directly, and
-// nothing wraps that call. 10s is generous margin for a bridge call that is
-// confirmed (DeviceSettingsPlugin.java) to resolve immediately after firing
-// its Settings intent, never waiting on the user's return.
-const NATIVE_BRIDGE_TIMEOUT_MS = 10_000;
-
-export async function getNativeLocationPowerStatus(userId?: string | null): Promise<NativeLocationPowerStatus | null> {
+export async function getNativeLocationPowerStatus(): Promise<NativeLocationPowerStatus | null> {
   if (!isNative()) return null;
   try {
     const DeviceSettings = await getDeviceSettingsPlugin();
-    return await withTimeout(DeviceSettings.getLocationPowerStatus(), NATIVE_BRIDGE_TIMEOUT_MS, 'getLocationPowerStatus');
+    return await DeviceSettings.getLocationPowerStatus();
   } catch (e) {
     console.warn('Could not read native location/power status:', e);
-    await logPermissionError(userId, 'getLocationPowerStatus', e);
     return null;
   }
 }
 
-export async function requestBatteryOptimizationExemption(userId?: string | null): Promise<NativeLocationPowerStatus | null> {
+export async function requestBatteryOptimizationExemption(): Promise<NativeLocationPowerStatus | null> {
   if (!isNative()) return null;
   try {
     const DeviceSettings = await getDeviceSettingsPlugin();
-    return await withTimeout(DeviceSettings.requestIgnoreBatteryOptimizations(), NATIVE_BRIDGE_TIMEOUT_MS, 'requestBatteryOptimizationExemption');
+    return await DeviceSettings.requestIgnoreBatteryOptimizations();
   } catch (e) {
     console.warn('Could not request battery optimisation exemption:', e);
-    await logPermissionError(userId, 'requestBatteryOptimizationExemption', e);
     return null;
   }
 }
 
 /** Open the system Location Services screen (device location on/off). */
-export async function openLocationSettings(userId?: string | null): Promise<NativeLocationPowerStatus | null> {
+export async function openLocationSettings(): Promise<NativeLocationPowerStatus | null> {
   if (!isNative()) return null;
   try {
     const DeviceSettings = await getDeviceSettingsPlugin();
-    return await withTimeout(DeviceSettings.openLocationSettings(), NATIVE_BRIDGE_TIMEOUT_MS, 'openLocationSettings');
+    return await DeviceSettings.openLocationSettings();
   } catch (e) {
     console.warn('Could not open location settings:', e);
-    await logPermissionError(userId, 'openLocationSettings', e);
     return null;
   }
 }
 
-export async function requestBackgroundLocationAccess(userId?: string | null): Promise<NativeLocationPowerStatus | null> {
+export async function requestBackgroundLocationAccess(): Promise<NativeLocationPowerStatus | null> {
   if (!isNative()) return null;
   try {
     const DeviceSettings = await getDeviceSettingsPlugin();
-    return await withTimeout(DeviceSettings.requestBackgroundLocation(), NATIVE_BRIDGE_TIMEOUT_MS, 'requestBackgroundLocationAccess');
+    return await DeviceSettings.requestBackgroundLocation();
   } catch (e) {
     console.warn('Could not request background location access:', e);
-    await logPermissionError(userId, 'requestBackgroundLocationAccess', e);
     return null;
   }
 }
@@ -199,140 +115,34 @@ export async function requestBackgroundLocationAccess(userId?: string | null): P
  * or disable Battery Optimization. This helper requests what Android permits
  * directly and opens the exact system screen for the user-controlled settings.
  */
-let prepareInFlight: Promise<NativeLocationPowerStatus | null> | null = null;
-
-// Both the battery-exemption and background-location requests below fire a
-// real startActivity() to a system Settings screen (confirmed in
-// DeviceSettingsPlugin.java) — not a lightweight dialog. That backgrounds
-// this app's Activity immediately. If the user doesn't complete the detour
-// and return, the backgrounded process can be killed by the OS within
-// minutes (observed: ApplicationExitInfo reasons SIGNALED/OTHER, not a user
-// Force Stop) before the JS side ever runs its next line — so chaining BOTH
-// redirects in one pass risked losing the whole flow (and the watcher
-// registration gated behind it) to a single Settings bounce, repeating
-// identically on every reopen with nothing persisted in between. Firing at
-// most one redirect per call, and cooling down afterward, keeps a half-
-// completed setup from re-bouncing the user every single time they reopen
-// the app, and lets the watcher registration that follows proceed on
-// whatever is already granted instead of blocking on the full chain.
-const SETTINGS_REDIRECT_COOLDOWN_MS = 5 * 60_000;
-const SETTINGS_REDIRECT_STORAGE_KEY = 'gps_last_settings_redirect_at';
-
-function msSinceLastSettingsRedirect(): number {
-  try {
-    const last = Number(localStorage.getItem(SETTINGS_REDIRECT_STORAGE_KEY)) || 0;
-    return Date.now() - last;
-  } catch {
-    return Infinity; // storage unavailable — never block on a cooldown we can't track
-  }
-}
-
-function markSettingsRedirect() {
-  try {
-    localStorage.setItem(SETTINGS_REDIRECT_STORAGE_KEY, String(Date.now()));
-  } catch { /* ignore */ }
-}
-
-/**
- * Best-effort diagnostic log, awaited with a short timeout rather than
- * fire-and-forget: a bare `void logTrackerEvent(...)` can still be lost if
- * the process dies moments later (the insert is an in-flight network
- * request, not something Android guarantees survives an Activity
- * transition). Awaiting gives it a real window to actually reach the
- * server before the caller proceeds to startActivity(); the timeout keeps
- * a slow/offline network from delaying that transition indefinitely.
- */
-async function logBreadcrumb(userId: string | null | undefined, event: TrackerEvent, details: Record<string, unknown>) {
-  try {
-    const { logTrackerEvent } = await import('@/services/trackerHealth');
-    await Promise.race([
-      logTrackerEvent(userId, event, details),
-      new Promise((resolve) => setTimeout(resolve, 1500)),
-    ]);
-  } catch { /* best-effort only */ }
-}
-
-/**
- * Single ordered, idempotent tracking-permission flow:
- * location → notifications → battery exemption → background location.
- * Concurrent callers share one run, so two dialogs can never race.
- *
- * `userId` is optional and used only to log a `location_setup_redirect`
- * tracker-health event immediately before a Settings redirect fires — the
- * one point in this flow guaranteed to run even if everything after it
- * (including the function's own return) never gets the chance to.
- *
- * `force` bypasses the redirect cooldown — only pass it from an explicit,
- * user-initiated retry (e.g. a "Fix settings" button the user just tapped).
- * The cooldown exists to stop the SILENT automatic flow from re-bouncing an
- * unaware user to Settings on every app reopen; it was never meant to make
- * a deliberate retry a no-op.
- */
-export function prepareNativeLocationSettings(
-  userId?: string | null,
-  opts?: { force?: boolean }
-): Promise<NativeLocationPowerStatus | null> {
-  if (!isNative()) return Promise.resolve(null);
-  if (prepareInFlight) return prepareInFlight;
-  prepareInFlight = runPrepareNativeLocationSettings(userId, opts?.force ?? false).finally(() => {
-    prepareInFlight = null;
-  });
-  return prepareInFlight;
-}
-
-async function runPrepareNativeLocationSettings(
-  userId?: string | null,
-  force = false
-): Promise<NativeLocationPowerStatus | null> {
-  // Breadcrumb before anything else in this flow runs — if a session only
-  // ever shows this and nothing after it, the failure is in the foreground-
-  // location request or getNativeLocationPowerStatus() itself, not in a
-  // later Settings redirect. Narrows "Check user tracking issues" down to
-  // exactly where setup stalled instead of just "somewhere before permission_status".
-  await logBreadcrumb(userId, 'location_setup_started', { forced: force });
+export async function prepareNativeLocationSettings(): Promise<NativeLocationPowerStatus | null> {
+  if (!isNative()) return null;
 
   try {
-    // Shared/deduped with useNativeStartup.ts's own boot-time request — see
-    // requestLocationPermissionCoordinated's own comment for why calling
-    // Geolocation.requestPermissions() independently here used to race it.
-    await requestLocationPermissionCoordinated();
+    const { Geolocation } = await import('@capacitor/geolocation');
+    await Geolocation.requestPermissions({ permissions: ['location', 'coarseLocation'] });
   } catch (e) {
     console.warn('Foreground location permission request failed:', e);
-    await logPermissionError(userId, 'requestPermissions', e);
   }
 
-  const status = await getNativeLocationPowerStatus(userId);
+  const status = await getNativeLocationPowerStatus();
   // Android 13+: the tracking foreground-service notification is invisible
   // until POST_NOTIFICATIONS is granted — request it in the same flow.
-  // (A plain permission dialog, not a Settings redirect — safe to keep here.)
   if (status?.notificationsEnabled === false) {
     try {
       const DeviceSettings = await getDeviceSettingsPlugin();
-      await withTimeout(DeviceSettings.requestPostNotifications(), NATIVE_BRIDGE_TIMEOUT_MS, 'requestPostNotifications');
+      await DeviceSettings.requestPostNotifications();
     } catch (e) {
       console.warn('Could not request notification permission:', e);
     }
   }
-
-  const cooldownActive = !force && msSinceLastSettingsRedirect() < SETTINGS_REDIRECT_COOLDOWN_MS;
-
   if (status?.ignoringBatteryOptimizations === false) {
-    if (cooldownActive) return status;
-    await logBreadcrumb(userId, 'location_setup_redirect', { step: 'battery_exemption', forced: force });
-    const result = await requestBatteryOptimizationExemption(userId);
-    // Only start the cooldown if Android actually confirms it opened a
-    // screen — a thrown/failed request shouldn't silently block a retry.
-    if (result?.opened) markSettingsRedirect();
-    return result;
+    await requestBatteryOptimizationExemption();
   }
   if (status?.backgroundLocation !== 'granted') {
-    if (cooldownActive) return status;
-    await logBreadcrumb(userId, 'location_setup_redirect', { step: 'background_location', forced: force });
-    const result = await requestBackgroundLocationAccess(userId);
-    if (result?.opened) markSettingsRedirect();
-    return result;
+    return requestBackgroundLocationAccess();
   }
-  return getNativeLocationPowerStatus(userId);
+  return getNativeLocationPowerStatus();
 }
 
 /**
@@ -349,7 +159,7 @@ type PositionFix = {
   heading: number | null;
 };
 
-function webGetPosition(opts: { enableHighAccuracy: boolean; timeout: number; maximumAge: number }): Promise<PositionFix> {
+function webGetPosition(opts: { enableHighAccuracy: boolean; timeout: number }): Promise<PositionFix> {
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) {
       return reject(new Error('Geolocation not supported'));
@@ -389,7 +199,7 @@ function webGetPosition(opts: { enableHighAccuracy: boolean; timeout: number; ma
       {
         enableHighAccuracy: opts.enableHighAccuracy,
         timeout: opts.timeout,
-        maximumAge: opts.maximumAge, // 0 (default) = never accept a stale cached fix
+        maximumAge: 0, // never accept a stale cached fix
       }
     );
 
@@ -398,18 +208,9 @@ function webGetPosition(opts: { enableHighAccuracy: boolean; timeout: number; ma
   });
 }
 
-/**
- * Get current position — tries native plugin, falls back to web API.
- *
- * `maximumAge` defaults to 0 (never accept a stale fix) to preserve exact
- * existing behavior for every caller that wants a genuinely fresh reading
- * (check-in/out, visit check-in, "Current Location"). Only a recurring
- * poller with its own cadence (useGPSTracker.ts's web fallback) should ever
- * pass a non-zero value — reusing a fix a few seconds old there avoids
- * forcing the GPS radio to re-acquire from scratch every single cycle.
- */
-export async function getCurrentPosition(options?: { enableHighAccuracy?: boolean; timeout?: number; maximumAge?: number }) {
-  const opts = { enableHighAccuracy: true, timeout: 15000, maximumAge: 0, ...options };
+/** Get current position — tries native plugin, falls back to web API */
+export async function getCurrentPosition(options?: { enableHighAccuracy?: boolean; timeout?: number }) {
+  const opts = { enableHighAccuracy: true, timeout: 15000, ...options };
 
   // Try native plugin first
   if (isNative()) {
@@ -491,9 +292,6 @@ export async function requestMicrophonePermission(): Promise<'granted' | 'denied
 
 /** Request all needed permissions — tries native, silently skips on failure */
 export async function requestNativePermissions() {
-  // On the phone app the ordered startup flow (useNativeStartup) owns these
-  // requests; running a second copy here raced it and lost dialog results.
-  if (isNative()) return;
   // Try native geolocation permission
   try {
     const { Geolocation } = await import('@capacitor/geolocation');
@@ -558,43 +356,4 @@ export async function openAutoStartSettings(): Promise<boolean> {
     console.warn('Could not open autostart settings:', e);
     return false;
   }
-}
-
-
-/**
- * Tell the Android app whether an attendance day is open. The reboot receiver
- * and the periodic watchdog read this flag to restart tracking when the app
- * UI isn't running. No-op on web and on older app builds without the method.
- */
-export async function setNativeTrackingDay(open: boolean): Promise<void> {
-  if (!isNative()) return;
-  try {
-    const DeviceSettings = await getDeviceSettingsPlugin();
-    await DeviceSettings.setTrackingDayOpen({ open });
-  } catch {
-    /* older APK without the method — app-side recovery still applies */
-  }
-}
-
-export type PhoneBrand = 'xiaomi' | 'oppo' | 'vivo' | 'samsung' | 'other';
-
-/** Phone maker, from the Android build info (needs the new APK; else 'other'). */
-export async function getPhoneBrand(): Promise<{ brand: PhoneBrand; manufacturer: string }> {
-  if (!isNative()) return { brand: 'other', manufacturer: '' };
-  try {
-    const DeviceSettings = await getDeviceSettingsPlugin();
-    const info = await DeviceSettings.getDeviceBrand();
-    return { brand: classifyBrand(`${info?.manufacturer ?? ''} ${info?.brand ?? ''}`), manufacturer: info?.manufacturer ?? '' };
-  } catch {
-    return { brand: 'other', manufacturer: '' };
-  }
-}
-
-export function classifyBrand(raw: string): PhoneBrand {
-  const s = raw.toLowerCase();
-  if (/xiaomi|redmi|poco/.test(s)) return 'xiaomi';
-  if (/oppo|realme|oneplus/.test(s)) return 'oppo';
-  if (/vivo|iqoo/.test(s)) return 'vivo';
-  if (/samsung/.test(s)) return 'samsung';
-  return 'other';
 }

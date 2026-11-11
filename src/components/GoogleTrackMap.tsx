@@ -19,13 +19,6 @@ interface GoogleTrackMapProps {
   activityMarkers?: ActivityMarker[];
   /** Precomputed road-snapped path. When provided, the map skips its own routing call. */
   routePath?: { lat: number; lng: number }[] | null;
-  /**
-   * Chronological fallback waypoints (GPS fixes, detected stops, visit
-   * check-ins) for days where real GPS alone is too sparse to draw a line.
-   * Only drawn when there's no real trail to show, and styled dashed/amber
-   * so it's never mistaken for a GPS-verified route.
-   */
-  extrapolatedPoints?: { lat: number; lng: number }[] | null;
 }
 
 
@@ -84,7 +77,7 @@ const AUTH_ERROR =
   "Google Maps rejected this domain. Add this site to the API key's HTTP referrer allowlist in Google Cloud Console.";
 
 const GoogleTrackMap = forwardRef<HTMLDivElement, GoogleTrackMapProps>(function GoogleTrackMap(
-  { location, gpsPoints, activityMarkers, routePath, extrapolatedPoints },
+  { location, gpsPoints, activityMarkers, routePath },
   _forwardedRef
 ) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -218,29 +211,6 @@ const GoogleTrackMap = forwardRef<HTMLDivElement, GoogleTrackMapProps>(function 
         bounds.extend(c);
         hasBounds = true;
       });
-    } else if (extrapolatedPoints && extrapolatedPoints.length > 1) {
-      // No real trail to draw (e.g. only one GPS fix all day). Connect
-      // whatever timestamped locations exist — GPS fixes, detected stops,
-      // visit check-ins — into a best-effort path so there's still a route
-      // on the map. Dashed + amber, deliberately distinct from the solid
-      // blue GPS-verified line above, so it always reads as approximate.
-      const dash = {
-        path: "M 0,-1 0,1",
-        strokeOpacity: 1,
-        scale: 3,
-      };
-      const line = new g.maps.Polyline({
-        path: extrapolatedPoints,
-        map,
-        strokeOpacity: 0,
-        strokeColor: "#f59e0b",
-        icons: [{ icon: dash, offset: "0", repeat: "14px" }],
-      });
-      overlaysRef.current.push(line);
-      extrapolatedPoints.forEach((c) => {
-        bounds.extend(c);
-        hasBounds = true;
-      });
     }
 
     // Start / latest
@@ -285,7 +255,7 @@ const GoogleTrackMap = forwardRef<HTMLDivElement, GoogleTrackMapProps>(function 
       });
       overlaysRef.current.push({ setMap: () => g.maps.event.removeListener(listener) });
     }
-  }, [ready, location, activityMarkers, points, routePath, extrapolatedPoints]);
+  }, [ready, location, activityMarkers, points, routePath]);
 
   if (error) {
     return (

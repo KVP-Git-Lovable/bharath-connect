@@ -16,8 +16,6 @@ export interface TrackerStatus {
   /** Epoch ms of the last watcher/probe callback of any kind. */
   lastCallbackAt: number | null;
   native: boolean;
-  /** Native background watcher could not start; running screen-on polling while retrying. */
-  foregroundOnly: boolean;
 }
 
 const STATUS_EVENT = "gps-tracker-status";
@@ -28,7 +26,6 @@ let status: TrackerStatus = {
   lastFixAt: null,
   lastCallbackAt: null,
   native: false,
-  foregroundOnly: false,
 };
 
 export function getTrackerStatus(): TrackerStatus {

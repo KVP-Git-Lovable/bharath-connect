@@ -569,13 +569,10 @@ export async function computeSnappedDistanceKm(
   window?: AttendanceWindow | null
 ): Promise<SnappedDistanceResult> {
   const t = processTrajectory(raw, { window });
-  // Road snapping unavailable: keep the straight-line gap legs as the
-  // estimated part (same rule as the per-batch fallback in googleRoute.ts)
-  // instead of discarding distance driven across tracking gaps.
   const fallback: SnappedDistanceResult = {
     trackedKm: t.trackedDistanceKm,
-    estimatedKm: t.gapLegsKm,
-    totalKm: t.trackedDistanceKm + t.gapLegsKm,
+    estimatedKm: 0,
+    totalKm: t.trackedDistanceKm,
     source: "validated-gps",
     metrics: t.metrics,
   };

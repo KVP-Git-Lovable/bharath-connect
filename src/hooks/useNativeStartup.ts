@@ -1,6 +1,4 @@
 import { useEffect } from "react";
-import { withTimeout } from "@/utils/withTimeout";
-import { requestLocationPermissionCoordinated } from "@/utils/nativePermissions";
 
 /**
  * Kept for API compatibility. Startup no longer opens a real microphone
@@ -15,13 +13,21 @@ export function isMicPrimingActive() {
  * On native (Capacitor) platforms, request all hardware permissions
  * as soon as the app starts. This triggers Android system dialogs
  * so the WebView has access to camera, location, etc.
- *
+ */
+/**
  * Some Capacitor permission calls never settle on certain Android versions —
  * Filesystem.requestPermissions() in particular hangs on API 33+, where
  * publicStorage is no longer a runtime permission. Awaiting it directly stalls
- * every request queued behind it, so each step is raced against a timeout
- * (withTimeout, shared with nativePermissions.ts/useGPSTracker.ts).
+ * every request queued behind it, so each step is raced against a timeout.
  */
+function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
+  return Promise.race([
+    p,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms)
+    ),
+  ]);
+}
 
 /**
  * The startup chain must run exactly once per app session.
@@ -60,15 +66,9 @@ export function useNativeStartup() {
       // or denied must not stop the ones after it.
 
       // 1. Location — GPS tracking, visit check-in, beat routing
-      //
-      // Shared/deduped with nativePermissions.ts's own request (fired from
-      // useGPSTracker.ts's startNativeBackground() when a day is already
-      // open): two independent Geolocation.requestPermissions() calls for
-      // the same plugin raced here before — see
-      // requestLocationPermissionCoordinated's own comment — leaving
-      // whichever one lost the race hanging forever.
       try {
-        const perm = await requestLocationPermissionCoordinated();
+        const { Geolocation } = await import("@capacitor/geolocation");
+        const perm = await withTimeout(Geolocation.requestPermissions(), 60000, 'Location');
         console.log(
           "[NativeStartup] Location:", perm.location,
           "| coarse:", perm.coarseLocation

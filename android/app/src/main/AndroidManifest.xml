@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
         android:name=".QuickLocateApplication"
         android:allowBackup="true"
@@ -22,31 +22,6 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
-        <!-- Resume Day Tracking after reboot / app update if a day is still open -->
-        <receiver
-            android:name=".BootReceiver"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="android.intent.action.BOOT_COMPLETED" />
-                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
-            </intent-filter>
-        </receiver>
-
-        <!-- Hardening override: guarantee the location service survives being
-             swiped from Recents and is typed as a location foreground service,
-             regardless of what the plugin's own library manifest declares (that
-             manifest isn't inspectable in this build environment, so this pins
-             the behavior explicitly instead of relying on it by chance).
-             exported is deliberately left unset here — the library declares
-             exported="true" and there's no reason from this change to flip
-             that, so tools:node="merge" lets its existing value stand instead
-             of forcing a tools:replace for an attribute we don't need to touch. -->
-        <service
-            android:name="com.equimaps.capacitor_background_geolocation.BackgroundGeolocationService"
-            tools:node="merge"
-            android:stopWithTask="false"
-            android:foregroundServiceType="location" />
 
         <provider
             android:name="androidx.core.content.FileProvider"
@@ -94,7 +69,6 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
-    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-feature android:name="android.hardware.location.gps" android:required="false" />
 </manifest>
 
