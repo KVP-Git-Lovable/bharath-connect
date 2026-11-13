@@ -16,6 +16,15 @@ import { setTrackerStatus } from "@/services/trackerStatus";
 import { format } from "date-fns";
 
 
+function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
+  return Promise.race([
+    p,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms)
+    ),
+  ]);
+}
+
 const MIN_FORCED_WRITE_MS = 15_000;  // min spacing for non-moving trail-density writes
 const FOREGROUND_POLL_MS = 15_000;   // web / non-native fallback (screen-on only)
 // Watcher-health: no watcher CALLBACK for this long while the day is open ⇒
@@ -321,11 +330,22 @@ export function useGPSTracker(userId: string | null | undefined) {
         console.debug("[GPSTracker] duplicate start attempt ignored — watcher already active");
         return true;
       }
+      // Tracks which await was in flight if this function times out or
+      // throws, so the single catch at the bottom can log a stage-specific
+      // native_start_timeout/native_start_error instead of a bare failure —
+      // previously a hang anywhere in this try block produced NO event at
+      // all (the catch only fires on rejection, never a hang), which is what
+      // let this function wedge silently for however long the app stayed open.
+      let stage = "prepareLocationSettings";
+      const startedAt = Date.now();
       try {
         // Foreground-service prerequisites: fine location, background
         // location and the battery-optimisation exemption. Logged so a
         // workday's logs show whether Android is allowed to keep us alive.
-        const powerStatus = await prepareNativeLocationSettings();
+        // Timeout-bounded (outer backstop, 75s): generous enough to cover a
+        // legitimate Settings-redirect round trip, but guarantees this
+        // function always proceeds instead of hanging indefinitely.
+        const powerStatus = await withTimeout(prepareNativeLocationSettings(), 75_000, stage);
         console.info("[GPSTracker] native location power status", powerStatus);
         void logTrackerEvent(userId, "permission_status", { ...(powerStatus ?? {}) });
 
@@ -335,9 +355,10 @@ export function useGPSTracker(userId: string | null | undefined) {
         // Only register the watcher once the OS has actually granted location.
         // Requesting here too would race the startup permission request and
         // Android would abandon one of the callbacks, leaving location denied.
+        stage = "checkPermissions";
         try {
           const { Geolocation } = await import("@capacitor/geolocation");
-          const perm = await Geolocation.checkPermissions();
+          const perm = await withTimeout(Geolocation.checkPermissions(), 10_000, stage);
           if (perm.location !== "granted") {
             // Approximate-only is NOT precise: fused ~35 m guesses flatten a
             // day to 0 km. Surface it (health card + event log) instead of
@@ -353,6 +374,12 @@ export function useGPSTracker(userId: string | null | undefined) {
           }
         } catch (e) {
           console.warn("[GPSTracker] Could not check location permission:", e);
+          const timedOut = e instanceof Error && e.message.includes("timed out");
+          void logTrackerEvent(userId, timedOut ? "native_start_timeout" : "native_start_error", {
+            stage,
+            elapsedMs: Date.now() - startedAt,
+            message: e instanceof Error ? e.message : String(e),
+          });
           return false;
         }
 
@@ -361,7 +388,12 @@ export function useGPSTracker(userId: string | null | undefined) {
         if (!BackgroundGeolocation?.addWatcher) return false;
 
         const register = async () => {
-          const id = await BackgroundGeolocation.addWatcher(
+          // Covers both call sites (initial registration below, and
+          // forceReregisterRef's rebuild on watchdog/resume) — addWatcher is
+          // a RETURN_CALLBACK plugin method expected to resolve almost
+          // immediately (it only registers the callback id; it doesn't wait
+          // for a fix), so 15s is generous margin, not an accommodation.
+          const id = await withTimeout(BackgroundGeolocation.addWatcher(
             {
               backgroundMessage: "Tracking your workday location. Tap to open JOVO.",
               backgroundTitle: "JOVO — Day Tracking active",
@@ -415,7 +447,7 @@ export function useGPSTracker(userId: string | null | undefined) {
                 );
               } catch { /* ignore */ }
             }
-          );
+          ), 15_000, "registerWatcher");
           watcherIdRef.current = id;
         };
 
@@ -493,6 +525,7 @@ export function useGPSTracker(userId: string | null | undefined) {
         };
 
 
+        stage = "registerWatcher";
         await register();
         lastWriteRef.current = Date.now();
         lastCallbackTsRef.current = Date.now();
@@ -591,6 +624,18 @@ export function useGPSTracker(userId: string | null | undefined) {
         return true;
       } catch (e) {
         console.warn("[GPSTracker] background plugin unavailable, falling back", e);
+        // This used to be the ONLY catch in the whole function — and it only
+        // fires on a rejection, never a hang, which is exactly how this
+        // function could previously wedge indefinitely with zero events
+        // logged. Every risky await above is now timeout-bounded, so this
+        // catch is reachable again either way — log which stage and whether
+        // it was a timeout or a genuine rejection.
+        const timedOut = e instanceof Error && e.message.includes("timed out");
+        void logTrackerEvent(userId, timedOut ? "native_start_timeout" : "native_start_error", {
+          stage,
+          elapsedMs: Date.now() - startedAt,
+          message: e instanceof Error ? e.message : String(e),
+        });
         return false;
       }
     }

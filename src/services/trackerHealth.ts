@@ -24,7 +24,16 @@ export type TrackerEvent =
   | "resume_recovery"
   | "native_buffer_drained"
   | "permission_status"
-  | "tracking_stopped";
+  | "tracking_stopped"
+  // A previously-unguarded native call in the permission-prep/watcher-start
+  // chain (startNativeBackground / prepareNativeLocationSettings) never
+  // settled within its timeout — before this, a hang in that chain produced
+  // ZERO events, no matter how long the app ran. details.stage identifies
+  // which await hung.
+  | "native_start_timeout"
+  // The same chain threw instead of hanging — startNativeBackground's outer
+  // catch previously only did console.warn.
+  | "native_start_error";
 
 /** Don't spam the table: identical events are rate-limited per session. */
 const MIN_GAP_MS: Partial<Record<TrackerEvent, number>> = {

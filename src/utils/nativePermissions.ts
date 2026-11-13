@@ -104,11 +104,20 @@ async function getDeviceSettingsPlugin() {
   return registerPlugin<any>('DeviceSettings');
 }
 
+// Every DeviceSettings.* call below is a thin native bridge method with no
+// guaranteed resolve/reject path. An unguarded await here has no timeout
+// anywhere above it either — TrackingHealthCard.tsx polls
+// getNativeLocationPowerStatus() directly, and nothing wraps that call.
+// 10s is generous margin for a bridge call that's expected to resolve
+// immediately after firing its Settings intent, never waiting on the user's
+// return.
+const NATIVE_BRIDGE_TIMEOUT_MS = 10_000;
+
 export async function getNativeLocationPowerStatus(): Promise<NativeLocationPowerStatus | null> {
   if (!isNative()) return null;
   try {
     const DeviceSettings = await getDeviceSettingsPlugin();
-    return await DeviceSettings.getLocationPowerStatus();
+    return await withTimeout(DeviceSettings.getLocationPowerStatus(), NATIVE_BRIDGE_TIMEOUT_MS, 'getLocationPowerStatus');
   } catch (e) {
     console.warn('Could not read native location/power status:', e);
     return null;
@@ -119,7 +128,7 @@ export async function requestBatteryOptimizationExemption(): Promise<NativeLocat
   if (!isNative()) return null;
   try {
     const DeviceSettings = await getDeviceSettingsPlugin();
-    return await DeviceSettings.requestIgnoreBatteryOptimizations();
+    return await withTimeout(DeviceSettings.requestIgnoreBatteryOptimizations(), NATIVE_BRIDGE_TIMEOUT_MS, 'requestBatteryOptimizationExemption');
   } catch (e) {
     console.warn('Could not request battery optimisation exemption:', e);
     return null;
@@ -131,7 +140,7 @@ export async function openLocationSettings(): Promise<NativeLocationPowerStatus 
   if (!isNative()) return null;
   try {
     const DeviceSettings = await getDeviceSettingsPlugin();
-    return await DeviceSettings.openLocationSettings();
+    return await withTimeout(DeviceSettings.openLocationSettings(), NATIVE_BRIDGE_TIMEOUT_MS, 'openLocationSettings');
   } catch (e) {
     console.warn('Could not open location settings:', e);
     return null;
@@ -142,7 +151,7 @@ export async function requestBackgroundLocationAccess(): Promise<NativeLocationP
   if (!isNative()) return null;
   try {
     const DeviceSettings = await getDeviceSettingsPlugin();
-    return await DeviceSettings.requestBackgroundLocation();
+    return await withTimeout(DeviceSettings.requestBackgroundLocation(), NATIVE_BRIDGE_TIMEOUT_MS, 'requestBackgroundLocationAccess');
   } catch (e) {
     console.warn('Could not request background location access:', e);
     return null;
