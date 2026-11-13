@@ -448,7 +448,7 @@ export function useGPSTracker(userId: string | null | undefined) {
               } catch { /* ignore */ }
             }
           ), 15_000, "registerWatcher");
-          watcherIdRef.current = id;
+          watcherIdRef.current = id as string | null;
         };
 
         /**
