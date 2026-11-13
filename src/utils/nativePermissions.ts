@@ -8,6 +8,45 @@
  * Strategy: always try native plugin first, catch errors, fall back to web API.
  */
 
+function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
+  return Promise.race([
+    p,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms)
+    ),
+  ]);
+}
+
+/**
+ * Coordinated, deduped Geolocation.requestPermissions() — the ONLY call site
+ * that should ever invoke it directly. Confirmed bug class (useNativeStartup.ts's
+ * own comment documents it too): Capacitor's Android bridge abandons one of
+ * the two callbacks when two requestPermissions() calls for the same plugin
+ * overlap, leaving whichever caller lost the race hanging forever with no
+ * timeout above it. useNativeStartup.ts fires this once on app boot;
+ * prepareNativeLocationSettings (below) used to fire a second, independent
+ * one shortly after for a user who's already checked in — exactly the
+ * scenario that races. Sharing one in-flight call, timeout-bounded, removes
+ * the race by construction instead of just tolerating its symptom.
+ */
+let locationPermRequestInFlight: Promise<any> | null = null;
+const LOCATION_PERM_REQUEST_TIMEOUT_MS = 60_000; // legitimately waits on a user-facing OS dialog
+
+export function requestLocationPermissionCoordinated(): Promise<any> {
+  if (locationPermRequestInFlight) return locationPermRequestInFlight;
+  locationPermRequestInFlight = (async () => {
+    const { Geolocation } = await import('@capacitor/geolocation');
+    return withTimeout(
+      Geolocation.requestPermissions({ permissions: ['location', 'coarseLocation'] }),
+      LOCATION_PERM_REQUEST_TIMEOUT_MS,
+      'Geolocation.requestPermissions'
+    );
+  })().finally(() => {
+    locationPermRequestInFlight = null;
+  });
+  return locationPermRequestInFlight;
+}
+
 let _isNativeCached: boolean | null = null;
 
 /** Check if running inside a Capacitor native shell */
@@ -119,8 +158,10 @@ export async function prepareNativeLocationSettings(): Promise<NativeLocationPow
   if (!isNative()) return null;
 
   try {
-    const { Geolocation } = await import('@capacitor/geolocation');
-    await Geolocation.requestPermissions({ permissions: ['location', 'coarseLocation'] });
+    // Shared/deduped with useNativeStartup.ts's own boot-time request — see
+    // requestLocationPermissionCoordinated's own comment for why calling
+    // Geolocation.requestPermissions() independently here used to race it.
+    await requestLocationPermissionCoordinated();
   } catch (e) {
     console.warn('Foreground location permission request failed:', e);
   }

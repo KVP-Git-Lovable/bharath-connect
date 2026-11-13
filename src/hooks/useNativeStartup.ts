@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { requestLocationPermissionCoordinated } from "@/utils/nativePermissions";
 
 /**
  * Kept for API compatibility. Startup no longer opens a real microphone
@@ -66,9 +67,17 @@ export function useNativeStartup() {
       // or denied must not stop the ones after it.
 
       // 1. Location — GPS tracking, visit check-in, beat routing
+      //
+      // Routed through requestLocationPermissionCoordinated() (nativePermissions.ts)
+      // instead of calling Geolocation.requestPermissions() directly: that
+      // function also calls it independently once useGPSTracker sees an open
+      // day, and two concurrent requestPermissions() calls for the same
+      // plugin race — Capacitor's Android bridge abandons one of the two
+      // callbacks, leaving whichever call lost the race hanging forever with
+      // no timeout above it. Sharing one in-flight, timeout-bounded call
+      // removes the race by construction.
       try {
-        const { Geolocation } = await import("@capacitor/geolocation");
-        const perm = await withTimeout(Geolocation.requestPermissions(), 60000, 'Location');
+        const perm = await requestLocationPermissionCoordinated();
         console.log(
           "[NativeStartup] Location:", perm.location,
           "| coarse:", perm.coarseLocation
