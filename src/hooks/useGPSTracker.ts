@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { getCurrentPosition, isNative, prepareNativeLocationSettings } from "@/utils/nativePermissions";
+import { getCurrentPosition, isNative, prepareNativeLocationSettings, getNativeLocationPowerStatus } from "@/utils/nativePermissions";
 import { shouldAcceptMove, isCoarseFix, GPS_CAPTURE_CONFIG } from "@/utils/gpsCaptureGate";
 import { GPS_PROCESSING_CONFIG, haversineMeters as haversine } from "@/utils/gpsDistance";
 import {
@@ -324,7 +324,7 @@ export function useGPSTracker(userId: string | null | undefined) {
       persistPoint(lat, lng, accuracy, now, true, speed, heading);
     }
 
-    async function startNativeBackground() {
+    async function startNativeBackground(opts: { quiet?: boolean } = {}) {
       // Idempotent start: never create a second watcher/location stream.
       if (watcherIdRef.current) {
         console.debug("[GPSTracker] duplicate start attempt ignored — watcher already active");
@@ -342,10 +342,17 @@ export function useGPSTracker(userId: string | null | undefined) {
         // Foreground-service prerequisites: fine location, background
         // location and the battery-optimisation exemption. Logged so a
         // workday's logs show whether Android is allowed to keep us alive.
+        // Retries run quietly (status read only, via getNativeLocationPowerStatus)
+        // so the recovery loop below never re-opens permission/battery
+        // screens over and over while it keeps trying in the background.
         // Timeout-bounded (outer backstop, 75s): generous enough to cover a
         // legitimate Settings-redirect round trip, but guarantees this
         // function always proceeds instead of hanging indefinitely.
-        const powerStatus = await withTimeout(prepareNativeLocationSettings(), 75_000, stage);
+        const powerStatus = await withTimeout(
+          opts.quiet ? getNativeLocationPowerStatus() : prepareNativeLocationSettings(),
+          75_000,
+          stage
+        );
         console.info("[GPSTracker] native location power status", powerStatus);
         void logTrackerEvent(userId, "permission_status", { ...(powerStatus ?? {}) });
 
@@ -670,6 +677,48 @@ export function useGPSTracker(userId: string | null | undefined) {
     // checks in later). Single-flight + idempotent-start guards make it safe
     // to call from every evaluate() — it can never create a second stream.
     let startingAcquisition = false;
+    // Native recovery loop: when the background watcher can't start (e.g.
+    // permission not granted yet, or the attempt got interrupted by the
+    // screen locking mid-registration) we no longer settle for
+    // foreground-only polling forever — keep retrying in the background,
+    // with no user action needed, while the day stays open.
+    const NATIVE_RETRY_DELAYS_MS = [30_000, 60_000, 120_000, 300_000];
+    let nativeRetryTimer: number | null = null;
+    let nativeRetryAttempt = 0;
+    function clearNativeRetry() {
+      if (nativeRetryTimer != null) { window.clearTimeout(nativeRetryTimer); nativeRetryTimer = null; }
+    }
+    async function retryNativeNow(reason: string) {
+      clearNativeRetry();
+      if (cancelled || !activeRef.current || !isNative()) return;
+      if (watcherIdRef.current != null || startingAcquisition) return;
+      startingAcquisition = true;
+      let ok = false;
+      try {
+        ok = await startNativeBackground({ quiet: true });
+      } finally {
+        startingAcquisition = false;
+      }
+      if (ok) {
+        nativeRetryAttempt = 0;
+        // Native watcher is the single source — stop the screen-on poll.
+        if (timerRef.current) { window.clearInterval(timerRef.current); timerRef.current = null; }
+        setTrackerStatus({ foregroundOnly: false });
+        void logTrackerEvent(userId, "native_recovered", { reason });
+      } else {
+        scheduleNativeRetry();
+      }
+    }
+    function scheduleNativeRetry() {
+      if (cancelled || !activeRef.current || nativeRetryTimer != null) return;
+      setTrackerStatus({ foregroundOnly: true });
+      const delay = NATIVE_RETRY_DELAYS_MS[Math.min(nativeRetryAttempt, NATIVE_RETRY_DELAYS_MS.length - 1)]!;
+      nativeRetryAttempt++;
+      nativeRetryTimer = window.setTimeout(() => {
+        nativeRetryTimer = null;
+        void retryNativeNow("retry_timer");
+      }, delay);
+    }
     async function ensureAcquisitionRunning() {
       if (startingAcquisition || cancelled || !activeRef.current) return;
       if (watcherIdRef.current != null || timerRef.current != null) return;
@@ -677,7 +726,10 @@ export function useGPSTracker(userId: string | null | undefined) {
       try {
         if (isNative()) {
           const ok = await startNativeBackground();
-          if (!ok) await startForeground();
+          if (!ok) {
+            await startForeground();
+            scheduleNativeRetry();
+          }
         } else {
           await startForeground();
         }
@@ -693,6 +745,8 @@ export function useGPSTracker(userId: string | null | undefined) {
       activeRef.current = open;
       setTrackerStatus({ active: open, native: isNative() });
       if (!open) {
+        clearNativeRetry();
+        setTrackerStatus({ foregroundOnly: false });
         // Day closed → stop background watcher if any, then drain the queue
         if (stopBackground) { await stopBackground(); stopBackground = null; }
         if (pollTimer) { window.clearInterval(pollTimer); pollTimer = null; }
@@ -727,7 +781,12 @@ export function useGPSTracker(userId: string | null | undefined) {
       const silenceMs = Date.now() - lastCallbackTsRef.current;
       if (!isNative()) return;
       if (watcherIdRef.current == null) {
-        void ensureAcquisitionRunning();
+        // A foreground-only fallback already running means a native retry is
+        // either in flight or scheduled — jump the queue now that the app is
+        // actually visible, the best moment for the attempt to succeed,
+        // instead of waiting out whatever backoff delay is left.
+        if (timerRef.current != null) void retryNativeNow("app_resume");
+        else void ensureAcquisitionRunning();
         return;
       }
       if (silenceMs > RESUME_SILENCE_MS) {
@@ -796,6 +855,7 @@ export function useGPSTracker(userId: string | null | undefined) {
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("attendance-changed", onAttendanceChanged);
       removeAppListener?.();
+      clearNativeRetry();
       if (timerRef.current) window.clearInterval(timerRef.current);
       if (pollTimer) window.clearInterval(pollTimer);
       if (stopBackground) stopBackground();

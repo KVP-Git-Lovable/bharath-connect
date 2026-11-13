@@ -33,7 +33,11 @@ export type TrackerEvent =
   | "native_start_timeout"
   // The same chain threw instead of hanging — startNativeBackground's outer
   // catch previously only did console.warn.
-  | "native_start_error";
+  | "native_start_error"
+  // The background native-retry loop (scheduleNativeRetry/retryNativeNow)
+  // succeeded after an earlier failed/interrupted attempt — the screen-on
+  // poll fallback is being torn down in favour of the real native watcher.
+  | "native_recovered";
 
 /** Don't spam the table: identical events are rate-limited per session. */
 const MIN_GAP_MS: Partial<Record<TrackerEvent, number>> = {
