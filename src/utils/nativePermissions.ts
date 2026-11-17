@@ -31,11 +31,25 @@ function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
  */
 let locationPermRequestInFlight: Promise<any> | null = null;
 const LOCATION_PERM_REQUEST_TIMEOUT_MS = 60_000; // legitimately waits on a user-facing OS dialog
+const LOCATION_PERM_CHECK_TIMEOUT_MS = 10_000; // checkPermissions never shows UI
 
 export function requestLocationPermissionCoordinated(): Promise<any> {
   if (locationPermRequestInFlight) return locationPermRequestInFlight;
   locationPermRequestInFlight = (async () => {
     const { Geolocation } = await import('@capacitor/geolocation');
+    // Check first: when precise location is already granted there is
+    // nothing to request, so never pay the request-dialog/bridge-callback
+    // risk at all. A failed/timed-out check falls through to the request.
+    try {
+      const current = await withTimeout(
+        Geolocation.checkPermissions(),
+        LOCATION_PERM_CHECK_TIMEOUT_MS,
+        'Geolocation.checkPermissions'
+      );
+      if (current?.location === 'granted') return current;
+    } catch (e) {
+      console.warn('Geolocation.checkPermissions failed before request:', e);
+    }
     return withTimeout(
       Geolocation.requestPermissions({ permissions: ['location', 'coarseLocation'] }),
       LOCATION_PERM_REQUEST_TIMEOUT_MS,
@@ -181,7 +195,7 @@ export async function prepareNativeLocationSettings(): Promise<NativeLocationPow
   if (status?.notificationsEnabled === false) {
     try {
       const DeviceSettings = await getDeviceSettingsPlugin();
-      await DeviceSettings.requestPostNotifications();
+      await withTimeout(DeviceSettings.requestPostNotifications(), NATIVE_BRIDGE_TIMEOUT_MS, 'requestPostNotifications');
     } catch (e) {
       console.warn('Could not request notification permission:', e);
     }

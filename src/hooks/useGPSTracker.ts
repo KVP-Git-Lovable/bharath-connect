@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { getCurrentPosition, isNative, prepareNativeLocationSettings, getNativeLocationPowerStatus } from "@/utils/nativePermissions";
+import { getCurrentPosition, isNative, prepareNativeLocationSettings, getNativeLocationPowerStatus, requestLocationPermissionCoordinated } from "@/utils/nativePermissions";
 import { shouldAcceptMove, isCoarseFix, GPS_CAPTURE_CONFIG } from "@/utils/gpsCaptureGate";
 import { GPS_PROCESSING_CONFIG, haversineMeters as haversine } from "@/utils/gpsDistance";
 import {
@@ -336,49 +336,60 @@ export function useGPSTracker(userId: string | null | undefined) {
       // previously a hang anywhere in this try block produced NO event at
       // all (the catch only fires on rejection, never a hang), which is what
       // let this function wedge silently for however long the app stayed open.
-      let stage = "prepareLocationSettings";
+      let stage = "checkPermissions";
       const startedAt = Date.now();
-      try {
-        // Foreground-service prerequisites: fine location, background
-        // location and the battery-optimisation exemption. Logged so a
-        // workday's logs show whether Android is allowed to keep us alive.
-        // Retries run quietly (status read only, via getNativeLocationPowerStatus)
-        // so the recovery loop below never re-opens permission/battery
-        // screens over and over while it keeps trying in the background.
-        // Timeout-bounded (outer backstop, 75s): generous enough to cover a
-        // legitimate Settings-redirect round trip, but guarantees this
-        // function always proceeds instead of hanging indefinitely.
-        const powerStatus = await withTimeout(
+
+      // Foreground-service prerequisites (background location "allow all
+      // the time", battery-optimisation exemption, notifications) plus the
+      // permission_status logging. This USED TO gate watcher registration —
+      // a stall anywhere in this chain (the native_start_timeout failures
+      // seen in production, stage "prepareLocationSettings") meant
+      // addWatcher() never ran and zero watcher_registered events all day,
+      // even though basic foreground location was already granted. It is
+      // now a non-blocking side effect: fired once a registration attempt
+      // has happened either way (success or failure), and its own
+      // timeout/rejection is only logged — it never aborts or unregisters a
+      // running watcher. Retries run quietly (status read only) so the
+      // recovery loop never re-opens permission/battery screens repeatedly.
+      let settingsPrepFired = false;
+      const fireSettingsPrep = () => {
+        if (settingsPrepFired) return;
+        settingsPrepFired = true;
+        void withTimeout(
           opts.quiet ? getNativeLocationPowerStatus() : prepareNativeLocationSettings(),
           75_000,
-          stage
-        );
-        console.info("[GPSTracker] native location power status", powerStatus);
-        void logTrackerEvent(userId, "permission_status", { ...(powerStatus ?? {}) });
-
-
-
-
-        // Only register the watcher once the OS has actually granted location.
-        // Requesting here too would race the startup permission request and
-        // Android would abandon one of the callbacks, leaving location denied.
-        stage = "checkPermissions";
-        try {
-          const { Geolocation } = await import("@capacitor/geolocation");
-          const perm = await withTimeout(Geolocation.checkPermissions(), 10_000, stage);
-          if (perm.location !== "granted") {
-            // Approximate-only is NOT precise: fused ~35 m guesses flatten a
-            // day to 0 km. Surface it (health card + event log) instead of
-            // silently tracking coarse.
-            void logTrackerEvent(userId, "permission_status", {
-              precise: false,
-              approximateOnly: perm.coarseLocation === "granted",
+          "prepareLocationSettings"
+        )
+          .then((powerStatus) => {
+            console.info("[GPSTracker] native location power status", powerStatus);
+            void logTrackerEvent(userId, "permission_status", { ...(powerStatus ?? {}) });
+          })
+          .catch((e) => {
+            console.warn("[GPSTracker] location settings prep failed (watcher unaffected)", e);
+            const timedOut = e instanceof Error && e.message.includes("timed out");
+            void logTrackerEvent(userId, timedOut ? "native_start_timeout" : "native_start_error", {
+              stage: "prepareLocationSettings",
+              elapsedMs: Date.now() - startedAt,
+              message: e instanceof Error ? e.message : String(e),
             });
-          }
-          if (perm.location !== "granted" && perm.coarseLocation !== "granted") {
-            console.warn("[GPSTracker] Location not granted yet — skipping background watcher");
-            return false;
-          }
+          });
+      };
+
+      try {
+        // Permission state is read FIRST (timeout-guarded, no UI). If
+        // foreground location (fine or coarse) is already granted, the
+        // watcher registers immediately, without waiting on the
+        // settings-prep chain above — that chain is what was observed
+        // wedging for 75s+ on some devices even with permission already
+        // granted, silently blocking registration the whole time it ran.
+        const { Geolocation } = await import("@capacitor/geolocation");
+        const readPerm = () => withTimeout(Geolocation.checkPermissions(), 10_000, "checkPermissions");
+        const hasLocation = (p: { location?: string; coarseLocation?: string }) =>
+          p.location === "granted" || p.coarseLocation === "granted";
+
+        let perm: Awaited<ReturnType<typeof readPerm>>;
+        try {
+          perm = await readPerm();
         } catch (e) {
           console.warn("[GPSTracker] Could not check location permission:", e);
           const timedOut = e instanceof Error && e.message.includes("timed out");
@@ -387,6 +398,50 @@ export function useGPSTracker(userId: string | null | undefined) {
             elapsedMs: Date.now() - startedAt,
             message: e instanceof Error ? e.message : String(e),
           });
+          fireSettingsPrep();
+          return false;
+        }
+
+        if (!hasLocation(perm) && !opts.quiet) {
+          // Nothing granted yet: request ONLY foreground location here, via
+          // the shared/deduped coordinated request (never a second parallel
+          // Geolocation.requestPermissions — Android abandons one callback
+          // when two overlap). The rest of settings prep still runs
+          // non-blocking after registration.
+          stage = "requestLocationPermission";
+          try {
+            await requestLocationPermissionCoordinated();
+          } catch (e) {
+            console.warn("[GPSTracker] Foreground location request failed:", e);
+          }
+          stage = "checkPermissions";
+          try {
+            perm = await readPerm();
+          } catch (e) {
+            console.warn("[GPSTracker] Could not re-check location permission:", e);
+            const timedOut = e instanceof Error && e.message.includes("timed out");
+            void logTrackerEvent(userId, timedOut ? "native_start_timeout" : "native_start_error", {
+              stage,
+              elapsedMs: Date.now() - startedAt,
+              message: e instanceof Error ? e.message : String(e),
+            });
+            fireSettingsPrep();
+            return false;
+          }
+        }
+
+        if (perm.location !== "granted") {
+          // Approximate-only is NOT precise: fused ~35 m guesses flatten a
+          // day to 0 km. Surface it (health card + event log) instead of
+          // silently tracking coarse.
+          void logTrackerEvent(userId, "permission_status", {
+            precise: false,
+            approximateOnly: perm.coarseLocation === "granted",
+          });
+        }
+        if (!hasLocation(perm)) {
+          console.warn("[GPSTracker] Location not granted yet — skipping background watcher");
+          fireSettingsPrep();
           return false;
         }
 
@@ -534,6 +589,9 @@ export function useGPSTracker(userId: string | null | undefined) {
 
         stage = "registerWatcher";
         await register();
+        // Watcher is running — now (and only now) kick off the remaining
+        // settings prep as a side effect that can never undo it.
+        fireSettingsPrep();
         lastWriteRef.current = Date.now();
         lastCallbackTsRef.current = Date.now();
         setTrackerStatus({
@@ -643,6 +701,9 @@ export function useGPSTracker(userId: string | null | undefined) {
           elapsedMs: Date.now() - startedAt,
           message: e instanceof Error ? e.message : String(e),
         });
+        // Registration failed — still give settings prep its chance so the
+        // next retry has better odds (no-op if it already fired).
+        fireSettingsPrep();
         return false;
       }
     }
