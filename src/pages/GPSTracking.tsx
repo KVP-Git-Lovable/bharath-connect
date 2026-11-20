@@ -508,11 +508,6 @@ export default function GPSTracking() {
       : "part estimated"
     : "estimated";
 
-  // Capture diagnostics — a long hole in the trail means the phone stopped
-  // reporting (Doze / battery optimisation), and no route API can recover
-  // kilometres that were never recorded.
-  const longestGapMinutes = trajectory?.metrics.longestGapMinutes ?? 0;
-
   // Android won't let an app silently disable its own battery optimisation
   // or upgrade location to "Allow all the time" — both need the user's tap
   // in Settings. This opens the app's settings screen directly instead of
@@ -759,24 +754,19 @@ export default function GPSTracking() {
               reported — a missing card reads as a missing feature. */}
           <AppUsageCards summary={usageSummary} error={usageError} />
 
-          {/* Tracking-gap warning: recorded distance can only be as complete as the trail */}
-          {gpsPoints.length > 1 && longestGapMinutes > 15 && (
-            <Card className="shadow-card border-destructive/40 bg-destructive/5">
-              <CardContent className="p-3 space-y-2">
-                <p className="text-xs font-semibold text-destructive">
-                  Tracking gap detected — {Math.round(longestGapMinutes)} min without a location fix
-                </p>
-                <p className="text-[11px] text-muted-foreground">
-                  Distance travelled during the gap could not be recorded. Set Battery to
-                  Unrestricted and Location to "Allow all the time" for this app to capture the
-                  full route.
-                </p>
-                <Button variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={handleFixTrackingGap}>
-                  Open Settings
-                </Button>
-              </CardContent>
-            </Card>
-          )}
+          {/* Preventive tip, always shown — not a reactive alarm tied to a
+              specific gap. Tells the user how to avoid gaps before they
+              happen, rather than flagging one after the fact. */}
+          <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 space-y-2">
+            <p className="text-xs text-amber-900">
+              To avoid any tracking gaps, set Location to "Precise" in your phone settings, set
+              Battery to Unrestricted, and make sure "Auto-start" is enabled for this application
+              in your phone's App settings.
+            </p>
+            <Button variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={handleFixTrackingGap}>
+              Open Settings
+            </Button>
+          </div>
 
           {/* Sync health: points captured on this device but not yet uploaded */}
           {(queueStats.pending > 0 || queueStats.dropped > 0 || queueStats.lastError) && (
